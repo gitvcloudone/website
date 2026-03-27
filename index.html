@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vCloudOne | Amazon EVS: The Definitive Prerequisite Guide</title>
+    <title>vCloudOne | Amazon EVS: Ultra-Detailed Prerequisite Guide</title>
     <style>
         :root {
             --primary: #232f3e;
@@ -15,6 +15,7 @@
             --code-bg: #1e1e1e;
             --code-text: #d4d4d4;
             --border: #ddd;
+            --success: #28a745;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,35 +25,41 @@
         header h1 { font-size: 2.8rem; margin-bottom: 0.5rem; letter-spacing: -1px; }
         header p { font-size: 1.2rem; opacity: 0.8; font-weight: 300; }
 
-        .container { max-width: 1000px; margin: -2rem auto 3rem; padding: 0 1.5rem; }
-        article { background: var(--white); padding: 3rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .container { max-width: 1100px; margin: -2rem auto 3rem; padding: 0 1.5rem; }
+        article { background: var(--white); padding: 4rem; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
         
-        h1 { font-size: 2.5rem; margin-bottom: 1rem; color: var(--primary); }
+        h1 { font-size: 2.8rem; margin-bottom: 1rem; color: var(--primary); }
         .meta { color: #888; margin-bottom: 2rem; font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
         
-        h2 { margin-top: 3rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--secondary); color: var(--primary); font-size: 1.8rem; }
-        h3 { margin-top: 2rem; color: var(--accent); font-size: 1.3rem; }
+        h2 { margin-top: 4rem; padding-bottom: 0.5rem; border-bottom: 3px solid var(--secondary); color: var(--primary); font-size: 2rem; display: flex; align-items: center; }
+        h3 { margin-top: 2.5rem; color: var(--accent); font-size: 1.5rem; font-weight: 600; }
         
-        p { margin-bottom: 1.2rem; }
-        ul, ol { margin-bottom: 1.5rem; padding-left: 2rem; }
-        li { margin-bottom: 0.8rem; }
+        p { margin-bottom: 1.5rem; }
+        
+        .step-card { background: #fafafa; border: 1px solid var(--border); border-radius: 8px; padding: 2rem; margin: 1.5rem 0; border-left: 6px solid var(--accent); }
+        .console-path { background: #eee; padding: 0.3rem 0.6rem; border-radius: 4px; font-family: monospace; font-size: 0.85rem; color: #d63384; font-weight: bold; }
+        
+        .value-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem; }
+        .value-table th, .value-table td { border: 1px solid var(--border); padding: 0.8rem; text-align: left; }
+        .value-table th { background: #f8f9fa; font-weight: bold; }
 
-        .note { background: #fff8e1; border-left: 5px solid var(--secondary); padding: 1rem; margin: 2rem 0; font-style: italic; }
+        .note { background: #fff8e1; border-left: 6px solid var(--secondary); padding: 1.5rem; margin: 2.5rem 0; border-radius: 4px; }
         
-        .code-header { background: #333; color: #fff; padding: 0.5rem 1rem; border-top-left-radius: 8px; border-top-right-radius: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; }
-        .code-block { background: var(--code-bg); color: var(--code-text); padding: 1.5rem; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.9rem; margin-bottom: 2rem; border: 1px solid #000; }
+        .code-header { background: #333; color: #fff; padding: 0.6rem 1.2rem; border-top-left-radius: 8px; border-top-right-radius: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; margin-top: 3rem; }
+        .code-block { background: var(--code-bg); color: var(--code-text); padding: 1.5rem; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.9rem; margin-bottom: 3rem; line-height: 1.5; }
         
-        .download-box { background: var(--primary); color: #fff; padding: 2rem; border-radius: 8px; text-align: center; margin-top: 4rem; }
-        .btn { display: inline-block; background: var(--secondary); color: var(--primary); padding: 1rem 2rem; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 1rem; transition: transform 0.2s; }
-        .btn:hover { transform: translateY(-2px); }
+        .download-section { background: var(--primary); color: #fff; padding: 3rem; border-radius: 12px; text-align: center; margin-top: 5rem; }
+        .btn { display: inline-block; background: var(--secondary); color: var(--primary); padding: 1.2rem 2.5rem; text-decoration: none; font-weight: bold; border-radius: 6px; margin-top: 1.5rem; font-size: 1.1rem; transition: all 0.2s; }
+        .btn:hover { background: #e68a00; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 
-        footer { text-align: center; padding: 3rem; color: #777; font-size: 0.9rem; }
+        footer { text-align: center; padding: 4rem; color: #777; font-size: 0.95rem; }
         
-        .step-number { background: var(--secondary); color: var(--primary); border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 10px; font-size: 0.9rem; }
+        .step-num { display: inline-block; background: var(--accent); color: #fff; width: 32px; height: 32px; line-height: 32px; text-align: center; border-radius: 50%; margin-right: 12px; font-size: 0.9rem; font-weight: bold; }
 
         @media (max-width: 768px) {
-            article { padding: 1.5rem; }
-            header h1 { font-size: 2rem; }
+            article { padding: 2rem 1.5rem; }
+            header h1 { font-size: 2.2rem; }
+            h1 { font-size: 2rem; }
         }
     </style>
 </head>
@@ -60,112 +67,173 @@
 
     <header>
         <h1>vCloudOne</h1>
-        <p>Architecting the Hybrid Cloud: VMware & AWS Integration</p>
+        <p>Zero-to-SDDC: The Official Amazon EVS Deployment Guide</p>
     </header>
 
     <div class="container">
         <article>
-            <h1>Amazon EVS: The Definitive Prerequisite Guide</h1>
-            <div class="meta">March 25, 2026 | By David | Deployment & Automation</div>
+            <h1>Amazon EVS: Step-by-Step Configuration Guide</h1>
+            <div class="meta">March 25, 2026 | By David | Core Infrastructure & Automation</div>
 
-            <p>Deploying **Amazon Elastic VMware Service (EVS)** is a significant milestone for any hybrid cloud strategy. It brings the power of VMware Cloud Foundation (VCF) directly onto AWS bare-metal infrastructure. However, the success of your SDDC hinges on the quality of your **AWS Underlay**.</p>
-            
-            <p>In this guide, we provide the exact, step-by-step manual process for preparing your environment, followed by a production-ready Terraform template to automate the entire stack.</p>
+            <p>Welcome to the definitive manual guide for preparing your AWS account for **Amazon Elastic VMware Service (EVS)**. This post breaks down the "yesterday's build" into granular steps, ensuring you have every IP address, ASN, and Console path required for a zero-error deployment.</p>
 
-            <h2>Phase 1: Capacity & IAM Readiness</h2>
-            <p>Before touching any networking, ensure your AWS account is authorized to run the EVS service.</p>
+            <h2><span class="step-num">1</span> Phase 1: Capacity & IAM Prep</h2>
             
-            <h3>1. Check Service Quotas</h3>
-            <p>Navigate to <strong>Service Quotas</strong> > <strong>AWS Services</strong> > <strong>Amazon EC2</strong>. Search for <code>Running Dedicated i3.metal Hosts</code> or <code>i4i.metal</code>. You must have a limit of at least <strong>3</strong> per region. If it is lower, request an increase immediately.</p>
-            
-            <h3>2. Enable the Service-Linked Role</h3>
-            <p>AWS requires a specific role to manage EVS resources on your behalf. While often created automatically, it is best practice to provision the <code>AWSServiceRoleForEVS</code> manually via IAM if it doesn't exist.</p>
-
-            <h2>Phase 2: Network Foundation (VPC Underlay)</h2>
-            <p>This is where the ESXi hosts and management appliances will live.</p>
-            
-            <ol>
-                <li><strong>Create a dedicated VPC:</strong> Use a CIDR block that offers long-term growth (e.g., <code>10.0.0.0/16</code>). Ensure <strong>DNS Hostnames</strong> and <strong>DNS Support</strong> are enabled.</li>
-                <li><strong>Provision a Service Access Subnet:</strong> This subnet hosts your Route Server endpoints and DNS Resolvers. A <code>/24</code> or <code>/28</code> is sufficient.</li>
-                <li><strong>Configure DHCP Option Sets:</strong> You must create a custom set that points to your VPC DNS resolvers and the Amazon Time Sync Service (<code>169.254.169.123</code>).</li>
-            </ol>
-
-            <div class="note">
-                <strong>Crucial Step:</strong> Reserve your VLAN CIDRs now! You will need non-overlapping ranges for <em>Host Management</em>, <em>vMotion</em>, <em>vSAN</em>, and <em>NSX Uplinks</em> during the final deployment phase.
+            <div class="step-card">
+                <h3>1.1 Bare Metal Quotas</h3>
+                <p><strong>Path:</strong> <span class="console-path">Console > Service Quotas > AWS Services > Amazon EC2</span></p>
+                <p>Search for <strong>"Running Dedicated i3.metal Hosts"</strong> (or i4i). Verify that the "Applied quota value" is at least <strong>3</strong>. If it's 0, click "Request increase at account level" and specify your target region.</p>
             </div>
 
-            <h2>Phase 3: DNS & Routing Logic</h2>
-            <p>VMware is a DNS-heavy architecture. Without proper Forward and Reverse lookups, the SDDC Manager will fail during bring-up.</p>
-            
-            <h3>1. Route 53 Resolver Endpoints</h3>
-            <p>Create an <strong>Inbound Resolver Endpoint</strong> within your Service Access Subnet. This allows your VMware management appliances to resolve AWS names and vice versa.</p>
-            
-            <h3>2. VPC Route Server (BGP)</h3>
-            <p>Provision the <strong>Amazon VPC Route Server</strong>. This is mandatory for EVS to communicate with the VMware NSX edges. You must enable <strong>Route Propagation</strong> on your VPC Route Tables so that VMware workload routes are automatically injected into AWS.</p>
+            <div class="step-card">
+                <h3>1.2 Service-Linked Role (SLR)</h3>
+                <p><strong>Path:</strong> <span class="console-path">Console > IAM > Roles > Create Role</span></p>
+                <p>Select "AWS Service", search for <strong>EVS</strong>, and select <strong>EVS - Elastic VMware Service</strong>. Click Next and Create. This gives EVS the permissions to manage VPC resources on your behalf.</p>
+            </div>
 
-            <h2>Full Automation: The "Master" Terraform Template</h2>
-            <p>Don't want to do it manually? Below is the <strong>Production-Ready Terraform Template</strong> that automates every step mentioned above: VPC, Subnets, DNS Zones, A/PTR records, and the VPC Route Server with BGP peering.</p>
+            <h2><span class="step-num">2</span> Phase 2: VPC Underlay Construction</h2>
+
+            <div class="step-card">
+                <h3>2.1 Create the VPC</h3>
+                <p><strong>Path:</strong> <span class="console-path">Console > VPC > Your VPCs > Create VPC</span></p>
+                <table class="value-table">
+                    <tr><th>Field</th><th>Value</th></tr>
+                    <tr><td>Name Tag</td><td>evs-underlay-vpc</td></tr>
+                    <tr><td>IPv4 CIDR</td><td>10.0.0.0/16</td></tr>
+                    <tr><td>DNS Hostnames</td><td>Enabled</td></tr>
+                    <tr><td>DNS Support</td><td>Enabled</td></tr>
+                </table>
+            </div>
+
+            <div class="step-card">
+                <h3>2.2 Service Access Subnet</h3>
+                <p><strong>Path:</strong> <span class="console-path">Console > VPC > Subnets > Create Subnet</span></p>
+                <table class="value-table">
+                    <tr><th>Field</th><th>Value</th></tr>
+                    <tr><td>VPC</td><td>evs-underlay-vpc</td></tr>
+                    <tr><td>Subnet Name</td><td>evs-service-access-a</td></tr>
+                    <tr><td>Availability Zone</td><td>us-west-2a (Choose one and stick to it)</td></tr>
+                    <tr><td>IPv4 CIDR</td><td>10.0.1.0/24</td></tr>
+                </table>
+            </div>
+
+            <h2><span class="step-num">3</span> Phase 3: Route Server & BGP Peering</h2>
+
+            <div class="step-card">
+                <h3>3.1 Provision VPC Route Server</h3>
+                <p><strong>Path:</strong> <span class="console-path">Console > VPC > Route Servers > Create Route Server</span></p>
+                <p>Enter <strong>ASN: 64512</strong>. Select <code>evs-underlay-vpc</code>. Once created, add two <strong>Endpoints</strong> in the <code>evs-service-access-a</code> subnet.</p>
+            </div>
+
+            <div class="step-card">
+                <h3>3.2 Configure BGP Peers (Neighbors)</h3>
+                <p>Under your Route Server settings, navigate to <strong>Peers</strong> and add two neighbors corresponding to your NSX Edges:</p>
+                <table class="value-table">
+                    <tr><th>Peer Name</th><th>IP Address</th><th>ASN</th></tr>
+                    <tr><td>edge-01</td><td>10.0.10.251</td><td>65000</td></tr>
+                    <tr><td>edge-02</td><td>10.0.10.252</td><td>65000</td></tr>
+                </table>
+            </div>
+
+            <h2><span class="step-num">4</span> Phase 4: Route 53 DNS & Resolver</h2>
+
+            <div class="step-card">
+                <h3>4.1 Private Hosted Zones</h3>
+                <p><strong>Path:</strong> <span class="console-path">Console > Route 53 > Hosted Zones > Create</span></p>
+                <p>Create the following three zones and associate them with <code>evs-underlay-vpc</code>:</p>
+                <ul>
+                    <li><strong>Forward:</strong> <code>evstest.com</code></li>
+                    <li><strong>Reverse MGMT:</strong> <code>10.0.10.in-addr.arpa</code></li>
+                    <li><strong>Reverse Host:</strong> <code>11.0.10.in-addr.arpa</code></li>
+                </ul>
+            </div>
+
+            <div class="step-card">
+                <h3>4.2 Inbound Resolver Endpoints</h3>
+                <p><strong>Path:</strong> <span class="console-path">Console > Route 53 > Resolver > Inbound Endpoints > Create</span></p>
+                <p>Select <code>evs-underlay-vpc</code>. Assign a Security Group that allows UDP/TCP port 53. Under IP Addresses, manually assign:</p>
+                <ul>
+                    <li><strong>IP 1:</strong> <code>10.0.1.100</code> (Subnet: evs-service-access-a)</li>
+                    <li><strong>IP 2:</strong> <code>10.0.1.110</code> (Subnet: evs-service-access-a)</li>
+                </ul>
+            </div>
+
+            <div class="note">
+                <strong>Important:</strong> Ensure you create A and PTR records for your core components (vCenter, SDDC Manager, NSX Managers) and your ESXi hosts (e.g., esxi-01 to esxi-04) within these zones.
+            </div>
+
+            <h2><span class="step-num">5</span> Phase 5: DHCP Option Set Association</h2>
+
+            <div class="step-card">
+                <h3>5.1 Create DHCP Option Set</h3>
+                <p><strong>Path:</strong> <span class="console-path">Console > VPC > DHCP Option Sets > Create</span></p>
+                <table class="value-table">
+                    <tr><th>Field</th><th>Value</th></tr>
+                    <tr><td>Domain Name</td><td>evstest.com</td></tr>
+                    <tr><td>Domain Name Servers</td><td>10.0.1.100, 10.0.1.110</td></tr>
+                    <tr><td>NTP Servers</td><td>169.254.169.123</td></tr>
+                </table>
+                <p>Finally, go back to <strong>Your VPCs</strong>, select your VPC, click <strong>Actions > Edit VPC Settings</strong>, and change the DHCP Option Set to the one you just created.</p>
+            </div>
+
+            <h2>Master Automation: Terraform Template</h2>
+            <p>If you prefer to deploy this entire stack in 60 seconds, use our production-grade Terraform configuration.</p>
 
             <div class="code-header">
-                <span>main.tf</span>
-                <span>Production Grade</span>
+                <span>main.tf (Comprehensive)</span>
+                <span>Version 1.2</span>
             </div>
             <div class="code-block">
 <pre>
-# 1. Create VPC Underlay
+# VPC & Networking
 resource "aws_vpc" "evs_vpc" {
-  cidr_block           = "10.0.0.0/16"
+  cidr_block = "10.0.0.0/16"
   enable_dns_hostnames = true
-  enable_dns_support   = true
-  tags = { Name = "evs-production-vpc" }
+  enable_dns_support = true
+  tags = { Name = "evs-vpc" }
 }
 
-# 2. Service Access Subnet
 resource "aws_subnet" "service_access" {
-  vpc_id            = aws_vpc.evs_vpc.id
-  cidr_block        = "10.0.1.0/24"
+  vpc_id = aws_vpc.evs_vpc.id
+  cidr_block = "10.0.1.0/24"
   availability_zone = "us-west-2a"
 }
 
-# 3. VPC Route Server (BGP Connection)
+# Route 53 Inbound Resolver
+resource "aws_route53_resolver_endpoint" "evs_dns" {
+  name = "evs-dns-resolver"
+  direction = "INBOUND"
+  security_group_ids = [aws_security_group.dns_sg.id]
+
+  ip_address { subnet_id = aws_subnet.service_access.id; ip = "10.0.1.100" }
+  ip_address { subnet_id = aws_subnet.service_access.id; ip = "10.0.1.110" }
+}
+
+# VPC Route Server
 resource "aws_vpc_route_server" "evs_rs" {
   amazon_side_asn = 64512
+  tags = { Name = "evs-route-server" }
 }
 
-resource "aws_vpc_route_server_vpc_association" "evs_rs_vpc" {
+resource "aws_vpc_route_server_peer" "edge_01" {
   route_server_id = aws_vpc_route_server.evs_rs.route_server_id
-  vpc_id          = aws_vpc.evs_vpc.id
-}
-
-# 4. Route 53 Forward & Reverse Zones
-resource "aws_route53_zone" "forward" {
-  name = "vcloudone.internal"
-  vpc { vpc_id = aws_vpc.evs_vpc.id }
-}
-
-resource "aws_route53_zone" "mgmt_reverse" {
-  name = "10.0.10.in-addr.arpa"
-  vpc { vpc_id = aws_vpc.evs_vpc.id }
-}
-
-# 5. Service-Linked Role
-resource "aws_iam_service_linked_role" "evs" {
-  aws_service_name = "evs.amazonaws.com"
+  peer_address = "10.0.10.251"
+  bgp_options { peer_asn = 65000 }
 }
 </pre>
             </div>
 
-            <div class="download-box">
-                <h3>Ready to Deploy?</h3>
-                <p>Download our complete Amazon EVS Automation Kit including variables, outputs, and DNS modules.</p>
-                <a href="https://github.com/gitvcloudone/website/archive/refs/heads/main.zip" class="btn">Download Terraform Kit (.zip)</a>
+            <div class="download-section">
+                <h3>Download the Full Kit</h3>
+                <p>Includes all .tf modules for DNS, Peering, Variables, and Outputs.</p>
+                <a href="https://github.com/gitvcloudone/website/archive/refs/heads/main.zip" class="btn">Download Terraform Automation Kit</a>
             </div>
 
         </article>
     </div>
 
     <footer>
-        <p>&copy; 2026 vCloudOne | Managed by David | Built with AWS and VMware</p>
+        <p>&copy; 2026 vCloudOne | Architected by David | Built for the Hybrid Cloud</p>
     </footer>
 
 </body>
