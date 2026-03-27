@@ -504,30 +504,30 @@
 
             <h2 id="phase2"><span class="step-num">2</span> Phase 2: Multi-VLAN Networking (Underlay)</h2>
 
-            <p>A production EVS environment requires <strong>10 dedicated VLANs/Subnets</strong>. These ranges must be non-overlapping and reserved within your VPC CIDR (typically a /16).</p>
+            <p>Amazon EVS automatically provisions <strong>10 VLANs</strong> during environment bring-up. All VLAN subnets must fall within your VPC CIDR (minimum <strong>/28</strong>, maximum <strong>/24</strong>) and must be non-overlapping. The one exception is the HCX Uplink VLAN, which must be exactly <strong>/28</strong> if HCX is used.</p>
 
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>VLAN Name</th><th>Description</th><th>Required Size</th><th>Recommended CIDR</th></tr>
+                        <tr><th>VLAN Name</th><th>Description</th><th>Allowed Size</th><th>Recommended CIDR</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td><strong>Management</strong></td><td>ESXi Hosts, vCenter, SDDC Manager</td><td>Min /24</td><td>10.0.10.0/24</td></tr>
-                        <tr><td><strong>vMotion</strong></td><td>Live VM Migration Traffic</td><td>Min /24</td><td>10.0.11.0/24</td></tr>
-                        <tr><td><strong>vSAN</strong></td><td>Software-Defined Storage Traffic</td><td>Min /24</td><td>10.0.12.0/24</td></tr>
-                        <tr><td><strong>Host Overlay (TEP)</strong></td><td>NSX Host Geneve Encapsulation</td><td>Min /24</td><td>10.0.13.0/24</td></tr>
-                        <tr><td><strong>Edge Overlay</strong></td><td>NSX Edge Geneve Encapsulation</td><td>Min /24</td><td>10.0.14.0/24</td></tr>
-                        <tr><td><strong>Uplink 1</strong></td><td>North-South Traffic (Tier-0)</td><td>Min /27</td><td>10.0.15.0/27</td></tr>
-                        <tr><td><strong>Uplink 2</strong></td><td>North-South Traffic (Tier-0 Redundancy)</td><td>Min /27</td><td>10.0.15.32/27</td></tr>
-                        <tr><td><strong>Service Access</strong></td><td>AWS Route Server &amp; DNS Resolver endpoints</td><td>Min /24</td><td>10.0.1.0/24</td></tr>
-                        <tr><td><strong>HCX Management</strong></td><td>(Optional) HCX Cloud Manager</td><td>Min /28</td><td>10.0.20.0/28</td></tr>
-                        <tr><td><strong>HCX Interconnect</strong></td><td>(Optional) HCX Migration Traffic</td><td>Min /28</td><td>10.0.21.0/28</td></tr>
+                        <tr><td><strong>Host Management</strong></td><td>ESXi host management traffic</td><td>/28 &ndash; /24</td><td>10.0.10.0/24</td></tr>
+                        <tr><td><strong>Management VM</strong></td><td>vCenter, SDDC Manager, NSX Managers</td><td>/28 &ndash; /24</td><td>10.0.11.0/24</td></tr>
+                        <tr><td><strong>vMotion</strong></td><td>Live VM migration traffic</td><td>/28 &ndash; /24</td><td>10.0.12.0/24</td></tr>
+                        <tr><td><strong>vSAN</strong></td><td>Software-defined storage traffic</td><td>/28 &ndash; /24</td><td>10.0.13.0/24</td></tr>
+                        <tr><td><strong>Host VTEP</strong></td><td>NSX host tunnel endpoint (Geneve encapsulation)</td><td>/28 &ndash; /24</td><td>10.0.14.0/24</td></tr>
+                        <tr><td><strong>Edge VTEP</strong></td><td>NSX Edge tunnel endpoint (Geneve encapsulation)</td><td>/28 &ndash; /24</td><td>10.0.15.0/24</td></tr>
+                        <tr><td><strong>NSX Uplink</strong></td><td>Tier-0 gateway north-south traffic (BGP peering)</td><td>/28 &ndash; /24</td><td>10.0.16.0/24</td></tr>
+                        <tr><td><strong>HCX Uplink</strong></td><td>(Optional) HCX-IX and HCX-NE migration &amp; extension traffic</td><td>Exactly /28</td><td>10.0.20.0/28</td></tr>
+                        <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF workload segments</td><td>/28 &ndash; /24</td><td>10.0.21.0/24</td></tr>
+                        <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF workload segments</td><td>/28 &ndash; /24</td><td>10.0.22.0/24</td></tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="note">
-                <strong>Deployment Note:</strong> These VLANs are provisioned during the EVS bring-up process. Only the <strong>Service Access Subnet</strong> should be pre-created manually in the VPC Console before initiating bring-up.
+                <strong>Deployment Note:</strong> All 10 VLANs above are provisioned automatically by Amazon EVS during bring-up — do not pre-create them. The one subnet you <em>must</em> create manually beforehand is the <strong>Service Access Subnet</strong> (used for the Route Server and DNS Resolver endpoints). This subnet is not a VLAN managed by EVS.
             </div>
 
             <h2 id="phase3"><span class="step-num">3</span> Phase 3: Route 53 DNS &amp; Management Resolution</h2>
@@ -540,16 +540,16 @@
                         <tr><th>Component</th><th>Forward FQDN (Example)</th><th>Reverse PTR IP</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td><strong>Cloud Builder</strong></td><td>cloud-builder.vcloudone.internal</td><td>10.0.10.9</td></tr>
-                        <tr><td><strong>SDDC Manager</strong></td><td>sddc-manager.vcloudone.internal</td><td>10.0.10.10</td></tr>
-                        <tr><td><strong>vCenter Server</strong></td><td>vcenter.vcloudone.internal</td><td>10.0.10.11</td></tr>
-                        <tr><td><strong>NSX Manager 01</strong></td><td>nsx-mgr-01.vcloudone.internal</td><td>10.0.10.12</td></tr>
-                        <tr><td><strong>NSX Manager 02</strong></td><td>nsx-mgr-02.vcloudone.internal</td><td>10.0.10.13</td></tr>
-                        <tr><td><strong>NSX Manager 03</strong></td><td>nsx-mgr-03.vcloudone.internal</td><td>10.0.10.14</td></tr>
-                        <tr><td><strong>NSX Edge 01</strong></td><td>nsx-edge-01.vcloudone.internal</td><td>10.0.10.21</td></tr>
-                        <tr><td><strong>NSX Edge 02</strong></td><td>nsx-edge-02.vcloudone.internal</td><td>10.0.10.22</td></tr>
-                        <tr><td><strong>ESXi Host 01&ndash;04</strong></td><td>esxi-0[1-4].vcloudone.internal</td><td>10.0.11.21&ndash;24</td></tr>
-                        <tr><td><strong>HCX Manager</strong></td><td>(Optional) hcx.vcloudone.internal</td><td>10.0.20.10</td></tr>
+                        <tr><td><strong>Cloud Builder</strong></td><td>cloud-builder.vcloudone.internal</td><td>10.0.10.9 (Host Mgmt)</td></tr>
+                        <tr><td><strong>ESXi Host 01&ndash;04</strong></td><td>esxi-0[1-4].vcloudone.internal</td><td>10.0.10.21&ndash;24 (Host Mgmt)</td></tr>
+                        <tr><td><strong>SDDC Manager</strong></td><td>sddc-manager.vcloudone.internal</td><td>10.0.11.10 (Mgmt VM)</td></tr>
+                        <tr><td><strong>vCenter Server</strong></td><td>vcenter.vcloudone.internal</td><td>10.0.11.11 (Mgmt VM)</td></tr>
+                        <tr><td><strong>NSX Manager 01</strong></td><td>nsx-mgr-01.vcloudone.internal</td><td>10.0.11.12 (Mgmt VM)</td></tr>
+                        <tr><td><strong>NSX Manager 02</strong></td><td>nsx-mgr-02.vcloudone.internal</td><td>10.0.11.13 (Mgmt VM)</td></tr>
+                        <tr><td><strong>NSX Manager 03</strong></td><td>nsx-mgr-03.vcloudone.internal</td><td>10.0.11.14 (Mgmt VM)</td></tr>
+                        <tr><td><strong>NSX Edge 01</strong></td><td>nsx-edge-01.vcloudone.internal</td><td>10.0.11.21 (Mgmt VM)</td></tr>
+                        <tr><td><strong>NSX Edge 02</strong></td><td>nsx-edge-02.vcloudone.internal</td><td>10.0.11.22 (Mgmt VM)</td></tr>
+                        <tr><td><strong>HCX Manager</strong></td><td>(Optional) hcx.vcloudone.internal</td><td>10.0.20.10 (HCX Uplink)</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -558,7 +558,7 @@
 
             <div class="step-card">
                 <h3>4.1 BGP Peering Configuration</h3>
-                <p>The <strong>VPC Route Server</strong> acts as the BGP bridge between the NSX overlay and the AWS VPC routing table. Associate the Route Server with your <code>evs-underlay-vpc</code> and configure peering with the NSX Edges using <strong>ASN 65000</strong> for the Edge cluster and <strong>ASN 64512</strong> for the Route Server.</p>
+                <p>The <strong>VPC Route Server</strong> acts as the BGP bridge between the NSX overlay and the AWS VPC routing table. Associate the Route Server with your <code>evs-underlay-vpc</code> and configure peering with both NSX Edge nodes. The default ASN for NSX Edge is <strong>65000</strong>; the Route Server ASN must be a private-range value (<strong>64512&ndash;65534</strong>) &mdash; 64512 is the common default. The peer ASN configured on the Route Server must match the NSX Edge ASN exactly.</p>
                 <p><strong>Important:</strong> Enable <strong>Route Propagation</strong> on your VPC Main Route Table so that VMware workload segments are reachable from AWS-native services.</p>
             </div>
 
