@@ -3,185 +3,690 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vCloudOne | Amazon EVS: Enterprise SDDC Implementation Guide</title>
+    <meta name="description" content="vCloudOne — Enterprise SDDC and Amazon EVS implementation guides, Terraform automation, and VMware Cloud on AWS architecture expertise.">
+    <title>vCloudOne | Enterprise SDDC &amp; Amazon EVS Architecture</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☁</text></svg>">
     <style>
         :root {
-            --primary: #232f3e;
-            --secondary: #ff9900;
-            --accent: #0073bb;
-            --text: #333;
-            --light: #f4f4f4;
-            --white: #fff;
-            --code-bg: #1e1e1e;
-            --code-text: #d4d4d4;
-            --border: #ddd;
+            --primary:   #0f1923;
+            --nav-bg:    #161f2c;
+            --orange:    #ff9900;
+            --orange-dk: #e68900;
+            --blue:      #0073bb;
+            --blue-lt:   #e8f4fd;
+            --text:      #1a1a2e;
+            --muted:     #6b7280;
+            --border:    #e5e7eb;
+            --bg:        #f8fafc;
+            --white:     #ffffff;
+            --code-bg:   #0d1117;
+            --code-text: #c9d1d9;
+            --note-bg:   #fffbeb;
+            --note-bdr:  #f59e0b;
+            --radius:    10px;
+            --shadow:    0 4px 24px rgba(0,0,0,0.08);
+            --shadow-lg: 0 12px 48px rgba(0,0,0,0.14);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--light); }
-        
-        header { background: var(--primary); color: var(--white); padding: 3rem 1rem; text-align: center; }
-        header h1 { font-size: 2.8rem; margin-bottom: 0.5rem; letter-spacing: -1px; }
-        header p { font-size: 1.2rem; opacity: 0.8; font-weight: 300; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .container { max-width: 1200px; margin: -2rem auto 3rem; padding: 0 1.5rem; }
-        article { background: var(--white); padding: 4rem; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-        
-        h1 { font-size: 2.8rem; margin-bottom: 1rem; color: var(--primary); }
-        .meta { color: #888; margin-bottom: 2rem; font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
-        
-        h2 { margin-top: 4rem; padding-bottom: 0.5rem; border-bottom: 3px solid var(--secondary); color: var(--primary); font-size: 2rem; display: flex; align-items: center; }
-        h3 { margin-top: 2.5rem; color: var(--accent); font-size: 1.5rem; font-weight: 600; }
-        
-        p { margin-bottom: 1.5rem; }
-        
-        .step-card { background: #fafafa; border: 1px solid var(--border); border-radius: 8px; padding: 2rem; margin: 1.5rem 0; border-left: 6px solid var(--accent); }
-        .console-path { background: #eee; padding: 0.3rem 0.6rem; border-radius: 4px; font-family: monospace; font-size: 0.85rem; color: #d63384; font-weight: bold; }
-        
-        .value-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem; }
-        .value-table th, .value-table td { border: 1px solid var(--border); padding: 0.8rem; text-align: left; }
-        .value-table th { background: #f8f9fa; font-weight: bold; }
+        html { scroll-behavior: smooth; }
 
-        .note { background: #fff8e1; border-left: 6px solid var(--secondary); padding: 1.5rem; margin: 2.5rem 0; border-radius: 4px; }
-        
-        .code-header { background: #333; color: #fff; padding: 0.6rem 1.2rem; border-top-left-radius: 8px; border-top-right-radius: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; margin-top: 3rem; }
-        .code-block { background: var(--code-bg); color: var(--code-text); padding: 1.5rem; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.9rem; margin-bottom: 3rem; line-height: 1.5; }
-        
-        .download-section { background: var(--primary); color: #fff; padding: 3rem; border-radius: 12px; text-align: center; margin-top: 5rem; }
-        .btn { display: inline-block; background: var(--secondary); color: var(--primary); padding: 1.2rem 2.5rem; text-decoration: none; font-weight: bold; border-radius: 6px; margin-top: 1.5rem; font-size: 1.1rem; transition: all 0.2s; }
-        .btn:hover { background: #e68a00; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-size: 16px;
+            line-height: 1.7;
+            color: var(--text);
+            background: var(--bg);
+        }
 
-        footer { text-align: center; padding: 4rem; color: #777; font-size: 0.95rem; }
-        
-        .step-num { display: inline-block; background: var(--accent); color: #fff; width: 32px; height: 32px; line-height: 32px; text-align: center; border-radius: 50%; margin-right: 12px; font-size: 0.9rem; font-weight: bold; }
+        /* ── NAV ── */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--nav-bg);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 1.15rem;
+            letter-spacing: -0.3px;
+        }
+        .nav-logo span {
+            color: var(--orange);
+        }
+        .nav-logo svg {
+            width: 28px; height: 28px;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .nav-links a {
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-links a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nav-links .btn-nav {
+            background: var(--orange);
+            color: var(--primary);
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        .nav-links .btn-nav:hover { background: var(--orange-dk); color: var(--primary); }
 
-        @media (max-width: 768px) {
-            article { padding: 2rem 1.5rem; }
-            header h1 { font-size: 2.2rem; }
-            h1 { font-size: 2rem; }
+        /* ── HERO ── */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, #1a2d4a 100%);
+            color: var(--white);
+            padding: 5rem 1.5rem 4rem;
+            text-align: center;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,153,0,0.15);
+            border: 1px solid rgba(255,153,0,0.35);
+            color: var(--orange);
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            margin-bottom: 1.5rem;
+        }
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 800;
+            letter-spacing: -1px;
+            line-height: 1.15;
+            margin-bottom: 1.25rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .hero h1 em {
+            font-style: normal;
+            color: var(--orange);
+        }
+        .hero p {
+            font-size: 1.15rem;
+            color: rgba(255,255,255,0.7);
+            max-width: 620px;
+            margin: 0 auto 2.5rem;
+            font-weight: 300;
+        }
+        .hero-ctas {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--orange);
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 0.85rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+        }
+        .btn-primary:hover { background: var(--orange-dk); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,153,0,0.35); }
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--white);
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 0.85rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.14); }
+
+        /* ── STATS BAR ── */
+        .stats-bar {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 1.25rem 1.5rem;
+        }
+        .stats-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            flex-wrap: wrap;
+        }
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+        .stat strong { color: var(--text); font-size: 0.92rem; }
+        .stat-dot { width: 8px; height: 8px; background: var(--orange); border-radius: 50%; }
+
+        /* ── LAYOUT ── */
+        .page-wrap {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem 4rem;
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 2.5rem;
+            align-items: start;
+        }
+
+        /* ── ARTICLE ── */
+        .article-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 3rem 3.5rem;
+        }
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .tag {
+            background: var(--blue-lt);
+            color: var(--blue);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+        }
+        .article-card h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.6rem;
+            border-bottom: 3px solid var(--orange);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .article-card h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--blue);
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        .article-card p { margin-bottom: 1.25rem; color: #374151; }
+
+        .step-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--blue);
+            color: #fff;
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            font-size: 0.85rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-card {
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--blue);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .note {
+            background: var(--note-bg);
+            border-left: 5px solid var(--note-bdr);
+            border-radius: 4px;
+            padding: 1.25rem 1.5rem;
+            margin: 2rem 0;
+            font-size: 0.93rem;
+        }
+        .note strong { color: #92400e; }
+
+        code {
+            background: #f1f5f9;
+            color: #be185d;
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+            font-size: 0.875em;
+        }
+
+        /* ── TABLES ── */
+        .table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        th, td { border: 1px solid var(--border); padding: 0.7rem 1rem; text-align: left; }
+        th { background: #f1f5f9; font-weight: 600; color: var(--text); }
+        tr:nth-child(even) td { background: #fafbfc; }
+
+        /* ── CODE BLOCK ── */
+        .code-wrap { margin: 2rem 0; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); }
+        .code-header {
+            background: #1c2333;
+            color: #8b949e;
+            padding: 0.6rem 1.25rem;
+            font-size: 0.82rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-header span:first-child { color: #e3e3e3; font-weight: 500; }
+        .code-body {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+            font-size: 0.87rem;
+            line-height: 1.6;
+        }
+        .code-body .cm  { color: #8b949e; }   /* comment */
+        .code-body .kw  { color: #ff7b72; }   /* keyword / resource */
+        .code-body .str { color: #a5d6ff; }   /* string */
+        .code-body .fn  { color: #d2a8ff; }   /* function / reference */
+        .code-body .num { color: #f8c555; }   /* number */
+
+        /* ── SIDEBAR ── */
+        .sidebar { display: flex; flex-direction: column; gap: 1.25rem; }
+        .sidebar-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        .sidebar-card h4 {
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+        .toc-list { list-style: none; }
+        .toc-list li { border-bottom: 1px solid #f3f4f6; }
+        .toc-list li:last-child { border-bottom: none; }
+        .toc-list a {
+            display: block;
+            padding: 0.5rem 0;
+            font-size: 0.88rem;
+            color: var(--blue);
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+        .toc-list a:hover { color: var(--orange); }
+        .tf-download {
+            background: linear-gradient(135deg, var(--primary), #1a2d4a);
+            color: var(--white);
+            border: none;
+        }
+        .tf-download h4 { color: rgba(255,255,255,0.55); }
+        .tf-download p { font-size: 0.88rem; color: rgba(255,255,255,0.75); margin-bottom: 1.25rem; line-height: 1.5; }
+        .btn-download {
+            display: block;
+            text-align: center;
+            background: var(--orange);
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 0.75rem;
+            border-radius: 7px;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .btn-download:hover { background: var(--orange-dk); }
+        .btn-download-ghost {
+            display: block;
+            text-align: center;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--white);
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 0.65rem;
+            border-radius: 7px;
+            text-decoration: none;
+            margin-top: 0.65rem;
+            transition: background 0.15s;
+        }
+        .btn-download-ghost:hover { background: rgba(255,255,255,0.14); }
+
+        /* ── FOOTER ── */
+        footer {
+            background: var(--nav-bg);
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            padding: 2.5rem 1.5rem;
+            font-size: 0.88rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        footer strong { color: rgba(255,255,255,0.8); }
+        footer a { color: var(--orange); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+            .page-wrap { grid-template-columns: 1fr; }
+            .sidebar { order: -1; display: grid; grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 640px) {
+            .article-card { padding: 1.75rem 1.25rem; }
+            .hero { padding: 3.5rem 1rem 3rem; }
+            .stats-inner { gap: 1.5rem; }
+            .sidebar { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>vCloudOne</h1>
-        <p>Architecting Enterprise SDDC: Amazon EVS Professional Implementation</p>
-    </header>
+<!-- NAV -->
+<nav>
+    <div class="nav-inner">
+        <a href="#" class="nav-logo">
+            <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 3C8.477 3 4 7.477 4 13a9.96 9.96 0 002.05 6.08L4.5 22h5.55A9.96 9.96 0 0014 23c5.523 0 10-4.477 10-10S19.523 3 14 3z" fill="#ff9900" opacity=".15"/>
+                <path d="M6 16.5c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#ff9900" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="14" cy="16.5" r="2.5" fill="#ff9900"/>
+                <path d="M4 20.5h20" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            v<span>Cloud</span>One
+        </a>
+        <div class="nav-links">
+            <a href="#guide">Guide</a>
+            <a href="#terraform">Terraform</a>
+            <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" class="btn-nav" target="_blank" rel="noopener">Download Kit &rarr;</a>
+        </div>
+    </div>
+</nav>
 
-    <div class="container">
-        <article>
-            <h1>Amazon EVS: The Complete Professional Prerequisite Guide</h1>
-            <div class="meta">March 25, 2026 | Deployment & Hybrid Cloud Architecture | VCF 5.x</div>
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-badge">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+        Amazon EVS &bull; VCF 5.x &bull; NSX-T &bull; Terraform
+    </div>
+    <h1>Enterprise SDDC on AWS.<br><em>Done right, the first time.</em></h1>
+    <p>The complete prerequisite guide for deploying VMware Cloud Foundation on Amazon Elastic VMware Service — with production-ready Terraform automation.</p>
+    <div class="hero-ctas">
+        <a href="#guide" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            Read the Guide
+        </a>
+        <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" class="btn-ghost" target="_blank" rel="noopener">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            View on GitHub
+        </a>
+    </div>
+</section>
 
-            <p>Amazon Elastic VMware Service (EVS) enables organizations to run VMware Cloud Foundation (VCF) directly on AWS bare-metal infrastructure. For a successful VCF bring-up, the AWS "underlay" must be precisely architected to handle management, storage, and workload traffic across a complex VLAN structure.</p>
-            
-            <p>This guide provides the exhaustive checklist for networking, DNS, and IP pool planning required for a production-ready EVS Software-Defined Data Center (SDDC).</p>
+<!-- STATS BAR -->
+<div class="stats-bar">
+    <div class="stats-inner">
+        <div class="stat"><span class="stat-dot"></span><strong>4 Phases</strong>&nbsp;Covered</div>
+        <div class="stat"><span class="stat-dot"></span><strong>10 VLANs</strong>&nbsp;Mapped</div>
+        <div class="stat"><span class="stat-dot"></span><strong>5 Terraform</strong>&nbsp;Modules</div>
+        <div class="stat"><span class="stat-dot"></span><strong>VCF 5.x</strong>&nbsp;Compatible</div>
+        <div class="stat"><span class="stat-dot"></span><strong>Production</strong>&nbsp;Ready</div>
+    </div>
+</div>
 
-            <h2><span class="step-num">1</span> Phase 1: Bare-Metal Readiness</h2>
-            
+<!-- MAIN CONTENT -->
+<div class="page-wrap" id="guide">
+
+    <!-- ARTICLE -->
+    <main>
+        <article class="article-card">
+            <div class="article-meta">
+                <span>March 25, 2026</span>
+                <span>&bull;</span>
+                <span class="tag">Deployment</span>
+                <span class="tag">Hybrid Cloud</span>
+                <span class="tag">VMware</span>
+                <span class="tag">AWS EVS</span>
+            </div>
+
+            <h2 id="phase1"><span class="step-num">1</span> Phase 1: Bare-Metal Readiness</h2>
+
             <div class="step-card">
                 <h3>1.1 Validating Instance Quotas</h3>
-                <p>Amazon EVS utilizes the **i4i.metal** instance type. A minimum of **4 nodes** is required for the initial VCF management domain cluster. Ensure your AWS Service Quotas for <code>Running Dedicated i4i.metal Hosts</code> is set to at least 4 per region before proceeding.</p>
+                <p>Amazon EVS utilizes the <strong>i4i.metal</strong> instance type. A minimum of <strong>4 nodes</strong> is required for the initial VCF management domain cluster. Ensure your AWS Service Quotas for <code>Running Dedicated i4i.metal Hosts</code> is set to at least 4 per region before proceeding.</p>
             </div>
 
-            <h2><span class="step-num">2</span> Phase 2: Multi-VLAN Networking (Underlay)</h2>
+            <h2 id="phase2"><span class="step-num">2</span> Phase 2: Multi-VLAN Networking (Underlay)</h2>
 
-            <p>A production EVS environment requires **10 dedicated VLANs/Subnets**. These ranges must be non-overlapping and reserved within your VPC CIDR (typically a /16).</p>
+            <p>A production EVS environment requires <strong>10 dedicated VLANs/Subnets</strong>. These ranges must be non-overlapping and reserved within your VPC CIDR (typically a /16).</p>
 
-            <table class="value-table">
-                <tr><th>VLAN Name</th><th>Description</th><th>Required Size</th><th>Recommended CIDR</th></tr>
-                <tr><td><strong>Management</strong></td><td>ESXi Hosts, vCenter, SDDC Manager</td><td>Min /24</td><td>10.0.10.0/24</td></tr>
-                <tr><td><strong>vMotion</strong></td><td>Live VM Migration Traffic</td><td>Min /24</td><td>10.0.11.0/24</td></tr>
-                <tr><td><strong>vSAN</strong></td><td>Software-Defined Storage Traffic</td><td>Min /24</td><td>10.0.12.0/24</td></tr>
-                <tr><td><strong>Host Overlay (TEP)</strong></td><td>NSX Host Geneve Encapsulation</td><td>Min /24</td><td>10.0.13.0/24</td></tr>
-                <tr><td><strong>Edge Overlay</strong></td><td>NSX Edge Geneve Encapsulation</td><td>Min /24</td><td>10.0.14.0/24</td></tr>
-                <tr><td><strong>Uplink 1</strong></td><td>North-South Traffic (Tier-0)</td><td>Min /27</td><td>10.0.15.0/27</td></tr>
-                <tr><td><strong>Uplink 2</strong></td><td>North-South Traffic (Tier-0 Redundancy)</td><td>Min /27</td><td>10.0.15.32/27</td></tr>
-                <tr><td><strong>Service Access</strong></td><td>AWS Route Server & DNS Resolver endpoints</td><td>Min /28</td><td>10.0.1.0/24</td></tr>
-                <tr><td><strong>HCX Management</strong></td><td>(Optional) HCX Cloud Manager</td><td>Min /28</td><td>10.0.20.0/28</td></tr>
-                <tr><td><strong>HCX Interconnect</strong></td><td>(Optional) HCX Migration Traffic</td><td>Min /28</td><td>10.0.21.0/28</td></tr>
-            </table>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>VLAN Name</th><th>Description</th><th>Required Size</th><th>Recommended CIDR</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Management</strong></td><td>ESXi Hosts, vCenter, SDDC Manager</td><td>Min /24</td><td>10.0.10.0/24</td></tr>
+                        <tr><td><strong>vMotion</strong></td><td>Live VM Migration Traffic</td><td>Min /24</td><td>10.0.11.0/24</td></tr>
+                        <tr><td><strong>vSAN</strong></td><td>Software-Defined Storage Traffic</td><td>Min /24</td><td>10.0.12.0/24</td></tr>
+                        <tr><td><strong>Host Overlay (TEP)</strong></td><td>NSX Host Geneve Encapsulation</td><td>Min /24</td><td>10.0.13.0/24</td></tr>
+                        <tr><td><strong>Edge Overlay</strong></td><td>NSX Edge Geneve Encapsulation</td><td>Min /24</td><td>10.0.14.0/24</td></tr>
+                        <tr><td><strong>Uplink 1</strong></td><td>North-South Traffic (Tier-0)</td><td>Min /27</td><td>10.0.15.0/27</td></tr>
+                        <tr><td><strong>Uplink 2</strong></td><td>North-South Traffic (Tier-0 Redundancy)</td><td>Min /27</td><td>10.0.15.32/27</td></tr>
+                        <tr><td><strong>Service Access</strong></td><td>AWS Route Server &amp; DNS Resolver endpoints</td><td>Min /24</td><td>10.0.1.0/24</td></tr>
+                        <tr><td><strong>HCX Management</strong></td><td>(Optional) HCX Cloud Manager</td><td>Min /28</td><td>10.0.20.0/28</td></tr>
+                        <tr><td><strong>HCX Interconnect</strong></td><td>(Optional) HCX Migration Traffic</td><td>Min /28</td><td>10.0.21.0/28</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
             <div class="note">
-                <strong>Deployment Note:</strong> These VLANs are provisioned during the EVS bring-up process. Only the **Service Access Subnet** should be pre-created manually in the VPC Console.
+                <strong>Deployment Note:</strong> These VLANs are provisioned during the EVS bring-up process. Only the <strong>Service Access Subnet</strong> should be pre-created manually in the VPC Console before initiating bring-up.
             </div>
 
-            <h2><span class="step-num">3</span> Phase 3: Route 53 DNS & Management Resolution</h2>
+            <h2 id="phase3"><span class="step-num">3</span> Phase 3: Route 53 DNS &amp; Management Resolution</h2>
 
-            <p>VCF is highly sensitive to name resolution. You must provision Forward (A) and Reverse (PTR) records for every management appliance and host before the bring-up process begins.</p>
+            <p>VCF is highly sensitive to name resolution. You must provision Forward (A) and Reverse (PTR) records for every management appliance and host <strong>before</strong> the bring-up process begins.</p>
 
-            <table class="value-table">
-                <tr><th>Component</th><th>Forward FQDN (Example)</th><th>Reverse Record (PTR)</th></tr>
-                <tr><td><strong>Cloud Builder</strong></td><td>cloud-builder.vcloudone.internal</td><td>10.0.10.9</td></tr>
-                <tr><td><strong>SDDC Manager</strong></td><td>sddc-manager.vcloudone.internal</td><td>10.0.10.10</td></tr>
-                <tr><td><strong>vCenter Server</strong></td><td>vcenter.vcloudone.internal</td><td>10.0.10.11</td></tr>
-                <tr><td><strong>NSX Manager 01</strong></td><td>nsx-mgr-01.vcloudone.internal</td><td>10.0.10.12</td></tr>
-                <tr><td><strong>NSX Manager 02</strong></td><td>nsx-mgr-02.vcloudone.internal</td><td>10.0.10.13</td></tr>
-                <tr><td><strong>NSX Manager 03</strong></td><td>nsx-mgr-03.vcloudone.internal</td><td>10.0.10.14</td></tr>
-                <tr><td><strong>NSX Edge 01</strong></td><td>nsx-edge-01.vcloudone.internal</td><td>10.0.10.21</td></tr>
-                <tr><td><strong>NSX Edge 02</strong></td><td>nsx-edge-02.vcloudone.internal</td><td>10.0.10.22</td></tr>
-                <tr><td><strong>ESXi Host 01-04</strong></td><td>esxi-0[1-4].vcloudone.internal</td><td>10.0.11.21-24</td></tr>
-                <tr><td><strong>HCX Manager</strong></td><td>(Optional) hcx.vcloudone.internal</td><td>10.0.20.10</td></tr>
-            </table>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Component</th><th>Forward FQDN (Example)</th><th>Reverse PTR IP</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Cloud Builder</strong></td><td>cloud-builder.vcloudone.internal</td><td>10.0.10.9</td></tr>
+                        <tr><td><strong>SDDC Manager</strong></td><td>sddc-manager.vcloudone.internal</td><td>10.0.10.10</td></tr>
+                        <tr><td><strong>vCenter Server</strong></td><td>vcenter.vcloudone.internal</td><td>10.0.10.11</td></tr>
+                        <tr><td><strong>NSX Manager 01</strong></td><td>nsx-mgr-01.vcloudone.internal</td><td>10.0.10.12</td></tr>
+                        <tr><td><strong>NSX Manager 02</strong></td><td>nsx-mgr-02.vcloudone.internal</td><td>10.0.10.13</td></tr>
+                        <tr><td><strong>NSX Manager 03</strong></td><td>nsx-mgr-03.vcloudone.internal</td><td>10.0.10.14</td></tr>
+                        <tr><td><strong>NSX Edge 01</strong></td><td>nsx-edge-01.vcloudone.internal</td><td>10.0.10.21</td></tr>
+                        <tr><td><strong>NSX Edge 02</strong></td><td>nsx-edge-02.vcloudone.internal</td><td>10.0.10.22</td></tr>
+                        <tr><td><strong>ESXi Host 01&ndash;04</strong></td><td>esxi-0[1-4].vcloudone.internal</td><td>10.0.11.21&ndash;24</td></tr>
+                        <tr><td><strong>HCX Manager</strong></td><td>(Optional) hcx.vcloudone.internal</td><td>10.0.20.10</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
-            <h2><span class="step-num">4</span> Phase 4: VPC Route Server & BGP</h2>
+            <h2 id="phase4"><span class="step-num">4</span> Phase 4: VPC Route Server &amp; BGP</h2>
 
             <div class="step-card">
                 <h3>4.1 BGP Peering Configuration</h3>
-                <p>The **VPC Route Server** acts as the BGP bridge between the NSX overlay and the AWS VPC routing table. Associate the Route Server with your <code>evs-underlay-vpc</code> and configure peering with the NSX Edges (using ASN 65000 for the Edge cluster and 64512 for the Route Server).</p>
-                <p><strong>Important:</strong> Enable **Route Propagation** on your VPC Main Route Table so that VMware workload segments are reachable from AWS native services.</p>
+                <p>The <strong>VPC Route Server</strong> acts as the BGP bridge between the NSX overlay and the AWS VPC routing table. Associate the Route Server with your <code>evs-underlay-vpc</code> and configure peering with the NSX Edges using <strong>ASN 65000</strong> for the Edge cluster and <strong>ASN 64512</strong> for the Route Server.</p>
+                <p><strong>Important:</strong> Enable <strong>Route Propagation</strong> on your VPC Main Route Table so that VMware workload segments are reachable from AWS-native services.</p>
             </div>
 
-            <h2>Automation: Advanced Terraform Deployment</h2>
-            <p>The following template automates the VPC, Service Access Subnet, Inbound Resolver, and VPC Route Server setup required for EVS.</p>
+            <h2 id="terraform"><span class="step-num">&#9889;</span> Automation: Terraform Deployment</h2>
 
-            <div class="code-header">
-                <span>main.tf (Full SDDC Underlay)</span>
-                <span>v1.5</span>
+            <p>The following modules are included in the <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit and automate the complete underlay setup.</p>
+
+            <div class="code-wrap">
+                <div class="code-header">
+                    <span>main.tf &mdash; VPC, DNS Resolver, Route Server</span>
+                    <span>v1.5</span>
+                </div>
+                <div class="code-body"><pre><span class="cm"># 1. Create Base VPC Underlay</span>
+<span class="kw">resource</span> <span class="str">"aws_vpc"</span> <span class="str">"evs_vpc"</span> {
+  cidr_block           = var.vpc_cidr
+  enable_dns_hostnames = <span class="num">true</span>
+  enable_dns_support   = <span class="num">true</span>
+  tags = { Name = <span class="str">"evs-vpc"</span> }
+}
+
+<span class="cm"># 2. Inbound DNS Resolver for SDDC Components</span>
+<span class="kw">resource</span> <span class="str">"aws_route53_resolver_endpoint"</span> <span class="str">"evs_dns"</span> {
+  name               = <span class="str">"evs-dns-resolver"</span>
+  direction          = <span class="str">"INBOUND"</span>
+  security_group_ids = [<span class="fn">aws_security_group.dns_sg.id</span>]
+
+  ip_address { subnet_id = <span class="fn">aws_subnet.service_access.id</span>; ip = <span class="str">"10.0.1.100"</span> }
+  ip_address { subnet_id = <span class="fn">aws_subnet.service_access.id</span>; ip = <span class="str">"10.0.1.110"</span> }
+}
+
+<span class="cm"># 3. VPC Route Server for NSX Edge BGP Peering</span>
+<span class="kw">resource</span> <span class="str">"aws_vpc_route_server"</span> <span class="str">"evs_rs"</span> {
+  amazon_side_asn = <span class="num">64512</span>
+}
+
+<span class="kw">resource</span> <span class="str">"aws_vpc_route_server_peer"</span> <span class="str">"nsx_edge_01"</span> {
+  route_server_id = <span class="fn">aws_vpc_route_server.evs_rs.route_server_id</span>
+  peer_address    = <span class="str">"10.0.10.251"</span>
+  bgp_options { peer_asn = <span class="num">65000</span> }
+}
+
+<span class="kw">resource</span> <span class="str">"aws_vpc_route_server_peer"</span> <span class="str">"nsx_edge_02"</span> {
+  route_server_id = <span class="fn">aws_vpc_route_server.evs_rs.route_server_id</span>
+  peer_address    = <span class="str">"10.0.10.252"</span>
+  bgp_options { peer_asn = <span class="num">65000</span> }
+}</pre></div>
             </div>
-            <div class="code-block">
-<pre>
-# 1. Create Base VPC Underlay
-resource "aws_vpc" "evs_vpc" {
-  cidr_block = "10.0.0.0/16"
-  enable_dns_hostnames = true
-  enable_dns_support = true
+
+            <div class="code-wrap">
+                <div class="code-header">
+                    <span>dns.tf &mdash; Route 53 Private Zones &amp; Records</span>
+                    <span>v1.5</span>
+                </div>
+                <div class="code-body"><pre><span class="cm"># Forward Zone</span>
+<span class="kw">resource</span> <span class="str">"aws_route53_zone"</span> <span class="str">"forward"</span> {
+  name = var.domain_name
+  vpc { vpc_id = <span class="fn">aws_vpc.evs_vpc.id</span> }
 }
 
-# 2. Inbound DNS Resolver for SDDC Components
-resource "aws_route53_resolver_endpoint" "evs_dns" {
-  direction = "INBOUND"
-  security_group_ids = [aws_security_group.dns_sg.id]
-  ip_address { subnet_id = aws_subnet.service_access.id; ip = "10.0.1.100" }
-  ip_address { subnet_id = aws_subnet.service_access.id; ip = "10.0.1.110" }
+<span class="cm"># A Records — dynamically built from vcf_components variable</span>
+<span class="kw">resource</span> <span class="str">"aws_route53_record"</span> <span class="str">"vcf_a"</span> {
+  for_each = var.vcf_components
+  zone_id  = <span class="fn">aws_route53_zone.forward.zone_id</span>
+  name     = <span class="str">"${each.key}.${var.domain_name}"</span>
+  type     = <span class="str">"A"</span>
+  ttl      = <span class="num">300</span>
+  records  = [each.value]
 }
 
-# 3. VPC Route Server for NSX Edge Peering
-resource "aws_vpc_route_server" "evs_rs" {
-  amazon_side_asn = 64512
-}
-
-resource "aws_vpc_route_server_peer" "nsx_edge_01" {
-  route_server_id = aws_vpc_route_server.evs_rs.route_server_id
-  peer_address = "10.0.10.251"
-  bgp_options { peer_asn = 65000 }
-}
-</pre>
-            </div>
-
-            <div class="download-section">
-                <h3>Download Enterprise EVS Kit</h3>
-                <p>Access the full modular Terraform project for DNS, Peering, IAM, and Networking.</p>
-                <a href="https://github.com/gitvcloudone/website/archive/refs/heads/main.zip" class="btn">Download Deployment Project (.zip)</a>
+<span class="cm"># PTR Records — extracts last octet from IP automatically</span>
+<span class="kw">resource</span> <span class="str">"aws_route53_record"</span> <span class="str">"vcf_ptr"</span> {
+  for_each = var.vcf_components
+  zone_id  = <span class="fn">aws_route53_zone.mgmt_reverse.zone_id</span>
+  name     = <span class="str">"${element(split(".", each.value), 3)}.10.0.10.in-addr.arpa."</span>
+  type     = <span class="str">"PTR"</span>
+  ttl      = <span class="num">300</span>
+  records  = [<span class="str">"${each.key}.${var.domain_name}."</span>]
+}</pre></div>
             </div>
 
         </article>
-    </div>
+    </main>
 
-    <footer>
-        <p>&copy; 2026 vCloudOne | Architected for Enterprise | VMware Cloud on AWS Native Integration</p>
-    </footer>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="sidebar-card">
+            <h4>On This Page</h4>
+            <ul class="toc-list">
+                <li><a href="#phase1">Phase 1: Bare-Metal Readiness</a></li>
+                <li><a href="#phase2">Phase 2: Multi-VLAN Networking</a></li>
+                <li><a href="#phase3">Phase 3: Route 53 DNS</a></li>
+                <li><a href="#phase4">Phase 4: BGP &amp; Route Server</a></li>
+                <li><a href="#terraform">Terraform Automation</a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-card tf-download">
+            <h4>Terraform Kit</h4>
+            <p>Complete modular project: VPC underlay, DNS private zones, BGP peering, IAM service-linked role, and DHCP options.</p>
+            <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform/archive/refs/heads/main.zip" class="btn-download">
+                &#8595; Download .zip
+            </a>
+            <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" class="btn-download-ghost" target="_blank" rel="noopener">
+                View on GitHub &rarr;
+            </a>
+        </div>
+
+        <div class="sidebar-card">
+            <h4>Modules Included</h4>
+            <ul style="list-style:none;font-size:0.87rem;color:#374151;display:flex;flex-direction:column;gap:0.5rem;">
+                <li>&#10003;&nbsp; <strong>main.tf</strong> — VPC + Service Subnet</li>
+                <li>&#10003;&nbsp; <strong>dns.tf</strong> — Route 53 A/PTR Records</li>
+                <li>&#10003;&nbsp; <strong>peering.tf</strong> — Route Server &amp; BGP</li>
+                <li>&#10003;&nbsp; <strong>variables.tf</strong> — IP/Domain Config</li>
+                <li>&#10003;&nbsp; <strong>outputs.tf</strong> — Resource IDs</li>
+            </ul>
+        </div>
+
+    </aside>
+</div>
+
+<!-- FOOTER -->
+<footer>
+    <p>&copy; 2026 <strong>vCloudOne</strong> &mdash; Architected for Enterprise &mdash;
+        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">GitHub</a>
+    </p>
+</footer>
 
 </body>
 </html>
