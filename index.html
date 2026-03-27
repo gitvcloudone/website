@@ -83,7 +83,7 @@
             <div class="step-card">
                 <h3>1.1 Validating Instance Quotas</h3>
                 <p><strong>Path:</strong> <span class="console-path">Console > Service Quotas > AWS Services > Amazon EC2</span></p>
-                <p>Search for **"Running Dedicated i3.metal Hosts"**. Verify that the "Applied quota value" is at least **3** (the minimum for a production management cluster). For modern high-performance workloads, ensure you also check quotas for **i3en.metal** or **i4i.metal** if supported in your target region.</p>
+                <p>Amazon EVS utilizes the **i4i.metal** instance type. This storage-optimized bare-metal instance is powered by 3rd Gen Intel Xeon Scalable processors. Verify that your account has a quota of at least **4** (required for the VCF management domain) in your target region.</p>
             </div>
 
             <div class="step-card">
@@ -111,11 +111,12 @@
                 <h3>2.2 Reserved IP Pools for VLANs</h3>
                 <p>During SDDC bring-up, you must provide non-overlapping CIDR blocks for the following VMware-managed networks. These should **not** be created as VPC subnets, but rather reserved for EVS use:</p>
                 <table class="value-table">
-                    <tr><th>VLAN Type</th><th>Required CIDR Size</th><th>Example Range</th></tr>
+                    <tr><th>VLAN Type</th><th>Required CIDR Size</th><th>Recommended Range</th></tr>
                     <tr><td>Management VLAN</td><td>Min /24</td><td>10.0.10.0/24</td></tr>
                     <tr><td>vMotion VLAN</td><td>Min /24</td><td>10.0.11.0/24</td></tr>
                     <tr><td>vSAN VLAN</td><td>Min /24</td><td>10.0.12.0/24</td></tr>
-                    <tr><td>NSX-T Overlay (TEP)</td><td>Min /24</td><td>10.0.13.0/24</td></tr>
+                    <tr><td>NSX-T Host Overlay (TEP)</td><td>Min /24</td><td>10.0.13.0/24</td></tr>
+                    <tr><td>NSX-T Edge Overlay</td><td>Min /24</td><td>10.0.14.0/24</td></tr>
                 </table>
             </div>
 
@@ -125,13 +126,18 @@
 
             <div class="step-card">
                 <h3>3.1 Mandatory DNS Records</h3>
-                <p>Create a **Private Hosted Zone** (e.g., <code>vcloudone.internal</code>) and associate it with your EVS VPC. The following records are mandatory:</p>
+                <p>Create a **Private Hosted Zone** (e.g., <code>vcloudone.internal</code>) and associate it with your EVS VPC. The following records must be manually provisioned before deployment:</p>
                 <table class="value-table">
                     <tr><th>Component</th><th>Forward Record (A)</th><th>Reverse Record (PTR)</th></tr>
                     <tr><td>SDDC Manager</td><td>sddc-manager.vcloudone.internal</td><td>10.0.10.10</td></tr>
                     <tr><td>vCenter Server</td><td>vcenter.vcloudone.internal</td><td>10.0.10.11</td></tr>
                     <tr><td>NSX Manager 01</td><td>nsx-mgr-01.vcloudone.internal</td><td>10.0.10.12</td></tr>
+                    <tr><td>NSX Manager 02</td><td>nsx-mgr-02.vcloudone.internal</td><td>10.0.10.13</td></tr>
+                    <tr><td>NSX Manager 03</td><td>nsx-mgr-03.vcloudone.internal</td><td>10.0.10.14</td></tr>
                     <tr><td>ESXi Host 01</td><td>esxi-01.vcloudone.internal</td><td>10.0.11.21</td></tr>
+                    <tr><td>ESXi Host 02</td><td>esxi-02.vcloudone.internal</td><td>10.0.11.22</td></tr>
+                    <tr><td>ESXi Host 03</td><td>esxi-03.vcloudone.internal</td><td>10.0.11.23</td></tr>
+                    <tr><td>ESXi Host 04</td><td>esxi-04.vcloudone.internal</td><td>10.0.11.24</td></tr>
                 </table>
             </div>
 
@@ -150,7 +156,7 @@
                     <li><strong>Peer 1 IP:</strong> 10.0.10.251 (ASN: 65000)</li>
                     <li><strong>Peer 2 IP:</strong> 10.0.10.252 (ASN: 65000)</li>
                 </ul>
-                <p><strong>Crucial:</strong> Enable **Route Propagation** on the VPC Route Table to allow VMware overlay routes to populate automatically.</p>
+                <p><strong>Crucial:</strong> Enable **Route Propagation** on the VPC Route Table to allow VMware overlay routes to populate automatically from the NSX Edges.</p>
             </div>
 
             <h2>Automation: Professional Terraform Template</h2>
@@ -158,7 +164,7 @@
 
             <div class="code-header">
                 <span>main.tf (Production-Grade)</span>
-                <span>v1.3</span>
+                <span>v1.4</span>
             </div>
             <div class="code-block">
 <pre>
