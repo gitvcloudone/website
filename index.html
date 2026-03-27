@@ -946,120 +946,7 @@ aws ec2 describe-capacity-reservations \
             <!-- TERRAFORM -->
             <h2 id="terraform"><span class="step-num">&#9889;</span> Automation: Terraform Deployment</h2>
 
-            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Phases 3&ndash;7: VPC creation, DNS resolver endpoints, Route 53 records, Route Server, and DHCP Options Set.</p>
-
-            <div class="code-wrap">
-                <div class="code-header"><span>main.tf &mdash; VPC, DNS Resolver, DHCP, Route Server</span><span>v1.5</span></div>
-                <div class="code-body"><pre><span class="cm"># Phase 3 — VPC</span>
-<span class="kw">resource</span> <span class="str">"aws_vpc"</span> <span class="str">"evs_vpc"</span> {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = <span class="num">true</span>
-  enable_dns_support   = <span class="num">true</span>
-  tags = { Name = <span class="str">"evs-vpc"</span> }
-}
-
-<span class="cm"># Phase 5 — DHCP Options Set</span>
-<span class="kw">resource</span> <span class="str">"aws_vpc_dhcp_options"</span> <span class="str">"evs_dhcp"</span> {
-  domain_name         = var.domain_name
-  domain_name_servers = [<span class="str">"10.0.0.10"</span>, <span class="str">"10.0.0.11"</span>]
-  ntp_servers         = [<span class="str">"169.254.169.123"</span>]
-  tags = { Name = <span class="str">"evs-dhcp-options"</span> }
-}
-<span class="kw">resource</span> <span class="str">"aws_vpc_dhcp_options_association"</span> <span class="str">"evs"</span> {
-  vpc_id          = <span class="fn">aws_vpc.evs_vpc.id</span>
-  dhcp_options_id = <span class="fn">aws_vpc_dhcp_options.evs_dhcp.id</span>
-}
-
-<span class="cm"># Phase 6 — Service Access Subnet</span>
-<span class="kw">resource</span> <span class="str">"aws_subnet"</span> <span class="str">"service_access"</span> {
-  vpc_id            = <span class="fn">aws_vpc.evs_vpc.id</span>
-  cidr_block        = var.service_access_cidr
-  availability_zone = var.az
-  tags = { Name = <span class="str">"evs-service-access"</span> }
-}
-
-<span class="cm"># Phase 4 — Route 53 Inbound Resolvers</span>
-<span class="kw">resource</span> <span class="str">"aws_route53_resolver_endpoint"</span> <span class="str">"evs_dns_1"</span> {
-  name               = <span class="str">"evs-dns-resolver-1"</span>
-  direction          = <span class="str">"INBOUND"</span>
-  security_group_ids = [<span class="fn">aws_security_group.dns_sg.id</span>]
-  ip_address { subnet_id = <span class="fn">aws_subnet.service_access.id</span>; ip = <span class="str">"10.0.0.10"</span> }
-}
-<span class="kw">resource</span> <span class="str">"aws_route53_resolver_endpoint"</span> <span class="str">"evs_dns_2"</span> {
-  name               = <span class="str">"evs-dns-resolver-2"</span>
-  direction          = <span class="str">"INBOUND"</span>
-  security_group_ids = [<span class="fn">aws_security_group.dns_sg.id</span>]
-  ip_address { subnet_id = <span class="fn">aws_subnet.service_access.id</span>; ip = <span class="str">"10.0.0.11"</span> }
-}
-
-<span class="cm"># Phase 7 — VPC Route Server</span>
-<span class="kw">resource</span> <span class="str">"aws_vpc_route_server"</span> <span class="str">"evs_rs"</span> {
-  amazon_side_asn  = <span class="num">65100</span>
-  persist_routes   = <span class="str">"enable"</span>
-  persist_routes_duration = <span class="num">2</span>
-}
-<span class="kw">resource</span> <span class="str">"aws_vpc_route_server_peer"</span> <span class="str">"nsx_edge_01"</span> {
-  route_server_id = <span class="fn">aws_vpc_route_server.evs_rs.route_server_id</span>
-  peer_address    = <span class="str">"10.0.16.10"</span>
-  bgp_options { peer_asn = <span class="num">65000</span> }
-}
-<span class="kw">resource</span> <span class="str">"aws_vpc_route_server_peer"</span> <span class="str">"nsx_edge_02"</span> {
-  route_server_id = <span class="fn">aws_vpc_route_server.evs_rs.route_server_id</span>
-  peer_address    = <span class="str">"10.0.16.11"</span>
-  bgp_options { peer_asn = <span class="num">65000</span> }
-}
-
-<span class="cm"># Phase 9 — On-Demand Capacity Reservation</span>
-<span class="kw">resource</span> <span class="str">"aws_ec2_capacity_reservation"</span> <span class="str">"evs_hosts"</span> {
-  instance_type           = <span class="str">"i4i.metal"</span>
-  instance_platform       = <span class="str">"Linux/UNIX"</span>
-  availability_zone       = var.az
-  instance_count          = <span class="num">4</span>
-  instance_match_criteria = <span class="str">"targeted"</span>
-  tags = { Name = <span class="str">"evs-odcr"</span> }
-}
-
-<span class="cm"># IAM — EVS Service-Linked Role</span>
-<span class="kw">resource</span> <span class="str">"aws_iam_service_linked_role"</span> <span class="str">"evs"</span> {
-  aws_service_name = <span class="str">"evs.amazonaws.com"</span>
-}</pre></div>
-            </div>
-
-            <div class="code-wrap">
-                <div class="code-header"><span>dns.tf &mdash; Private Zone, A Records, PTR Records</span><span>v1.5</span></div>
-                <div class="code-body"><pre><span class="kw">resource</span> <span class="str">"aws_route53_zone"</span> <span class="str">"forward"</span> {
-  name = var.domain_name
-  vpc { vpc_id = <span class="fn">aws_vpc.evs_vpc.id</span> }
-}
-<span class="kw">resource</span> <span class="str">"aws_route53_zone"</span> <span class="str">"mgmt_reverse"</span> {
-  name = <span class="str">"10.0.10.in-addr.arpa"</span>
-  vpc { vpc_id = <span class="fn">aws_vpc.evs_vpc.id</span> }
-}
-<span class="kw">resource</span> <span class="str">"aws_route53_zone"</span> <span class="str">"vm_reverse"</span> {
-  name = <span class="str">"11.0.10.in-addr.arpa"</span>
-  vpc { vpc_id = <span class="fn">aws_vpc.evs_vpc.id</span> }
-}
-
-<span class="cm"># A Records (ESXi hosts + VCF appliances, built from variables)</span>
-<span class="kw">resource</span> <span class="str">"aws_route53_record"</span> <span class="str">"vcf_a"</span> {
-  for_each = var.vcf_components
-  zone_id  = <span class="fn">aws_route53_zone.forward.zone_id</span>
-  name     = <span class="str">"${each.key}.${var.domain_name}"</span>
-  type     = <span class="str">"A"</span>; ttl = <span class="num">300</span>; records = [each.value]
-}
-
-<span class="cm"># PTR Records (auto-extracts last octet from each IP)</span>
-<span class="kw">resource</span> <span class="str">"aws_route53_record"</span> <span class="str">"vcf_ptr"</span> {
-  for_each = var.vcf_components
-  zone_id  = <span class="fn">aws_route53_zone.mgmt_reverse.zone_id</span>
-  name     = <span class="str">"${element(split(".", each.value), 3)}.10.0.10.in-addr.arpa."</span>
-  type     = <span class="str">"PTR"</span>; ttl = <span class="num">300</span>
-  records  = [<span class="str">"${each.key}.${var.domain_name}."</span>]
-}</pre></div>
-            </div>
-            <h2 id="terraform"><span class="step-num">&#9889;</span> Automation: Terraform Deployment</h2>
-
-            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Phases 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options set, service access subnet with explicit route table, and Route Server with BGP peers. Download and run <code>terraform apply</code> — all defaults are production-ready and match the IP plan in this guide.</p>
+            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Phases 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options set, service access subnet with explicit route table, and Route Server with BGP peers. Phase 9 (ODCR) is included in <code>odcr.tf</code> as commented-out code — uncomment to enable. Download and run <code>terraform apply</code> — all defaults are production-ready and match the IP plan in this guide.</p>
 
             <div class="code-wrap">
                 <div class="code-header"><span>main.tf &mdash; VPC, Subnet, Route Table, Resolvers, DHCP, SLR</span><span>v2.0</span></div>
@@ -1088,19 +975,16 @@ aws ec2 describe-capacity-reservations \
   route_table_id = <span class="fn">aws_route_table.service_access.id</span>
 }
 
-<span class="cm"># Phase 4 — Two Route 53 Resolver inbound endpoints (primary + secondary DNS)
+<span class="cm"># Phase 4 — Route 53 Inbound Resolver Endpoint
+# AWS requires a minimum of 2 IPs per resolver endpoint.
 # Explicit IPs (not dynamic lookup) ensure stable ordering in DHCP options.</span>
-<span class="kw">resource</span> <span class="str">"aws_route53_resolver_endpoint"</span> <span class="str">"evs_dns_1"</span> {
-  name               = <span class="str">"evs-dns-resolver-1"</span>
+<span class="kw">resource</span> <span class="str">"aws_route53_resolver_endpoint"</span> <span class="str">"evs_dns"</span> {
+  name               = <span class="str">"evs-dns-resolver"</span>
   direction          = <span class="str">"INBOUND"</span>
   security_group_ids = [<span class="fn">aws_security_group.dns_sg.id</span>]
   ip_address { subnet_id = <span class="fn">aws_subnet.service_access.id</span>; ip = var.resolver_ip_1 }
-}
-<span class="kw">resource</span> <span class="str">"aws_route53_resolver_endpoint"</span> <span class="str">"evs_dns_2"</span> {
-  name               = <span class="str">"evs-dns-resolver-2"</span>
-  direction          = <span class="str">"INBOUND"</span>
-  security_group_ids = [<span class="fn">aws_security_group.dns_sg.id</span>]
   ip_address { subnet_id = <span class="fn">aws_subnet.service_access.id</span>; ip = var.resolver_ip_2 }
+  tags = { Name = <span class="str">"evs-dns-resolver"</span> }
 }
 
 <span class="cm"># Phase 5 — DHCP Options Set
@@ -1119,7 +1003,21 @@ aws ec2 describe-capacity-reservations \
 <span class="cm"># Phase 2 — EVS Service-Linked Role</span>
 <span class="kw">resource</span> <span class="str">"aws_iam_service_linked_role"</span> <span class="str">"evs"</span> {
   aws_service_name = <span class="str">"evs.amazonaws.com"</span>
-}</pre></div>
+}
+
+<span class="cm"># Phase 9 — On-Demand Capacity Reservation (ODCR) — uncomment to enable
+# Requires EC2 vCPU quota ≥ 512 (4 × i4i.metal × 128 vCPUs).
+# instance_match_criteria = "targeted" means only launches that explicitly
+# reference this reservation ID will consume capacity.
+#
+# resource "aws_ec2_capacity_reservation" "evs_hosts" {
+#   instance_type           = "i4i.metal"
+#   instance_platform       = "Linux/UNIX"
+#   availability_zone       = var.az
+#   instance_count          = 4
+#   instance_match_criteria = "targeted"
+#   tags                    = { Name = "evs-odcr" }
+# }</span></pre></div>
             </div>
 
             <div class="code-wrap">
@@ -1252,7 +1150,7 @@ aws ec2 describe-capacity-reservations \
 
         <div class="sidebar-card tf-download">
             <h4>Terraform Kit</h4>
-            <p>Automates Phases 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options, and Route Server.</p>
+            <p>Automates Phases 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options, and Route Server. ODCR (Phase 9) included as commented-out code.</p>
             <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform/archive/refs/heads/main.zip" class="btn-download">
                 &#8595; Download .zip
             </a>
