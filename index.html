@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vCloudOne | Amazon EVS Prerequisites & Automation</title>
+    <style>
+        :root {
+            --primary: #232f3e;
+            --secondary: #ff9900;
+            --text: #333;
+            --light: #f4f4f4;
+            --white: #fff;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--light);
+        }
+
+        header {
+            background-color: var(--primary);
+            color: var(--white);
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background: var(--white);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+
+        article {
+            padding: 2rem;
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--secondary);
+            display: inline-block;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+        }
+
+        ul {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .code-block {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .code-block::before {
+            content: "Terraform";
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--secondary);
+            color: var(--primary);
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-bottom-left-radius: 6px;
+            font-weight: bold;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #777;
+            font-size: 0.9rem;
+        }
+
+        .highlight {
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.8rem; }
+            .container { margin: 1rem auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>vCloudOne</h1>
+        <p>Expert Insights into AWS Cloud and VMware Virtualization</p>
+    </header>
+
+    <div class="container">
+        <article>
+            <h1>Mastering Amazon EVS: Prerequisites and Automation</h1>
+            <p>Posted on March 25, 2026</p>
+
+            <p>Amazon Elastic VMware Service (EVS) is a game-changer for enterprises looking to lift-and-shift their VMware workloads to AWS. Unlike traditional managed services, EVS gives you full administrative control over the VMware stack while leveraging the scale and elasticity of the AWS Cloud. However, success starts with a rock-solid foundation.</p>
+
+            <h2>Understanding the Prerequisites</h2>
+            <p>Before you deploy your first EVS environment, you must prepare your AWS infrastructure. The most critical component is the <span class="highlight">VPC Underlay</span>.</p>
+            <ul>
+                <li><strong>Dedicated VPC:</strong> A large CIDR (e.g., /16) is recommended to accommodate both AWS native services and VMware management VLANs.</li>
+                <li><strong>Service Access Subnet:</strong> A subnet (minimum /28) in your target AZ to host the VPC Route Server endpoints.</li>
+                <li><strong>Reserved VLAN CIDRs:</strong> You must identify four non-overlapping CIDR blocks (/28 to /24) for Host Management, vMotion, vSAN, and NSX Uplinks.</li>
+                <li><strong>DNS & NTP:</strong> A custom DHCP Option Set pointing to Route 53 Inbound Resolvers and the Amazon Time Sync Service.</li>
+            </ul>
+
+            <h2>Automation with Terraform</h2>
+            <p>Manually configuring these networking components is prone to error. We recommend using <span class="highlight">Terraform</span> to ensure a repeatable and consistent deployment environment.</p>
+
+            <h3>1. The VPC Infrastructure</h3>
+            <p>This template creates the base VPC and the necessary Service Access Subnet required for the EVS Route Server.</p>
+
+            <div class="code-block">
+<pre>
+resource "aws_vpc" "evs_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Name = "evs-underlay-vpc"
+  }
+}
+
+resource "aws_subnet" "service_access" {
+  vpc_id            = aws_vpc.evs_vpc.id
+  cidr_block        = "10.0.0.0/28"
+  availability_zone = "us-west-2a"
+
+  tags = {
+    Name = "evs-service-access-subnet"
+  }
+}
+</pre>
+            </div>
+
+            <h3>2. VPC Route Server & Propagation</h3>
+            <p>The Route Server is the "bridge" between the VMware NSX overlay and your AWS VPC routing table.</p>
+
+            <div class="code-block">
+<pre>
+# Example of enabling route propagation for EVS
+resource "aws_vpn_gateway" "evs_gateway" {
+  vpc_id = aws_vpc.evs_vpc.id
+}
+
+resource "aws_vpn_gateway_route_propagation" "evs_propagation" {
+  vpn_gateway_id = aws_vpn_gateway.evs_gateway.id
+  route_table_id = aws_vpc.evs_vpc.main_route_table_id
+}
+</pre>
+            </div>
+
+            <h2>Conclusion</h2>
+            <p>Amazon EVS offers unparalleled flexibility for VMware administrators, but it requires a disciplined approach to networking. By automating the underlay with Terraform, you reduce the risk of configuration drift and accelerate your journey to a hybrid cloud environment.</p>
+            <p>Stay tuned for our next post where we will dive into the EVS deployment process itself!</p>
+        </article>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 vCloudOne. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
