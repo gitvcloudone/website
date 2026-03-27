@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vCloudOne | Amazon EVS: Technical Prerequisite & Deployment Guide</title>
+    <title>vCloudOne | Amazon EVS: Enterprise SDDC Implementation Guide</title>
     <style>
         :root {
             --primary: #232f3e;
@@ -24,7 +24,7 @@
         header h1 { font-size: 2.8rem; margin-bottom: 0.5rem; letter-spacing: -1px; }
         header p { font-size: 1.2rem; opacity: 0.8; font-weight: 300; }
 
-        .container { max-width: 1100px; margin: -2rem auto 3rem; padding: 0 1.5rem; }
+        .container { max-width: 1200px; margin: -2rem auto 3rem; padding: 0 1.5rem; }
         article { background: var(--white); padding: 4rem; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
         
         h1 { font-size: 2.8rem; margin-bottom: 1rem; color: var(--primary); }
@@ -66,130 +66,100 @@
 
     <header>
         <h1>vCloudOne</h1>
-        <p>Architecting Enterprise SDDC: Amazon EVS Professional Guide</p>
+        <p>Architecting Enterprise SDDC: Amazon EVS Professional Implementation</p>
     </header>
 
     <div class="container">
         <article>
-            <h1>Mastering Amazon EVS: Comprehensive Prerequisite Guide</h1>
-            <div class="meta">March 25, 2026 | Deployment & Hybrid Cloud Architecture</div>
+            <h1>Amazon EVS: The Complete Professional Prerequisite Guide</h1>
+            <div class="meta">March 25, 2026 | Deployment & Hybrid Cloud Architecture | VCF 5.x</div>
 
-            <p>Amazon Elastic VMware Service (EVS) enables organizations to run VMware Cloud Foundation (VCF) directly on AWS bare-metal infrastructure. A successful Software-Defined Data Center (SDDC) deployment depends on a precisely configured AWS "underlay" networking and identity foundation.</p>
+            <p>Amazon Elastic VMware Service (EVS) enables organizations to run VMware Cloud Foundation (VCF) directly on AWS bare-metal infrastructure. For a successful VCF bring-up, the AWS "underlay" must be precisely architected to handle management, storage, and workload traffic across a complex VLAN structure.</p>
             
-            <p>This guide details the mandatory manual configuration steps required before initiating an SDDC bring-up, including instance validation, networking, DNS, and IP pool planning.</p>
+            <p>This guide provides the exhaustive checklist for networking, DNS, and IP pool planning required for a production-ready EVS Software-Defined Data Center (SDDC).</p>
 
-            <h2><span class="step-num">1</span> Phase 1: Capacity & IAM Readiness</h2>
+            <h2><span class="step-num">1</span> Phase 1: Bare-Metal Readiness</h2>
             
             <div class="step-card">
                 <h3>1.1 Validating Instance Quotas</h3>
-                <p><strong>Path:</strong> <span class="console-path">Console > Service Quotas > AWS Services > Amazon EC2</span></p>
-                <p>Amazon EVS utilizes the **i4i.metal** instance type. This storage-optimized bare-metal instance is powered by 3rd Gen Intel Xeon Scalable processors. Verify that your account has a quota of at least **4** (required for the VCF management domain) in your target region.</p>
+                <p>Amazon EVS utilizes the **i4i.metal** instance type. A minimum of **4 nodes** is required for the initial VCF management domain cluster. Ensure your AWS Service Quotas for <code>Running Dedicated i4i.metal Hosts</code> is set to at least 4 per region before proceeding.</p>
             </div>
+
+            <h2><span class="step-num">2</span> Phase 2: Multi-VLAN Networking (Underlay)</h2>
+
+            <p>A production EVS environment requires **10 dedicated VLANs/Subnets**. These ranges must be non-overlapping and reserved within your VPC CIDR (typically a /16).</p>
+
+            <table class="value-table">
+                <tr><th>VLAN Name</th><th>Description</th><th>Required Size</th><th>Recommended CIDR</th></tr>
+                <tr><td><strong>Management</strong></td><td>ESXi Hosts, vCenter, SDDC Manager</td><td>Min /24</td><td>10.0.10.0/24</td></tr>
+                <tr><td><strong>vMotion</strong></td><td>Live VM Migration Traffic</td><td>Min /24</td><td>10.0.11.0/24</td></tr>
+                <tr><td><strong>vSAN</strong></td><td>Software-Defined Storage Traffic</td><td>Min /24</td><td>10.0.12.0/24</td></tr>
+                <tr><td><strong>Host Overlay (TEP)</strong></td><td>NSX Host Geneve Encapsulation</td><td>Min /24</td><td>10.0.13.0/24</td></tr>
+                <tr><td><strong>Edge Overlay</strong></td><td>NSX Edge Geneve Encapsulation</td><td>Min /24</td><td>10.0.14.0/24</td></tr>
+                <tr><td><strong>Uplink 1</strong></td><td>North-South Traffic (Tier-0)</td><td>Min /27</td><td>10.0.15.0/27</td></tr>
+                <tr><td><strong>Uplink 2</strong></td><td>North-South Traffic (Tier-0 Redundancy)</td><td>Min /27</td><td>10.0.15.32/27</td></tr>
+                <tr><td><strong>Service Access</strong></td><td>AWS Route Server & DNS Resolver endpoints</td><td>Min /28</td><td>10.0.1.0/24</td></tr>
+                <tr><td><strong>HCX Management</strong></td><td>(Optional) HCX Cloud Manager</td><td>Min /28</td><td>10.0.20.0/28</td></tr>
+                <tr><td><strong>HCX Interconnect</strong></td><td>(Optional) HCX Migration Traffic</td><td>Min /28</td><td>10.0.21.0/28</td></tr>
+            </table>
+
+            <div class="note">
+                <strong>Deployment Note:</strong> These VLANs are provisioned during the EVS bring-up process. Only the **Service Access Subnet** should be pre-created manually in the VPC Console.
+            </div>
+
+            <h2><span class="step-num">3</span> Phase 3: Route 53 DNS & Management Resolution</h2>
+
+            <p>VCF is highly sensitive to name resolution. You must provision Forward (A) and Reverse (PTR) records for every management appliance and host before the bring-up process begins.</p>
+
+            <table class="value-table">
+                <tr><th>Component</th><th>Forward FQDN (Example)</th><th>Reverse Record (PTR)</th></tr>
+                <tr><td><strong>Cloud Builder</strong></td><td>cloud-builder.vcloudone.internal</td><td>10.0.10.9</td></tr>
+                <tr><td><strong>SDDC Manager</strong></td><td>sddc-manager.vcloudone.internal</td><td>10.0.10.10</td></tr>
+                <tr><td><strong>vCenter Server</strong></td><td>vcenter.vcloudone.internal</td><td>10.0.10.11</td></tr>
+                <tr><td><strong>NSX Manager 01</strong></td><td>nsx-mgr-01.vcloudone.internal</td><td>10.0.10.12</td></tr>
+                <tr><td><strong>NSX Manager 02</strong></td><td>nsx-mgr-02.vcloudone.internal</td><td>10.0.10.13</td></tr>
+                <tr><td><strong>NSX Manager 03</strong></td><td>nsx-mgr-03.vcloudone.internal</td><td>10.0.10.14</td></tr>
+                <tr><td><strong>NSX Edge 01</strong></td><td>nsx-edge-01.vcloudone.internal</td><td>10.0.10.21</td></tr>
+                <tr><td><strong>NSX Edge 02</strong></td><td>nsx-edge-02.vcloudone.internal</td><td>10.0.10.22</td></tr>
+                <tr><td><strong>ESXi Host 01-04</strong></td><td>esxi-0[1-4].vcloudone.internal</td><td>10.0.11.21-24</td></tr>
+                <tr><td><strong>HCX Manager</strong></td><td>(Optional) hcx.vcloudone.internal</td><td>10.0.20.10</td></tr>
+            </table>
+
+            <h2><span class="step-num">4</span> Phase 4: VPC Route Server & BGP</h2>
 
             <div class="step-card">
-                <h3>1.2 Provisioning the Service-Linked Role (SLR)</h3>
-                <p><strong>Path:</strong> <span class="console-path">Console > IAM > Roles > Create Role</span></p>
-                <p>AWS requires the <code>AWSServiceRoleForEVS</code> to manage VPC resources (ENIs, Route Tables) on your behalf. Select **"AWS Service"**, search for **EVS**, and complete the role creation process.</p>
+                <h3>4.1 BGP Peering Configuration</h3>
+                <p>The **VPC Route Server** acts as the BGP bridge between the NSX overlay and the AWS VPC routing table. Associate the Route Server with your <code>evs-underlay-vpc</code> and configure peering with the NSX Edges (using ASN 65000 for the Edge cluster and 64512 for the Route Server).</p>
+                <p><strong>Important:</strong> Enable **Route Propagation** on your VPC Main Route Table so that VMware workload segments are reachable from AWS native services.</p>
             </div>
 
-            <h2><span class="step-num">2</span> Phase 2: VPC Underlay & IP Pool Planning</h2>
-
-            <p>The VPC acts as the transport layer for the SDDC. Beyond the base VPC, you must reserve specific CIDR ranges for the internal VMware VLANs.</p>
-
-            <div class="step-card">
-                <h3>2.1 Create the VPC and Service Access Subnet</h3>
-                <p><strong>Path:</strong> <span class="console-path">Console > VPC > Your VPCs > Create VPC</span></p>
-                <table class="value-table">
-                    <tr><th>Component</th><th>Recommended Value</th></tr>
-                    <tr><td>VPC CIDR</td><td>10.0.0.0/16</td></tr>
-                    <tr><td>Service Access Subnet</td><td>10.0.1.0/24 (Availability Zone: us-west-2a)</td></tr>
-                    <tr><td>DNS Settings</td><td>Enable DNS Hostnames & DNS Support</td></tr>
-                </table>
-            </div>
-
-            <div class="step-card">
-                <h3>2.2 Reserved IP Pools for VLANs</h3>
-                <p>During SDDC bring-up, you must provide non-overlapping CIDR blocks for the following VMware-managed networks. These should **not** be created as VPC subnets, but rather reserved for EVS use:</p>
-                <table class="value-table">
-                    <tr><th>VLAN Type</th><th>Required CIDR Size</th><th>Recommended Range</th></tr>
-                    <tr><td>Management VLAN</td><td>Min /24</td><td>10.0.10.0/24</td></tr>
-                    <tr><td>vMotion VLAN</td><td>Min /24</td><td>10.0.11.0/24</td></tr>
-                    <tr><td>vSAN VLAN</td><td>Min /24</td><td>10.0.12.0/24</td></tr>
-                    <tr><td>NSX-T Host Overlay (TEP)</td><td>Min /24</td><td>10.0.13.0/24</td></tr>
-                    <tr><td>NSX-T Edge Overlay</td><td>Min /24</td><td>10.0.14.0/24</td></tr>
-                </table>
-            </div>
-
-            <h2><span class="step-num">3</span> Phase 3: Route 53 DNS Infrastructure</h2>
-
-            <p>VMware Cloud Foundation is highly dependent on both Forward and Reverse DNS resolution. Failure to provide PTR records will result in an SDDC Manager bring-up failure.</p>
-
-            <div class="step-card">
-                <h3>3.1 Mandatory DNS Records</h3>
-                <p>Create a **Private Hosted Zone** (e.g., <code>vcloudone.internal</code>) and associate it with your EVS VPC. The following records must be manually provisioned before deployment:</p>
-                <table class="value-table">
-                    <tr><th>Component</th><th>Forward Record (A)</th><th>Reverse Record (PTR)</th></tr>
-                    <tr><td>SDDC Manager</td><td>sddc-manager.vcloudone.internal</td><td>10.0.10.10</td></tr>
-                    <tr><td>vCenter Server</td><td>vcenter.vcloudone.internal</td><td>10.0.10.11</td></tr>
-                    <tr><td>NSX Manager 01</td><td>nsx-mgr-01.vcloudone.internal</td><td>10.0.10.12</td></tr>
-                    <tr><td>NSX Manager 02</td><td>nsx-mgr-02.vcloudone.internal</td><td>10.0.10.13</td></tr>
-                    <tr><td>NSX Manager 03</td><td>nsx-mgr-03.vcloudone.internal</td><td>10.0.10.14</td></tr>
-                    <tr><td>ESXi Host 01</td><td>esxi-01.vcloudone.internal</td><td>10.0.11.21</td></tr>
-                    <tr><td>ESXi Host 02</td><td>esxi-02.vcloudone.internal</td><td>10.0.11.22</td></tr>
-                    <tr><td>ESXi Host 03</td><td>esxi-03.vcloudone.internal</td><td>10.0.11.23</td></tr>
-                    <tr><td>ESXi Host 04</td><td>esxi-04.vcloudone.internal</td><td>10.0.11.24</td></tr>
-                </table>
-            </div>
-
-            <div class="step-card">
-                <h3>3.2 Inbound Resolver Endpoints</h3>
-                <p>Provision **Route 53 Inbound Resolver Endpoints** in your Service Access Subnet. This allows the VMware management appliances to resolve records within the AWS private hosted zones.</p>
-            </div>
-
-            <h2><span class="step-num">4</span> Phase 4: VPC Route Server & BGP Peering</h2>
-
-            <div class="step-card">
-                <h3>4.1 Route Server Configuration</h3>
-                <p><strong>Path:</strong> <span class="console-path">Console > VPC > Route Servers > Create Route Server</span></p>
-                <p>Set the **Amazon-side ASN to 64512**. Once the Route Server is active, create two **BGP Peers** to connect to your VMware NSX Edges:</p>
-                <ul>
-                    <li><strong>Peer 1 IP:</strong> 10.0.10.251 (ASN: 65000)</li>
-                    <li><strong>Peer 2 IP:</strong> 10.0.10.252 (ASN: 65000)</li>
-                </ul>
-                <p><strong>Crucial:</strong> Enable **Route Propagation** on the VPC Route Table to allow VMware overlay routes to populate automatically from the NSX Edges.</p>
-            </div>
-
-            <h2>Automation: Professional Terraform Template</h2>
-            <p>To ensure a consistent, repeatable deployment that avoids manual configuration drift, use the following Terraform template.</p>
+            <h2>Automation: Advanced Terraform Deployment</h2>
+            <p>The following template automates the VPC, Service Access Subnet, Inbound Resolver, and VPC Route Server setup required for EVS.</p>
 
             <div class="code-header">
-                <span>main.tf (Production-Grade)</span>
-                <span>v1.4</span>
+                <span>main.tf (Full SDDC Underlay)</span>
+                <span>v1.5</span>
             </div>
             <div class="code-block">
 <pre>
-# VPC & Core Networking
+# 1. Create Base VPC Underlay
 resource "aws_vpc" "evs_vpc" {
   cidr_block = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support = true
-  tags = { Name = "evs-underlay" }
 }
 
-# Route 53 Resolver for VMware Integration
+# 2. Inbound DNS Resolver for SDDC Components
 resource "aws_route53_resolver_endpoint" "evs_dns" {
-  name = "evs-inbound-resolver"
   direction = "INBOUND"
   security_group_ids = [aws_security_group.dns_sg.id]
-
   ip_address { subnet_id = aws_subnet.service_access.id; ip = "10.0.1.100" }
   ip_address { subnet_id = aws_subnet.service_access.id; ip = "10.0.1.110" }
 }
 
-# VPC Route Server for BGP Propagation
+# 3. VPC Route Server for NSX Edge Peering
 resource "aws_vpc_route_server" "evs_rs" {
   amazon_side_asn = 64512
-  tags = { Name = "evs-route-server" }
 }
 
 resource "aws_vpc_route_server_peer" "nsx_edge_01" {
@@ -201,16 +171,16 @@ resource "aws_vpc_route_server_peer" "nsx_edge_01" {
             </div>
 
             <div class="download-section">
-                <h3>Download Deployment Kit</h3>
-                <p>Download the complete Terraform modular kit including DNS, Peering, and SLR modules.</p>
-                <a href="https://github.com/gitvcloudone/website/archive/refs/heads/main.zip" class="btn">Download EVS Automation Kit (.zip)</a>
+                <h3>Download Enterprise EVS Kit</h3>
+                <p>Access the full modular Terraform project for DNS, Peering, IAM, and Networking.</p>
+                <a href="https://github.com/gitvcloudone/website/archive/refs/heads/main.zip" class="btn">Download Deployment Project (.zip)</a>
             </div>
 
         </article>
     </div>
 
     <footer>
-        <p>&copy; 2026 vCloudOne | Architected for Enterprise | VMware on AWS Integration</p>
+        <p>&copy; 2026 vCloudOne | Architected for Enterprise | VMware Cloud on AWS Native Integration</p>
     </footer>
 
 </body>
