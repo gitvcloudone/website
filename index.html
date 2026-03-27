@@ -556,10 +556,126 @@
 
             <h2 id="phase4"><span class="step-num">4</span> Phase 4: VPC Route Server &amp; BGP</h2>
 
+            <p>The <strong>VPC Route Server</strong> is the BGP bridge between NSX-T and the AWS underlay. It dynamically propagates NSX overlay routes into your VPC route tables, enabling AWS-native services to reach VMware workload segments without static routes. This phase must be completed before submitting the EVS environment creation request.</p>
+
             <div class="step-card">
-                <h3>4.1 BGP Peering Configuration</h3>
-                <p>The <strong>VPC Route Server</strong> acts as the BGP bridge between the NSX overlay and the AWS VPC routing table. Associate the Route Server with your <code>evs-underlay-vpc</code> and configure peering with both NSX Edge nodes. The default ASN for NSX Edge is <strong>65000</strong>; the Route Server ASN must be a private-range value (<strong>64512&ndash;65534</strong>) &mdash; 64512 is the common default. The peer ASN configured on the Route Server must match the NSX Edge ASN exactly.</p>
-                <p><strong>Important:</strong> Enable <strong>Route Propagation</strong> on your VPC Main Route Table so that VMware workload segments are reachable from AWS-native services.</p>
+                <h3>4.1 Create the VPC Route Server</h3>
+                <p>In the AWS Console, navigate to <code>VPC &rsaquo; Virtual Private Cloud &rsaquo; Route Servers</code> and click <strong>Create route server</strong>. Configure the following:</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Field</th><th>Value</th><th>Notes</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Name</strong></td><td>evs-route-server-01</td><td>Any descriptive label</td></tr>
+                            <tr><td><strong>Amazon Side ASN</strong></td><td>64512&ndash;65534 (e.g. 65100)</td><td>Must be a <em>different</em> value than the NSX Edge ASN (default 65000)</td></tr>
+                            <tr><td><strong>Persist Routes</strong></td><td>Enabled</td><td>Preserves routes for 1&ndash;5 min after a BGP session drops; prevents route flaps</td></tr>
+                            <tr><td><strong>SNS Notifications</strong></td><td>Optional</td><td>Recommended for production &mdash; alerts on BGP state changes</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>Wait for the Route Server status to reach <strong>Available</strong> before proceeding.</p>
+            </div>
+
+            <div class="step-card">
+                <h3>4.2 Associate the Route Server with the Service Access Subnet</h3>
+                <p>Select the Route Server &rsaquo; <strong>Associations</strong> tab &rsaquo; <strong>Associate route server</strong>. Select your <strong>Service Access Subnet</strong> (the one pre-created in Phase 2). AWS will automatically deploy <strong>two Route Server endpoints</strong> into that subnet &mdash; one per availability zone. Both endpoints must reach <strong>Available</strong> state before you create peers.</p>
+                <div class="note" style="margin-top:1rem;">
+                    <strong>Important:</strong> Each endpoint receives a private IP from the Service Access Subnet. Note these IPs &mdash; you will need them when configuring BGP neighbors on the NSX Tier-0 gateway in step 4.5.
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>4.3 Create Route Server Peers (One per NSX Edge)</h3>
+                <p>Navigate to <strong>Route server peers</strong> tab &rsaquo; <strong>Create route server peer</strong>. Create one peer per NSX Edge node (two total). The <strong>peer address</strong> is the IP that will be assigned to each NSX Edge's uplink interface in the <strong>NSX Uplink VLAN</strong> &mdash; not the management IP.</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Field</th><th>Peer 1 (Edge 01)</th><th>Peer 2 (Edge 02)</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Route Server Endpoint</strong></td><td>Endpoint 1 ID</td><td>Endpoint 2 ID</td></tr>
+                            <tr><td><strong>Peer Address</strong></td><td>10.0.16.10 (NSX Uplink VLAN)</td><td>10.0.16.11 (NSX Uplink VLAN)</td></tr>
+                            <tr><td><strong>Peer ASN</strong></td><td>65000</td><td>65000</td></tr>
+                            <tr><td><strong>Liveness Detection</strong></td><td>BGP Keepalive</td><td>BGP Keepalive</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="note" style="margin-top:1rem;">
+                    <strong>Critical:</strong> Always use <strong>BGP Keepalive</strong> as the liveness detection method. BFD (Bidirectional Forwarding Detection) is <em>not supported</em> for Amazon EVS and will cause undefined session behavior.
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>4.4 Enable Route Propagation on the VPC Route Table</h3>
+                <p>Navigate to the Route Server &rsaquo; <strong>Propagations</strong> tab &rsaquo; <strong>Create propagation</strong>. Select the route table(s) that need to receive NSX overlay routes &mdash; at minimum, the Service Access Subnet route table and your workload subnet route tables.</p>
+                <div class="note" style="margin-top:1rem;">
+                    <strong>Common failure point:</strong> Every route table configured for propagation <em>must</em> have at least one explicit subnet association. Route tables with only an implicit main-route-table association will silently fail to receive BGP routes. Verify this with <code>aws ec2 describe-route-tables</code> before proceeding.
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>4.5 Configure NSX Tier-0 BGP (VMware Side)</h3>
+                <p>After EVS bring-up completes, log into NSX Manager and navigate to <code>Networking &rsaquo; Tier-0 Gateways</code>. Edit the Tier-0 gateway and configure BGP under the <strong>Routing</strong> section:</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>BGP Setting</th><th>Value</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Local AS Number</strong></td><td>65000 (must match Peer ASN set on Route Server)</td></tr>
+                            <tr><td><strong>BGP Status</strong></td><td>Enabled</td></tr>
+                            <tr><td><strong>Graceful Restart</strong></td><td>Enabled</td></tr>
+                            <tr><td><strong>Keepalive Timer</strong></td><td>5 seconds</td></tr>
+                            <tr><td><strong>Hold Time</strong></td><td>60 seconds (minimum 3&times; keepalive)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="margin-top:1rem;">Then add two <strong>BGP Neighbors</strong> under <code>BGP &rsaquo; Neighbors</code> &mdash; one for each Route Server endpoint IP noted in step 4.2:</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Neighbor Field</th><th>Neighbor 1</th><th>Neighbor 2</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Neighbor Address</strong></td><td>Route Server Endpoint 1 IP</td><td>Route Server Endpoint 2 IP</td></tr>
+                            <tr><td><strong>Remote AS</strong></td><td>65100 (Route Server ASN)</td><td>65100 (Route Server ASN)</td></tr>
+                            <tr><td><strong>Source Address</strong></td><td>10.0.16.10 (Edge 01 uplink)</td><td>10.0.16.11 (Edge 02 uplink)</td></tr>
+                            <tr><td><strong>Route Filter</strong></td><td>rfc-1918-allow</td><td>rfc-1918-allow</td></tr>
+                            <tr><td><strong>Max Hop Limit</strong></td><td>2</td><td>2</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="margin-top:1rem;">Finally, enable <strong>Route Redistribution</strong> on the Tier-0 to advertise <strong>Connected</strong> and <strong>NSX Static</strong> routes. This causes NSX to push overlay VLAN prefixes to the Route Server.</p>
+            </div>
+
+            <div class="step-card">
+                <h3>4.6 Verify BGP Session Establishment</h3>
+                <p>Work through this checklist in order. Each step must pass before moving to the next.</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Check</th><th>Where</th><th>Expected Result</th></tr></thead>
+                        <tbody>
+                            <tr><td>Route Server status</td><td>AWS Console &rsaquo; Route Servers</td><td><strong>Available</strong></td></tr>
+                            <tr><td>Both endpoints status</td><td>Route Server &rsaquo; Endpoints tab</td><td><strong>Available</strong> (both)</td></tr>
+                            <tr><td>Both peers status</td><td>Route Server &rsaquo; Peers tab</td><td><strong>Available</strong> (both)</td></tr>
+                            <tr><td>BGP neighbor state</td><td>NSX Manager &rsaquo; Networking &rsaquo; Tier-0 &rsaquo; BGP</td><td><strong>Established</strong></td></tr>
+                            <tr><td>Routes advertised</td><td>NSX BGP neighbor detail</td><td>Count &gt; 0 (overlay prefixes)</td></tr>
+                            <tr><td>Routes received</td><td>NSX BGP neighbor detail</td><td>Count &gt; 0 (VPC CIDR blocks)</td></tr>
+                            <tr><td>Overlay routes in VPC route table</td><td>AWS Console &rsaquo; Route Tables</td><td>NSX overlay prefixes appear</td></tr>
+                            <tr><td>End-to-end connectivity</td><td>Ping from EC2 instance to NSX overlay IP</td><td>Replies received</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>4.7 Networking Prerequisites &amp; Port Requirements</h3>
+                <p>BGP runs on <strong>TCP port 179</strong>. Ensure the following is in place before expecting sessions to establish:</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Requirement</th><th>Detail</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Security Groups</strong></td><td>Allow TCP 179 inbound/outbound between NSX Uplink VLAN CIDR and Service Access Subnet CIDR</td></tr>
+                            <tr><td><strong>Network ACLs</strong></td><td>Allow TCP 179 <em>and</em> ephemeral ports 49152&ndash;65535 bidirectionally (NACLs are stateless)</td></tr>
+                            <tr><td><strong>Route Server ASN &ne; Peer ASN</strong></td><td>Using the same ASN on both sides (e.g. both 65000) will prevent BGP negotiation entirely</td></tr>
+                            <tr><td><strong>Unique peer IPs</strong></td><td>Each Route Server peer must use a unique IP from the NSX Uplink VLAN; duplicates cause only one session to be active</td></tr>
+                            <tr><td><strong>Explicit subnet association</strong></td><td>All propagated route tables must have at least one explicit subnet association (not just the implicit main association)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <h2 id="terraform"><span class="step-num">&#9889;</span> Automation: Terraform Deployment</h2>
@@ -652,6 +768,13 @@
                 <li><a href="#phase2">Phase 2: Multi-VLAN Networking</a></li>
                 <li><a href="#phase3">Phase 3: Route 53 DNS</a></li>
                 <li><a href="#phase4">Phase 4: BGP &amp; Route Server</a></li>
+                <li><a href="#phase4" style="padding-left:1rem;font-size:0.82rem;color:var(--muted);">4.1 Create Route Server</a></li>
+                <li><a href="#phase4" style="padding-left:1rem;font-size:0.82rem;color:var(--muted);">4.2 Associate &amp; Endpoints</a></li>
+                <li><a href="#phase4" style="padding-left:1rem;font-size:0.82rem;color:var(--muted);">4.3 Create Peers</a></li>
+                <li><a href="#phase4" style="padding-left:1rem;font-size:0.82rem;color:var(--muted);">4.4 Route Propagation</a></li>
+                <li><a href="#phase4" style="padding-left:1rem;font-size:0.82rem;color:var(--muted);">4.5 NSX Tier-0 BGP</a></li>
+                <li><a href="#phase4" style="padding-left:1rem;font-size:0.82rem;color:var(--muted);">4.6 Verify Sessions</a></li>
+                <li><a href="#phase4" style="padding-left:1rem;font-size:0.82rem;color:var(--muted);">4.7 Port Requirements</a></li>
                 <li><a href="#terraform">Terraform Automation</a></li>
             </ul>
         </div>
