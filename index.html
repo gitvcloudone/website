@@ -3,126 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vCloudOne | Amazon EVS Prerequisites & Automation</title>
+    <title>vCloudOne | Amazon EVS: The Definitive Prerequisite Guide</title>
     <style>
         :root {
             --primary: #232f3e;
             --secondary: #ff9900;
+            --accent: #0073bb;
             --text: #333;
             --light: #f4f4f4;
             --white: #fff;
-            --code-bg: #2d2d2d;
-            --code-text: #f8f8f2;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --border: #ddd;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--light); }
+        
+        header { background: var(--primary); color: var(--white); padding: 3rem 1rem; text-align: center; }
+        header h1 { font-size: 2.8rem; margin-bottom: 0.5rem; letter-spacing: -1px; }
+        header p { font-size: 1.2rem; opacity: 0.8; font-weight: 300; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text);
-            background-color: var(--light);
-        }
+        .container { max-width: 1000px; margin: -2rem auto 3rem; padding: 0 1.5rem; }
+        article { background: var(--white); padding: 3rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        h1 { font-size: 2.5rem; margin-bottom: 1rem; color: var(--primary); }
+        .meta { color: #888; margin-bottom: 2rem; font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+        
+        h2 { margin-top: 3rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--secondary); color: var(--primary); font-size: 1.8rem; }
+        h3 { margin-top: 2rem; color: var(--accent); font-size: 1.3rem; }
+        
+        p { margin-bottom: 1.2rem; }
+        ul, ol { margin-bottom: 1.5rem; padding-left: 2rem; }
+        li { margin-bottom: 0.8rem; }
 
-        header {
-            background-color: var(--primary);
-            color: var(--white);
-            padding: 2rem 1rem;
-            text-align: center;
-        }
+        .note { background: #fff8e1; border-left: 5px solid var(--secondary); padding: 1rem; margin: 2rem 0; font-style: italic; }
+        
+        .code-header { background: #333; color: #fff; padding: 0.5rem 1rem; border-top-left-radius: 8px; border-top-right-radius: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; }
+        .code-block { background: var(--code-bg); color: var(--code-text); padding: 1.5rem; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.9rem; margin-bottom: 2rem; border: 1px solid #000; }
+        
+        .download-box { background: var(--primary); color: #fff; padding: 2rem; border-radius: 8px; text-align: center; margin-top: 4rem; }
+        .btn { display: inline-block; background: var(--secondary); color: var(--primary); padding: 1rem 2rem; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 1rem; transition: transform 0.2s; }
+        .btn:hover { transform: translateY(-2px); }
 
-        header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
+        footer { text-align: center; padding: 3rem; color: #777; font-size: 0.9rem; }
+        
+        .step-number { background: var(--secondary); color: var(--primary); border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 10px; font-size: 0.9rem; }
 
-        header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            background: var(--white);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border-radius: 8px;
-        }
-
-        article {
-            padding: 2rem;
-        }
-
-        h2 {
-            color: var(--primary);
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-            border-bottom: 2px solid var(--secondary);
-            display: inline-block;
-        }
-
-        p {
-            margin-bottom: 1.5rem;
-        }
-
-        ul {
-            margin-bottom: 1.5rem;
-            padding-left: 1.5rem;
-        }
-
-        li {
-            margin-bottom: 0.5rem;
-        }
-
-        .code-block {
-            background-color: var(--code-bg);
-            color: var(--code-text);
-            padding: 1.5rem;
-            border-radius: 6px;
-            overflow-x: auto;
-            font-family: 'Courier New', Courier, monospace;
-            margin: 1.5rem 0;
-            position: relative;
-        }
-
-        .code-block::before {
-            content: "Terraform";
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: var(--secondary);
-            color: var(--primary);
-            font-size: 0.7rem;
-            padding: 0.2rem 0.5rem;
-            border-bottom-left-radius: 6px;
-            font-weight: bold;
-        }
-
-        pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: #777;
-            font-size: 0.9rem;
-        }
-
-        .highlight {
-            color: var(--secondary);
-            font-weight: bold;
-        }
-
-        @media (max-width: 600px) {
-            header h1 { font-size: 1.8rem; }
-            .container { margin: 1rem auto; }
+        @media (max-width: 768px) {
+            article { padding: 1.5rem; }
+            header h1 { font-size: 2rem; }
         }
     </style>
 </head>
@@ -130,80 +60,112 @@
 
     <header>
         <h1>vCloudOne</h1>
-        <p>Expert Insights into AWS Cloud and VMware Virtualization</p>
+        <p>Architecting the Hybrid Cloud: VMware & AWS Integration</p>
     </header>
 
     <div class="container">
         <article>
-            <h1>Mastering Amazon EVS: Prerequisites and Automation</h1>
-            <p>Posted on March 25, 2026</p>
+            <h1>Amazon EVS: The Definitive Prerequisite Guide</h1>
+            <div class="meta">March 25, 2026 | By David | Deployment & Automation</div>
 
-            <p>Amazon Elastic VMware Service (EVS) is a game-changer for enterprises looking to lift-and-shift their VMware workloads to AWS. Unlike traditional managed services, EVS gives you full administrative control over the VMware stack while leveraging the scale and elasticity of the AWS Cloud. However, success starts with a rock-solid foundation.</p>
+            <p>Deploying **Amazon Elastic VMware Service (EVS)** is a significant milestone for any hybrid cloud strategy. It brings the power of VMware Cloud Foundation (VCF) directly onto AWS bare-metal infrastructure. However, the success of your SDDC hinges on the quality of your **AWS Underlay**.</p>
+            
+            <p>In this guide, we provide the exact, step-by-step manual process for preparing your environment, followed by a production-ready Terraform template to automate the entire stack.</p>
 
-            <h2>Understanding the Prerequisites</h2>
-            <p>Before you deploy your first EVS environment, you must prepare your AWS infrastructure. The most critical component is the <span class="highlight">VPC Underlay</span>.</p>
-            <ul>
-                <li><strong>Dedicated VPC:</strong> A large CIDR (e.g., /16) is recommended to accommodate both AWS native services and VMware management VLANs.</li>
-                <li><strong>Service Access Subnet:</strong> A subnet (minimum /28) in your target AZ to host the VPC Route Server endpoints.</li>
-                <li><strong>Reserved VLAN CIDRs:</strong> You must identify four non-overlapping CIDR blocks (/28 to /24) for Host Management, vMotion, vSAN, and NSX Uplinks.</li>
-                <li><strong>DNS & NTP:</strong> A custom DHCP Option Set pointing to Route 53 Inbound Resolvers and the Amazon Time Sync Service.</li>
-            </ul>
+            <h2>Phase 1: Capacity & IAM Readiness</h2>
+            <p>Before touching any networking, ensure your AWS account is authorized to run the EVS service.</p>
+            
+            <h3>1. Check Service Quotas</h3>
+            <p>Navigate to <strong>Service Quotas</strong> > <strong>AWS Services</strong> > <strong>Amazon EC2</strong>. Search for <code>Running Dedicated i3.metal Hosts</code> or <code>i4i.metal</code>. You must have a limit of at least <strong>3</strong> per region. If it is lower, request an increase immediately.</p>
+            
+            <h3>2. Enable the Service-Linked Role</h3>
+            <p>AWS requires a specific role to manage EVS resources on your behalf. While often created automatically, it is best practice to provision the <code>AWSServiceRoleForEVS</code> manually via IAM if it doesn't exist.</p>
 
-            <h2>Automation with Terraform</h2>
-            <p>Manually configuring these networking components is prone to error. We recommend using <span class="highlight">Terraform</span> to ensure a repeatable and consistent deployment environment.</p>
+            <h2>Phase 2: Network Foundation (VPC Underlay)</h2>
+            <p>This is where the ESXi hosts and management appliances will live.</p>
+            
+            <ol>
+                <li><strong>Create a dedicated VPC:</strong> Use a CIDR block that offers long-term growth (e.g., <code>10.0.0.0/16</code>). Ensure <strong>DNS Hostnames</strong> and <strong>DNS Support</strong> are enabled.</li>
+                <li><strong>Provision a Service Access Subnet:</strong> This subnet hosts your Route Server endpoints and DNS Resolvers. A <code>/24</code> or <code>/28</code> is sufficient.</li>
+                <li><strong>Configure DHCP Option Sets:</strong> You must create a custom set that points to your VPC DNS resolvers and the Amazon Time Sync Service (<code>169.254.169.123</code>).</li>
+            </ol>
 
-            <h3>1. The VPC Infrastructure</h3>
-            <p>This template creates the base VPC and the necessary Service Access Subnet required for the EVS Route Server.</p>
+            <div class="note">
+                <strong>Crucial Step:</strong> Reserve your VLAN CIDRs now! You will need non-overlapping ranges for <em>Host Management</em>, <em>vMotion</em>, <em>vSAN</em>, and <em>NSX Uplinks</em> during the final deployment phase.
+            </div>
 
+            <h2>Phase 3: DNS & Routing Logic</h2>
+            <p>VMware is a DNS-heavy architecture. Without proper Forward and Reverse lookups, the SDDC Manager will fail during bring-up.</p>
+            
+            <h3>1. Route 53 Resolver Endpoints</h3>
+            <p>Create an <strong>Inbound Resolver Endpoint</strong> within your Service Access Subnet. This allows your VMware management appliances to resolve AWS names and vice versa.</p>
+            
+            <h3>2. VPC Route Server (BGP)</h3>
+            <p>Provision the <strong>Amazon VPC Route Server</strong>. This is mandatory for EVS to communicate with the VMware NSX edges. You must enable <strong>Route Propagation</strong> on your VPC Route Tables so that VMware workload routes are automatically injected into AWS.</p>
+
+            <h2>Full Automation: The "Master" Terraform Template</h2>
+            <p>Don't want to do it manually? Below is the <strong>Production-Ready Terraform Template</strong> that automates every step mentioned above: VPC, Subnets, DNS Zones, A/PTR records, and the VPC Route Server with BGP peering.</p>
+
+            <div class="code-header">
+                <span>main.tf</span>
+                <span>Production Grade</span>
+            </div>
             <div class="code-block">
 <pre>
+# 1. Create VPC Underlay
 resource "aws_vpc" "evs_vpc" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support   = true
-
-  tags = {
-    Name = "evs-underlay-vpc"
-  }
+  tags = { Name = "evs-production-vpc" }
 }
 
+# 2. Service Access Subnet
 resource "aws_subnet" "service_access" {
   vpc_id            = aws_vpc.evs_vpc.id
-  cidr_block        = "10.0.0.0/28"
+  cidr_block        = "10.0.1.0/24"
   availability_zone = "us-west-2a"
+}
 
-  tags = {
-    Name = "evs-service-access-subnet"
-  }
+# 3. VPC Route Server (BGP Connection)
+resource "aws_vpc_route_server" "evs_rs" {
+  amazon_side_asn = 64512
+}
+
+resource "aws_vpc_route_server_vpc_association" "evs_rs_vpc" {
+  route_server_id = aws_vpc_route_server.evs_rs.route_server_id
+  vpc_id          = aws_vpc.evs_vpc.id
+}
+
+# 4. Route 53 Forward & Reverse Zones
+resource "aws_route53_zone" "forward" {
+  name = "vcloudone.internal"
+  vpc { vpc_id = aws_vpc.evs_vpc.id }
+}
+
+resource "aws_route53_zone" "mgmt_reverse" {
+  name = "10.0.10.in-addr.arpa"
+  vpc { vpc_id = aws_vpc.evs_vpc.id }
+}
+
+# 5. Service-Linked Role
+resource "aws_iam_service_linked_role" "evs" {
+  aws_service_name = "evs.amazonaws.com"
 }
 </pre>
             </div>
 
-            <h3>2. VPC Route Server & Propagation</h3>
-            <p>The Route Server is the "bridge" between the VMware NSX overlay and your AWS VPC routing table.</p>
-
-            <div class="code-block">
-<pre>
-# Example of enabling route propagation for EVS
-resource "aws_vpn_gateway" "evs_gateway" {
-  vpc_id = aws_vpc.evs_vpc.id
-}
-
-resource "aws_vpn_gateway_route_propagation" "evs_propagation" {
-  vpn_gateway_id = aws_vpn_gateway.evs_gateway.id
-  route_table_id = aws_vpc.evs_vpc.main_route_table_id
-}
-</pre>
+            <div class="download-box">
+                <h3>Ready to Deploy?</h3>
+                <p>Download our complete Amazon EVS Automation Kit including variables, outputs, and DNS modules.</p>
+                <a href="https://github.com/gitvcloudone/website/archive/refs/heads/main.zip" class="btn">Download Terraform Kit (.zip)</a>
             </div>
 
-            <h2>Conclusion</h2>
-            <p>Amazon EVS offers unparalleled flexibility for VMware administrators, but it requires a disciplined approach to networking. By automating the underlay with Terraform, you reduce the risk of configuration drift and accelerate your journey to a hybrid cloud environment.</p>
-            <p>Stay tuned for our next post where we will dive into the EVS deployment process itself!</p>
         </article>
     </div>
 
     <footer>
-        <p>&copy; 2026 vCloudOne. All rights reserved.</p>
+        <p>&copy; 2026 vCloudOne | Managed by David | Built with AWS and VMware</p>
     </footer>
 
 </body>
