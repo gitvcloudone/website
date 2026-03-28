@@ -94,6 +94,24 @@
             margin-left: 0.5rem;
         }
         .nav-links .btn-nav:hover { background: var(--orange-dk); color: var(--primary); }
+        .nav-social {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-left: 0.25rem;
+        }
+        .nav-social a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            color: rgba(255,255,255,0.65);
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-social a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nav-social svg { width: 18px; height: 18px; }
 
         /* ── HERO ── */
         .hero {
@@ -444,7 +462,14 @@
             <a href="#guide">Guide</a>
             <a href="#terraform">Terraform</a>
             <a href="#validator">Validator</a>
-            <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">GitHub</a>
+            <div class="nav-social">
+                <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="@dchung615 on X">
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="gitvcloudone on GitHub">
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                </a>
+            </div>
             <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" class="btn-nav" target="_blank" rel="noopener">Download Kit &rarr;</a>
         </div>
     </div>
@@ -1502,9 +1527,17 @@ Exit code 0 — environment is ready for EVS deployment.
 
 <!-- FOOTER -->
 <footer>
-    <p>&copy; 2026 <strong>vCloudOne</strong> &mdash; Architected for Enterprise &mdash;
-        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">GitHub</a>
-    </p>
+    <p>&copy; 2026 <strong>vCloudOne</strong> &mdash; Architected for Enterprise</p>
+    <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:0.5rem;">
+        <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="@dchung615 on X" style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.88rem;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            @dchung615
+        </a>
+        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="gitvcloudone on GitHub" style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.88rem;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            gitvcloudone
+        </a>
+    </div>
 </footer>
 
 </body>
