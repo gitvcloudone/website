@@ -443,6 +443,7 @@
         <div class="nav-links">
             <a href="#guide">Guide</a>
             <a href="#terraform">Terraform</a>
+            <a href="#validator">Validator</a>
             <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">GitHub</a>
             <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" class="btn-nav" target="_blank" rel="noopener">Download Kit &rarr;</a>
         </div>
@@ -946,7 +947,163 @@ aws ec2 describe-capacity-reservations \
             <!-- TERRAFORM -->
             <h2 id="terraform"><span class="step-num">&#9889;</span> Automation: Terraform Deployment</h2>
 
-            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Phases 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options set, service access subnet with explicit route table, and Route Server with BGP peers. Phase 9 (ODCR) is included in <code>odcr.tf</code> as commented-out code — uncomment to enable. Download and run <code>terraform apply</code> — all defaults are production-ready and match the IP plan in this guide.</p>
+            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Phases 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options set, service access subnet with explicit route table, and Route Server with BGP peers. Phase 9 (ODCR) is included in <code>odcr.tf</code> as commented-out code &mdash; uncomment when ready. All defaults match the IP plan in this guide and are production-ready.</p>
+
+            <h3>File descriptions</h3>
+
+            <table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:1.5rem;">
+                <thead>
+                    <tr style="background:var(--blue-lt);text-align:left;">
+                        <th style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-weight:600;color:var(--text);">File</th>
+                        <th style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-weight:600;color:var(--text);">Phase</th>
+                        <th style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-weight:600;color:var(--text);">What it creates</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">variables.tf</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">&mdash;</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">All configurable values: region, AZ, CIDRs, domain, IPs, ASNs, host maps. <strong>Edit this file before applying.</strong></td>
+                    </tr>
+                    <tr style="background:#fafafa;">
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">main.tf</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">2, 3, 4, 5, 6</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">VPC, service access subnet, explicit route table, DNS security group, Route 53 inbound resolver endpoint (2 IPs), DHCP options set, EVS service-linked role</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">dns.tf</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">4</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">Route 53 private hosted zone, two reverse PTR zones (Host VLAN + Mgmt VLAN), A and PTR records for all VCF components and ESXi hosts</td>
+                    </tr>
+                    <tr style="background:#fafafa;">
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">peering.tf</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">7</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">VPC Route Server, VPC association, two Route Server endpoints in the service access subnet, two BGP peers (NSX Edge uplink IPs, bgp-keepalive), route propagation to the explicit route table</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">iam.tf</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">2</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">EVSDeploymentPolicy &mdash; minimum IAM policy for the user or role that calls <code>CreateEnvironment</code></td>
+                    </tr>
+                    <tr style="background:#fafafa;">
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">odcr.tf</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">9</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">On-Demand Capacity Reservation for i4i.metal &mdash; all code is commented out. Uncomment when EC2 vCPU quota &ge; 512 and you are ready to reserve capacity.</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">outputs.tf</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">&mdash;</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">Prints all resource IDs, IPs, and zone IDs after apply &mdash; useful for cross-checking against the EVS Console during bring-up</td>
+                    </tr>
+                    <tr style="background:#fafafa;">
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">providers.tf</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">&mdash;</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">Terraform &ge; 1.3 and AWS provider &ge; 5.84 (required for Route Server resources). No remote state &mdash; local backend.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Customizing variables.tf</h3>
+            <p>Open <code>variables.tf</code> and update the following before running <code>terraform apply</code>. The defaults match the IP plan in this guide &mdash; change them to match your environment.</p>
+
+            <div class="code-wrap">
+                <div class="code-header"><span>variables.tf &mdash; values to update for your environment</span><span>v2.0</span></div>
+                <div class="code-body"><pre><span class="cm"># ── Target region and AZ ──────────────────────────────────────────────────────
+# All EVS resources must be in the same AZ.</span>
+variable <span class="str">"aws_region"</span> { default = <span class="str">"us-east-1"</span> }   <span class="cm"># change to your region</span>
+variable <span class="str">"az"</span>         { default = <span class="str">"us-east-1a"</span> } <span class="cm"># change to your target AZ</span>
+
+<span class="cm"># ── VPC & subnet CIDRs ────────────────────────────────────────────────────────
+# vpc_cidr minimum /22 — cannot be changed after EVS deployment.
+# service_access_cidr hosts the Route Server endpoints and DNS resolver ENIs.</span>
+variable <span class="str">"vpc_cidr"</span>            { default = <span class="str">"10.0.0.0/16"</span>  }
+variable <span class="str">"service_access_cidr"</span> { default = <span class="str">"10.0.0.0/24"</span>  }
+
+<span class="cm"># ── DNS domain ────────────────────────────────────────────────────────────────
+# Must match the Route 53 private hosted zone name exactly.
+# All VCF components are registered under this domain.</span>
+variable <span class="str">"domain_name"</span> { default = <span class="str">"evs.vcloudone.local"</span> }
+
+<span class="cm"># ── Resolver IPs ──────────────────────────────────────────────────────────────
+# Two static IPs within service_access_cidr.
+# These become the DHCP domain-name-servers — must be stable and ordered.</span>
+variable <span class="str">"resolver_ip_1"</span> { default = <span class="str">"10.0.0.10"</span> }  <span class="cm"># primary DNS</span>
+variable <span class="str">"resolver_ip_2"</span> { default = <span class="str">"10.0.0.11"</span> }  <span class="cm"># secondary DNS</span>
+
+<span class="cm"># ── BGP ASNs ──────────────────────────────────────────────────────────────────
+# route_server_asn: VPC Route Server ASN — must differ from nsx_peer_asn.
+# nsx_peer_asn: NSX Tier-0 ASN — default NSX value is 65000.</span>
+variable <span class="str">"route_server_asn"</span> { default = <span class="num">65100</span> }
+variable <span class="str">"nsx_peer_asn"</span>     { default = <span class="num">65000</span> }
+
+<span class="cm"># ── VCF component IPs ─────────────────────────────────────────────────────────
+# Must be in the Management VM VLAN (default 10.0.11.x).
+# A and PTR records are created for every entry in this map.</span>
+variable <span class="str">"vcf_components"</span> {
+  default = {
+    <span class="str">"cloud-builder"</span> = <span class="str">"10.0.11.9"</span>
+    <span class="str">"sddc-manager"</span>  = <span class="str">"10.0.11.10"</span>
+    <span class="str">"vcenter"</span>       = <span class="str">"10.0.11.11"</span>
+    <span class="str">"nsx-mgr-01"</span>    = <span class="str">"10.0.11.12"</span>
+    <span class="str">"nsx-mgr-02"</span>    = <span class="str">"10.0.11.13"</span>
+    <span class="str">"nsx-mgr-03"</span>    = <span class="str">"10.0.11.14"</span>
+    <span class="str">"nsx-edge-01"</span>   = <span class="str">"10.0.11.21"</span>
+    <span class="str">"nsx-edge-02"</span>   = <span class="str">"10.0.11.22"</span>
+  }
+}
+
+<span class="cm"># ── ESXi host IPs ─────────────────────────────────────────────────────────────
+# Must be in the Host Management VLAN (default 10.0.10.x).
+# Add or remove entries to match your host count (minimum 4 for EVS).</span>
+variable <span class="str">"esxi_hosts"</span> {
+  default = {
+    <span class="str">"esxi-01"</span> = <span class="str">"10.0.10.21"</span>
+    <span class="str">"esxi-02"</span> = <span class="str">"10.0.10.22"</span>
+    <span class="str">"esxi-03"</span> = <span class="str">"10.0.10.23"</span>
+    <span class="str">"esxi-04"</span> = <span class="str">"10.0.10.24"</span>
+  }
+}
+
+<span class="cm"># ── NSX Edge uplink IPs ───────────────────────────────────────────────────────
+# IPs assigned to NSX Edge uplink interfaces during EVS bring-up.
+# Must be within the NSX Uplink VLAN (default 10.0.16.x).
+# These are configured as Route Server BGP peer addresses.</span>
+variable <span class="str">"nsx_edge_peer_ips"</span> {
+  default = {
+    <span class="str">"edge-01"</span> = <span class="str">"10.0.16.10"</span>
+    <span class="str">"edge-02"</span> = <span class="str">"10.0.16.11"</span>
+  }
+}</pre></div>
+            </div>
+
+            <h3>Usage</h3>
+            <div class="code-wrap">
+                <div class="code-header"><span>terminal</span><span>bash</span></div>
+                <div class="code-body"><pre><span class="cm"># 1. Clone and enter the repo</span>
+git clone https://github.com/gitvcloudone/EVS-PreREQ-Terraform.git
+cd EVS-PreREQ-Terraform
+
+<span class="cm"># 2. Edit variables.tf with your region, AZ, CIDRs, IPs, and hostnames</span>
+<span class="cm">#    (see table above — at minimum update aws_region, az, and domain_name)</span>
+
+<span class="cm"># 3. Initialize providers (downloads hashicorp/aws ~= 5.84)</span>
+terraform init
+
+<span class="cm"># 4. Preview what will be created — review before applying</span>
+terraform plan
+
+<span class="cm"># 5. Deploy (~45 resources, typically completes in 3-5 minutes)</span>
+terraform apply
+
+<span class="cm"># 6. Review outputs — all resource IDs and IPs are printed</span>
+terraform output</pre></div>
+            </div>
+
+            <div class="note" style="margin-bottom:1.5rem;">
+                <strong>ODCR (Phase 9):</strong> The <code>odcr.tf</code> file contains a commented-out <code>aws_ec2_capacity_reservation</code> resource for <code>i4i.metal</code>. Uncomment it when your EC2 vCPU On-Demand Standard quota is &ge; 512 and you are ready to reserve capacity before deploying EVS. The reservation uses <code>instance_match_criteria = "targeted"</code> so only your EVS deployment will consume it.
+            </div>
+
+            <h3>Terraform file reference</h3>
 
             <div class="code-wrap">
                 <div class="code-header"><span>main.tf &mdash; VPC, Subnet, Route Table, Resolvers, DHCP, SLR</span><span>v2.0</span></div>
@@ -1124,6 +1281,143 @@ aws ec2 describe-capacity-reservations \
 }</pre></div>
             </div>
 
+            <!-- ── VALIDATOR SECTION ──────────────────────────────────────────── -->
+
+            <h2 id="validator"><span class="step-num">&#10003;</span> Automation: Prerequisite Validator</h2>
+
+            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Validate" target="_blank" rel="noopener">EVS-PreREQ-Validate</a> script uses boto3 to auto-discover every non-default VPC in your account and validate it against EVS prerequisites &mdash; no input required. Run it against a manually-built environment or after running the Terraform kit above to confirm everything is wired correctly end-to-end.</p>
+
+            <h3>Prerequisites</h3>
+            <ul style="margin:0 0 1rem 1.5rem;line-height:2;">
+                <li>Python 3.8 or later</li>
+                <li>AWS credentials configured (<code>aws configure</code>, IAM instance role, or environment variables)</li>
+                <li>boto3 (<code>pip install boto3</code>)</li>
+                <li>IAM permissions: <code>ec2:Describe*</code>, <code>iam:ListRoles</code>, <code>iam:GetPolicy</code>, <code>route53:*</code>, <code>route53resolver:ListResolverEndpoints</code>, <code>route53resolver:ListResolverEndpointIpAddresses</code>, <code>servicequotas:GetServiceQuota</code>, <code>support:DescribeSeverityLevels</code></li>
+            </ul>
+
+            <h3>Installation &amp; usage</h3>
+            <div class="code-wrap">
+                <div class="code-header"><span>terminal</span><span>bash</span></div>
+                <div class="code-body"><pre><span class="cm"># Install boto3 if not already installed</span>
+pip install boto3
+
+<span class="cm"># Clone the validator</span>
+git clone https://github.com/gitvcloudone/EVS-PreREQ-Validate.git
+cd EVS-PreREQ-Validate
+
+<span class="cm"># Run against default region (from AWS config / environment)</span>
+python evs_validate.py
+
+<span class="cm"># Run against a specific region</span>
+python evs_validate.py --region us-east-1
+python evs_validate.py --region eu-west-1</pre></div>
+            </div>
+
+            <h3>Expected output</h3>
+            <p>The script runs account-level checks first, then iterates every non-default VPC. Each check prints <strong style="color:#16a34a;">PASS</strong>, <strong style="color:#dc2626;">FAIL</strong>, or <strong style="color:#d97706;">WARN</strong>. A summary with total counts is printed at the end. The exit code is <code>0</code> (all pass), <code>1</code> (failures), or <code>2</code> (credential error).</p>
+
+            <div class="code-wrap">
+                <div class="code-header"><span>evs_validate.py &mdash; annotated sample output</span><span>Python / boto3</span></div>
+                <div class="code-body"><pre><span class="cm">================================================================
+  Amazon EVS Prerequisite Validator
+  Region : us-east-1   Account : 123456789012
+================================================================</span>
+
+<span class="cm">── Phase 2: IAM</span>
+  <span class="kw">✓ PASS</span>  AWSServiceRoleForEVS service-linked role exists
+  <span class="kw">✓ PASS</span>  EVSDeploymentPolicy found (arn:aws:iam::123456789012:policy/EVSDeploymentPolicy)
+<span class="cm">  # FAIL here means the SLR or policy was never created — run the Terraform kit
+  # or create them manually before calling CreateEnvironment.</span>
+
+<span class="cm">── EC2 vCPU Service Quota</span>
+  <span class="kw">✓ PASS</span>  vCPU quota = 512  — meets minimum for 4 × i4i.metal
+<span class="cm">  # FAIL: quota = 256 — request increase at Service Quotas > Amazon EC2 >
+  # "Running On-Demand Standard instances" before deploying EVS.</span>
+
+<span class="cm">── AWS Support Plan</span>
+  <span class="kw">✓ PASS</span>  Support plan is Business or higher
+<span class="cm">  # FAIL: Basic/Developer plan — EVS CreateEnvironment will be rejected.
+  # Upgrade to Business, Enterprise On-Ramp, or Enterprise.</span>
+
+<span class="cm">── VPC Auto-Discovery</span>
+    INFO  Found 1 non-default VPC(s)
+<span class="cm">  # The script skips the default VPC. If you see 0, your VPC hasn't been created.</span>
+
+<span class="cm">================================================================
+VPC: evs-vpc  (vpc-0f75dd807fc01abb9)  CIDR: 10.0.0.0/16
+================================================================</span>
+
+<span class="cm">── Phase 3: VPC</span>
+  <span class="kw">✓ PASS</span>  CIDR 10.0.0.0/16 meets minimum /22 requirement
+  <span class="kw">✓ PASS</span>  DNS hostnames enabled
+  <span class="kw">✓ PASS</span>  DNS support enabled
+
+<span class="cm">── Phase 5: DHCP Options Set</span>
+  <span class="kw">✓ PASS</span>  Domain name = 'evs.vcloudone.local'
+  <span class="kw">✓ PASS</span>  DNS servers: 10.0.0.10, 10.0.0.11
+  <span class="kw">✓ PASS</span>  NTP = 169.254.169.123 (AWS Time Sync Service)
+<span class="cm">  # FAIL on domain_name: DHCP domain must match the Route 53 zone exactly.
+  # FAIL on DNS servers: printed IPs must match resolver endpoint IPs (see below).
+  # FAIL on NTP: 169.254.169.123 must be in the list — no internet required.</span>
+
+<span class="cm">── Phase 4: Route 53 Private Zones</span>
+  <span class="kw">✓ PASS</span>  Forward zone(s): ['evs.vcloudone.local']
+  <span class="kw">✓ PASS</span>  Reverse PTR zone(s): ['11.0.10.in-addr.arpa', '10.0.10.in-addr.arpa']
+    INFO  Zone: evs.vcloudone.local  (Z04587343LEL3Z83E8QNP)  records: 14
+  <span class="kw">✓ PASS</span>  DHCP domain 'evs.vcloudone.local' matches Route 53 zone
+<span class="cm">  # FAIL if no forward zone: create the private hosted zone and associate with the VPC.
+  # FAIL if no reverse zones: EVS requires PTR zones for both ESXi and Mgmt VLANs.
+  # records: 14 = 4 ESXi A/PTR + 8 VCF component A/PTR records — verify count matches.</span>
+
+<span class="cm">── Phase 4: Route 53 Inbound Resolver Endpoint</span>
+  <span class="kw">✓ PASS</span>  Inbound resolver endpoint(s): ['evs-dns-resolver']
+  <span class="kw">✓ PASS</span>    'evs-dns-resolver' — IPs: 10.0.0.11, 10.0.0.10  (status: OPERATIONAL)
+  <span class="kw">✓ PASS</span>    Resolver IPs ['10.0.0.11', '10.0.0.10'] are present in DHCP DNS servers
+<span class="cm">  # FAIL on resolver: create an INBOUND resolver endpoint with ≥ 2 IPs in the VPC.
+  # FAIL on cross-check: DHCP domain-name-servers must exactly match resolver IPs.
+  # FAIL if status is not OPERATIONAL: resolver endpoint is still provisioning.</span>
+
+<span class="cm">── Phase 6: Service Access Subnet & Route Tables</span>
+  <span class="kw">✓ PASS</span>  1 subnet(s) across AZs: us-east-1a(1)
+  <span class="kw">✓ PASS</span>  Explicit route table(s): ['rtb-0b7c5516a85491e95']
+  <span class="kw">✓ PASS</span>  Explicit subnet association(s): ['subnet-003763d6fb9af8fca']
+<span class="cm">  # FAIL on explicit route table: the main (implicit) VPC route table does not count.
+  # A dedicated route table with an explicit subnet association is required so BGP
+  # routes propagated by the Route Server are received by this subnet.</span>
+
+<span class="cm">── Phase 7: NACL & Security Groups</span>
+  <span class="kw">✓ PASS</span>  Custom NACL(s): ['acl-06980e7ddc52a53cb']
+  <span class="kw">✓ PASS</span>  Security group(s) with port 53 rule: ['evs-dns-sg', 'default']
+  <span class="kw">✓ PASS</span>  Security group(s) with port 179 rule: ['VPCRouteServer-rse-...', 'default']
+<span class="cm">  # FAIL on port 179: the Route Server auto-creates its own SGs but verify they exist.
+  # FAIL on custom NACL: the default VPC NACL does not count — create one explicitly.</span>
+
+<span class="cm">── Phase 7: VPC Route Server & BGP</span>
+  <span class="kw">✓ PASS</span>  Route Server(s): ['rs-0e8e3f3e2278e29fa']
+  <span class="kw">✓ PASS</span>    Route Server rs-0e8e3f3e2278e29fa  ASN 65100  state: available
+  <span class="kw">✓ PASS</span>    Endpoints: 2  IPs: ['10.0.0.47', '10.0.0.90']
+  <span class="kw">✓ PASS</span>    2 BGP peer(s) configured with bgp-keepalive liveness
+  <span class="kw">✓ PASS</span>    Route propagation: 1 route table(s)  ['rtb-0b7c5516a85491e95']
+  <span class="kw">✓ PASS</span>    Propagation -> rtb-0b7c5516a85491e95 (explicit route table — correct)
+<span class="cm">  # FAIL on BGP peers: expected before EVS bring-up — NSX Edge IPs are configured
+  #   during CreateEnvironment. This FAIL is normal at pre-deployment time.
+  # FAIL on propagation targeting main RT: BGP routes would be silently dropped.
+  #   Propagation must point to the explicit route table, not the VPC main table.</span>
+
+<span class="cm">── Phase 9: On-Demand Capacity Reservation (ODCR)</span>
+  <span class="str">⚠ WARN</span>  No active i4i.metal ODCR in us-east-1a — create before deploying EVS
+<span class="cm">  # WARN (not FAIL) — optional until CreateEnvironment is called.
+  # Create an ODCR for i4i.metal with instance_match_criteria = "targeted"
+  # before deploying to guarantee capacity.</span>
+
+<span class="cm">================================================================
+SUMMARY  (29 checks across 1 VPC(s))
+   27 PASS    0 FAIL    1 WARN
+
+Exit code 0 — environment is ready for EVS deployment.
+================================================================</span></pre></div>
+            </div>
+
         </article>
     </main>
 
@@ -1145,6 +1439,7 @@ aws ec2 describe-capacity-reservations \
                 <li><a href="#phase10">10. VCF Licensing</a></li>
                 <li><a href="#phase11">11. Key Pair &amp; Quotas</a></li>
                 <li><a href="#terraform">Terraform Automation</a></li>
+                <li><a href="#validator">Prereq Validator</a></li>
             </ul>
         </div>
 
@@ -1160,15 +1455,24 @@ aws ec2 describe-capacity-reservations \
         </div>
 
         <div class="sidebar-card">
-            <h4>Modules Included</h4>
+            <h4>Terraform Files</h4>
             <ul style="list-style:none;font-size:0.87rem;color:#374151;display:flex;flex-direction:column;gap:0.5rem;">
+                <li>&#10003;&nbsp; <strong>variables.tf</strong> — Edit before apply</li>
                 <li>&#10003;&nbsp; <strong>main.tf</strong> — VPC, Subnet, Route Table, Resolvers, DHCP</li>
                 <li>&#10003;&nbsp; <strong>dns.tf</strong> — Route 53 Zone, A/PTR Records (both VLANs)</li>
                 <li>&#10003;&nbsp; <strong>peering.tf</strong> — Route Server, Endpoints, BGP Peers</li>
                 <li>&#10003;&nbsp; <strong>iam.tf</strong> — Deployment User Policy &amp; SLR</li>
-                <li>&#10003;&nbsp; <strong>variables.tf</strong> — IP, ASN &amp; Domain Config</li>
+                <li>&#10003;&nbsp; <strong>odcr.tf</strong> — ODCR (commented out — uncomment when ready)</li>
                 <li>&#10003;&nbsp; <strong>outputs.tf</strong> — All Resource IDs &amp; IPs</li>
             </ul>
+        </div>
+
+        <div class="sidebar-card">
+            <h4>Prereq Validator</h4>
+            <p>Python/boto3 script. Auto-discovers every VPC and validates all EVS prerequisites. No input required &mdash; works against any environment, manual or Terraform-built.</p>
+            <a href="https://github.com/gitvcloudone/EVS-PreREQ-Validate" class="btn-download-ghost" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:0.5rem;">
+                View on GitHub &rarr;
+            </a>
         </div>
 
         <div class="sidebar-card">
