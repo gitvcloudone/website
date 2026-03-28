@@ -1287,6 +1287,15 @@ terraform output</pre></div>
 
             <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Validate" target="_blank" rel="noopener">EVS-PreREQ-Validate</a> script uses boto3 to auto-discover every non-default VPC in your account and validate it against EVS prerequisites &mdash; no input required. Run it against a manually-built environment or after running the Terraform kit above to confirm everything is wired correctly end-to-end.</p>
 
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+                <a href="https://github.com/gitvcloudone/EVS-PreREQ-Validate/archive/refs/heads/main.zip" class="btn-download" style="display:inline-flex;align-items:center;gap:0.4rem;text-decoration:none;">
+                    &#8595; Download .zip
+                </a>
+                <a href="https://github.com/gitvcloudone/EVS-PreREQ-Validate" class="btn-download-ghost" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.4rem;text-decoration:none;">
+                    View on GitHub &rarr;
+                </a>
+            </div>
+
             <h3>Prerequisites</h3>
             <ul style="margin:0 0 1rem 1.5rem;line-height:2;">
                 <li>Python 3.8 or later</li>
@@ -1467,10 +1476,13 @@ Exit code 0 — environment is ready for EVS deployment.
             </ul>
         </div>
 
-        <div class="sidebar-card">
+        <div class="sidebar-card tf-download">
             <h4>Prereq Validator</h4>
             <p>Python/boto3 script. Auto-discovers every VPC and validates all EVS prerequisites. No input required &mdash; works against any environment, manual or Terraform-built.</p>
-            <a href="https://github.com/gitvcloudone/EVS-PreREQ-Validate" class="btn-download-ghost" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:0.5rem;">
+            <a href="https://github.com/gitvcloudone/EVS-PreREQ-Validate/archive/refs/heads/main.zip" class="btn-download">
+                &#8595; Download .zip
+            </a>
+            <a href="https://github.com/gitvcloudone/EVS-PreREQ-Validate" class="btn-download-ghost" target="_blank" rel="noopener">
                 View on GitHub &rarr;
             </a>
         </div>
