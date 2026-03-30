@@ -903,7 +903,7 @@ aws ec2 describe-capacity-reservations \
             <!-- PHASE 10 -->
             <h2 id="phase10"><span class="step-num">10</span> Phase 10: VCF Licensing</h2>
 
-            <p>Amazon EVS is a BYOL (Bring Your Own License) service. You must procure VCF licenses from Broadcom before bring-up. Licenses are entered during environment creation and validated by SDDC Manager post-deployment.</p>
+            <p>Amazon EVS is a BYOL (Bring Your Own License) service. You must procure VCF licenses from Broadcom before bring-up. License keys are entered in the AWS Console (or via the <code>CreateEnvironment</code> API call) at the time of environment creation — AWS accepts the keys and applies them during the EVS deployment process itself.</p>
 
             <div class="step-card">
                 <h3>10.1 Required License Keys</h3>
@@ -921,10 +921,8 @@ aws ec2 describe-capacity-reservations \
 
             <div class="step-card">
                 <h3>10.2 License Application Process</h3>
-                <p>License keys are provided as inputs during the <code>CreateEnvironment</code> API call or via the AWS Console environment creation wizard. After EVS bring-up completes:</p>
+                <p>Enter your license keys directly in the <strong>AWS Console environment creation wizard</strong> or as parameters in the <code>CreateEnvironment</code> API call. AWS passes the keys through and applies them during the initial EVS deployment — there is no SDDC Manager running yet at this stage to validate them. The deployment process itself handles license application.</p>
                 <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem;font-size:0.93rem;color:#374151;">
-                    <li>Log into <strong>vSphere Client</strong> and assign the VCF Solution Key to each host</li>
-                    <li>Verify the vSAN key appears in <strong>SDDC Manager &rsaquo; Licensing</strong></li>
                     <li>Perpetual vSphere licenses are <strong>not supported</strong> — VCF subscription keys with portability entitlements only</li>
                     <li>A license with fewer than 256 cores will cause environment creation to fail</li>
                 </ul>
