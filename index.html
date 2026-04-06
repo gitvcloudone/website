@@ -1088,6 +1088,13 @@ variable <span class="str">"esxi_hosts"</span> {
   }
 }
 
+<span class="cm"># ── Reverse DNS zone names ────────────────────────────────────────────────────
+# Must match the /24 prefix of the IPs in esxi_hosts and vcf_components.
+# Format: third-octet.second-octet.first-octet.in-addr.arpa
+# If you change the host or management VM subnet, update these too.</span>
+variable <span class="str">"host_mgmt_reverse_zone"</span> { default = <span class="str">"10.0.10.in-addr.arpa"</span> }  <span class="cm"># matches 10.0.10.0/24</span>
+variable <span class="str">"mgmt_vm_reverse_zone"</span>   { default = <span class="str">"11.0.10.in-addr.arpa"</span> }  <span class="cm"># matches 10.0.11.0/24</span>
+
 <span class="cm"># ── NSX Edge uplink IPs ───────────────────────────────────────────────────────
 # IPs assigned to NSX Edge uplink interfaces during EVS bring-up.
 # Must be within the NSX Uplink VLAN (default 10.0.16.x).
@@ -1262,14 +1269,16 @@ terraform output</pre></div>
   name = var.domain_name
   vpc { vpc_id = <span class="fn">aws_vpc.evs_vpc.id</span> }
 }
-<span class="cm"># Host Management VLAN reverse zone (ESXi hosts — 10.0.10.x)</span>
+<span class="cm"># Host Management VLAN reverse zone (ESXi hosts — 10.0.10.x)
+# Driven by var.host_mgmt_reverse_zone — update if you change esxi_hosts subnet.</span>
 <span class="kw">resource</span> <span class="str">"aws_route53_zone"</span> <span class="str">"host_mgmt_reverse"</span> {
-  name = <span class="str">"10.0.10.in-addr.arpa"</span>
+  name = var.host_mgmt_reverse_zone
   vpc { vpc_id = <span class="fn">aws_vpc.evs_vpc.id</span> }
 }
-<span class="cm"># Management VM VLAN reverse zone (appliances — 10.0.11.x)</span>
+<span class="cm"># Management VM VLAN reverse zone (appliances — 10.0.11.x)
+# Driven by var.mgmt_vm_reverse_zone — update if you change vcf_components subnet.</span>
 <span class="kw">resource</span> <span class="str">"aws_route53_zone"</span> <span class="str">"mgmt_vm_reverse"</span> {
-  name = <span class="str">"11.0.10.in-addr.arpa"</span>
+  name = var.mgmt_vm_reverse_zone
   vpc { vpc_id = <span class="fn">aws_vpc.evs_vpc.id</span> }
 }
 
