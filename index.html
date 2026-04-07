@@ -863,15 +863,29 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             <!-- PHASE 9 -->
             <h2 id="phase9"><span class="step-num">9</span> Step 9: On-Demand Capacity Reservation (ODCR)</h2>
 
-            <p>Amazon EVS uses <strong>i4i.metal</strong> bare-metal instances exclusively. Because bare-metal capacity can be constrained in specific AZs, you must create an On-Demand Capacity Reservation (ODCR) before deployment to guarantee availability.</p>
+            <p>Amazon EVS runs on bare-metal instances. Because bare-metal capacity can be constrained in specific AZs, you must create an On-Demand Capacity Reservation (ODCR) before deployment to guarantee availability. At the time of writing, <strong>i4i.metal</strong> is the only supported instance type. Additional instance types — including <strong>i7i.metal-24xl</strong> and <strong>i7i.metal-48xl</strong> — are coming. Choose the instance type that matches your planned EVS environment.</p>
 
             <div class="step-card">
-                <h3>9.1 Create the Capacity Reservation</h3>
+                <h3>9.1 Supported Instance Types</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Instance Type</th><th>vCPUs</th><th>Physical Cores</th><th>NVMe Storage</th><th>Availability</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>i4i.metal</strong></td><td>128</td><td>64</td><td>Up to 30 TB</td><td>Available now</td></tr>
+                            <tr><td><strong>i7i.metal-24xl</strong></td><td>96</td><td>48</td><td>Up to 15 TB</td><td>Coming soon</td></tr>
+                            <tr><td><strong>i7i.metal-48xl</strong></td><td>192</td><td>96</td><td>Up to 30 TB</td><td>Coming soon</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>9.2 Create the Capacity Reservation</h3>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Setting</th><th>Value</th></tr></thead>
                         <tbody>
-                            <tr><td><strong>Instance type</strong></td><td>i4i.metal (128 vCPUs, up to 30 TB NVMe per host)</td></tr>
+                            <tr><td><strong>Instance type</strong></td><td>Select the instance type for your EVS environment (see table above)</td></tr>
                             <tr><td><strong>Platform</strong></td><td>Linux/UNIX</td></tr>
                             <tr><td><strong>Quantity</strong></td><td>Minimum 4 (match your planned cluster size; max 16)</td></tr>
                             <tr><td><strong>Availability Zone</strong></td><td>Must be the <strong>same AZ as the EVS environment</strong></td></tr>
@@ -897,7 +911,7 @@ aws ec2 describe-capacity-reservations \
             </div>
 
             <div class="note">
-                <strong>EC2 vCPU Quota:</strong> Each i4i.metal instance uses 128 vCPUs. A 4-host cluster requires a minimum <strong>512 vCPU</strong> quota for Running On-Demand Standard instances. Check and request a quota increase at <code>Service Quotas &rsaquo; Amazon EC2 &rsaquo; Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances</code> before deployment if needed.
+                <strong>EC2 vCPU Quota:</strong> The required vCPU quota depends on your chosen instance type. A 4-host cluster requires: <strong>512 vCPUs</strong> for i4i.metal &nbsp;|&nbsp; <strong>384 vCPUs</strong> for i7i.metal-24xl &nbsp;|&nbsp; <strong>768 vCPUs</strong> for i7i.metal-48xl. Check and request a quota increase at <code>Service Quotas &rsaquo; Amazon EC2 &rsaquo; Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances</code> before deployment if needed.
             </div>
 
             <!-- PHASE 10 -->
@@ -911,7 +925,7 @@ aws ec2 describe-capacity-reservations \
                     <table>
                         <thead><tr><th>License</th><th>Minimum</th><th>Notes</th></tr></thead>
                         <tbody>
-                            <tr><td><strong>VCF Solution Key</strong></td><td>256 cores</td><td>4 hosts &times; 64 cores per i4i.metal = 256 core minimum. Covers vSphere 8 Enterprise Plus, NSX, SDDC Manager, vCenter. Each key can only be assigned to one EVS environment.</td></tr>
+                            <tr><td><strong>VCF Solution Key</strong></td><td>Varies by instance type</td><td>Core count is based on physical cores &times; 4 hosts: <strong>256 cores</strong> for i4i.metal (64 cores/host) &nbsp;|&nbsp; <strong>192 cores</strong> for i7i.metal-24xl (48 cores/host) &nbsp;|&nbsp; <strong>384 cores</strong> for i7i.metal-48xl (96 cores/host). Covers vSphere 8 Enterprise Plus, NSX, SDDC Manager, vCenter. Each key can only be assigned to one EVS environment.</td></tr>
                             <tr><td><strong>vSAN License Key</strong></td><td>110 TiB</td><td>Covers the vSAN storage capacity of the initial 4-host cluster. Cannot be reused across environments.</td></tr>
                             <tr><td><strong>Broadcom Site ID</strong></td><td>Required</td><td>Your organization's Broadcom support portal site ID, used for license validation and entitlement verification.</td></tr>
                         </tbody>
