@@ -545,6 +545,14 @@
                 <img src="/images/1.2_region_map.jpg" alt="AWS regions supporting Amazon EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
+            <div class="step-card">
+                <h3>1.3 Transit Gateway for On-Premises Connectivity</h3>
+                <p>If your EVS environment needs to communicate with on-premises networks, an <strong>AWS Transit Gateway</strong> is required. AWS does not support Direct Connect Private VIFs, VGW-based Site-to-Site VPNs, or VPC peering for EVS underlay connectivity — all external network paths must go through Transit Gateway or AWS Cloud WAN.</p>
+                <div class="note" style="margin-top:0.75rem;">
+                    <strong>Note:</strong> VPC peering is not supported with Amazon EVS. For VPC-to-VPC connectivity, use Transit Gateway or AWS Cloud WAN.
+                </div>
+            </div>
+
             <!-- PHASE 2 -->
             <h2 id="phase2"><span class="step-num">2</span> Step 2: IAM Permissions &amp; Service-Linked Role</h2>
 
@@ -586,7 +594,7 @@
             </div>
 
             <div class="note">
-                <strong>Best Practice:</strong> Do not use root credentials to deploy EVS. Create a dedicated IAM role or user with least-privilege permissions scoped to the deployment account and region.
+                <strong>Best Practice:</strong> Do not use root credentials to deploy EVS. Create a dedicated IAM role or user with least-privilege permissions scoped to the deployment account and region. Alternatively, attach the AWS-managed policy <code>AmazonEVSEnvironmentPolicy</code> which covers the minimum permissions required to call <code>CreateEnvironment</code>.
             </div>
 
             <!-- PHASE 3 -->
@@ -685,7 +693,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     <table>
                         <thead><tr><th>Component</th><th>Forward A Record</th><th>Reverse PTR IP</th><th>VLAN</th></tr></thead>
                         <tbody>
-                            <tr><td><strong>Cloud Builder</strong></td><td>cloud-builder.evs.vcloudone.local</td><td>10.0.10.9</td><td>Host Mgmt</td></tr>
+                            <tr><td><strong>Cloud Builder</strong></td><td>cloud-builder.evs.vcloudone.local</td><td>10.0.11.9</td><td>Mgmt VM</td></tr>
                             <tr><td><strong>ESXi Host 01</strong></td><td>esxi-01.evs.vcloudone.local</td><td>10.0.10.21</td><td>Host Mgmt</td></tr>
                             <tr><td><strong>ESXi Host 02</strong></td><td>esxi-02.evs.vcloudone.local</td><td>10.0.10.22</td><td>Host Mgmt</td></tr>
                             <tr><td><strong>ESXi Host 03</strong></td><td>esxi-03.evs.vcloudone.local</td><td>10.0.10.23</td><td>Host Mgmt</td></tr>
@@ -701,8 +709,8 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                         </tbody>
                     </table>
                 </div>
-                <p style="margin-top:1rem;">Also create <strong>reverse lookup (PTR) zones</strong> for each subnet: <code>10.0.10.in-addr.arpa</code> (Host Mgmt) and <code>11.0.10.in-addr.arpa</code> (Mgmt VM), associated with the EVS VPC.</p>
                 <img src="/images/4.3_dns_records.jpg" alt="DNS A records for EVS components in Route 53" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <p style="margin-top:1rem;">Also create <strong>reverse lookup (PTR) zones</strong> for each subnet: <code>10.0.10.in-addr.arpa</code> (Host Mgmt) and <code>11.0.10.in-addr.arpa</code> (Mgmt VM), associated with the EVS VPC.</p>
                 <img src="/images/4.3_dns_reverse_ptr_10.jpg" alt="Reverse PTR zone for Host Management VLAN (10.0.10.x)" style="width:100%;margin-top:0.75rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
                 <img src="/images/4.3_dns_reverse_ptr_11.jpg" alt="Reverse PTR zone for Management VM VLAN (10.0.11.x)" style="width:100%;margin-top:0.75rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
@@ -770,7 +778,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     <table>
                         <thead><tr><th>Field</th><th>Value</th><th>Notes</th></tr></thead>
                         <tbody>
-                            <tr><td><strong>Amazon Side ASN</strong></td><td>e.g. 65100</td><td>Must be in private range 64512&ndash;65534. <strong>Must differ from NSX Edge ASN (default 65000).</strong></td></tr>
+                            <tr><td><strong>Amazon Side ASN</strong></td><td>e.g. 65100</td><td>Must be a private ASN — 16-bit range <strong>64512–65534</strong> or 32-bit range <strong>4200000000–4294967294</strong>. <strong>Must differ from NSX Tier-0 ASN (default 65000).</strong></td></tr>
                             <tr><td><strong>Persist Routes</strong></td><td>Enabled</td><td>Preserves routes for 1&ndash;5 min after BGP session drops; prevents route flaps during maintenance</td></tr>
                             <tr><td><strong>SNS Notifications</strong></td><td>Recommended</td><td>Alerts on BGP state changes in production</td></tr>
                         </tbody>
@@ -830,6 +838,17 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 </div>
             </div>
 
+            <div class="step-card">
+                <h3>7.6 EVS Networking Limitations</h3>
+                <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;font-size:0.93rem;color:#374151;">
+                    <li><strong>Security groups do not apply</strong> to EVS VLAN subnet ENIs. NACLs are the only packet-level filtering mechanism for EVS traffic.</li>
+                    <li><strong>VPC peering is not supported.</strong> Use Transit Gateway or AWS Cloud WAN for VPC-to-VPC connectivity.</li>
+                    <li><strong>S3 Gateway endpoints are not supported</strong> with EVS. Use S3 Interface endpoints for S3 access from EVS workloads.</li>
+                    <li><strong>Direct Connect Private VIFs and VGW-based VPNs are not supported.</strong> All external paths must terminate on Transit Gateway or Cloud WAN.</li>
+                    <li><strong>IPv6 is not supported.</strong></li>
+                </ul>
+            </div>
+
             <div class="note">
                 <strong>NSX Tier-0 BGP is auto-configured.</strong> EVS automatically configures the NSX Tier-0 gateway BGP neighbors using the Route Server endpoint IPs and the peer ASN you specified. You do not need to log into NSX Manager to configure BGP — this is handled entirely during EVS bring-up.
             </div>
@@ -837,7 +856,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             <!-- PHASE 8 -->
             <h2 id="phase8"><span class="step-num">8</span> Step 8: VLAN Subnet Sizing</h2>
 
-            <p>You do not create these subnets — you provide the CIDRs in the EVS <code>CreateEnvironment</code> API call. Plan them now against your VPC CIDR to ensure zero overlap. All VLANs accept <strong>/28 to /24</strong> except HCX Uplink which must be exactly <strong>/28</strong>.</p>
+            <p>You do not create these subnets — you provide the CIDRs in the EVS <code>CreateEnvironment</code> API call. Plan them now against your VPC CIDR to ensure zero overlap. All VLANs accept <strong>/28 to /24</strong>.</p>
 
             <div class="table-wrap">
                 <table>
@@ -850,11 +869,15 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                         <tr><td><strong>Host VTEP</strong></td><td>NSX host tunnel endpoints</td><td>/28 &ndash; /24</td><td>10.0.14.0/24</td></tr>
                         <tr><td><strong>Edge VTEP</strong></td><td>NSX Edge tunnel endpoints</td><td>/28 &ndash; /24</td><td>10.0.15.0/24</td></tr>
                         <tr><td><strong>NSX Uplink</strong></td><td>Tier-0 BGP peering (source IPs for Route Server peers)</td><td>/28 &ndash; /24</td><td>10.0.16.0/24</td></tr>
-                        <tr><td><strong>HCX Uplink</strong></td><td>(Optional) HCX-IX &amp; HCX-NE</td><td>Exactly /28</td><td>10.0.20.0/28</td></tr>
+                        <tr><td><strong>HCX Uplink</strong></td><td>(Optional) HCX-IX &amp; HCX-NE</td><td>/28 &ndash; /24</td><td>10.0.20.0/28</td></tr>
                         <tr><td><strong>Expansion VLAN 1</strong></td><td>Future workload segments</td><td>/28 &ndash; /24</td><td>10.0.21.0/24</td></tr>
                         <tr><td><strong>Expansion VLAN 2</strong></td><td>Future workload segments</td><td>/28 &ndash; /24</td><td>10.0.22.0/24</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div class="note">
+                <strong>Sizing constraints:</strong> vMotion, vSAN, and Host VTEP VLANs must be the same size as the Host Management VLAN — they cannot be independently sized. The Host VTEP subnet consumes <strong>2 IP addresses per host</strong>, so a /24 supports a maximum of 112 hosts. No customer workloads (including bastion hosts or monitoring agents) may be launched in EVS-managed subnets — these are dedicated exclusively to VCF components.
             </div>
 
             <!-- PHASE 9 -->
@@ -932,10 +955,10 @@ aws ec2 describe-capacity-reservations \
 
             <div class="step-card">
                 <h3>10.2 License Application Process</h3>
-                <p>Enter your license keys directly in the <strong>AWS Console environment creation wizard</strong> or as parameters in the <code>CreateEnvironment</code> API call. AWS passes the keys through and applies them during the initial EVS deployment — there is no SDDC Manager running yet at this stage to validate them. The deployment process itself handles license application.</p>
+                <p>Enter your license keys directly in the <strong>AWS Console environment creation wizard</strong> or as parameters in the <code>CreateEnvironment</code> API call. <strong>AWS does not validate license keys</strong> — validation is performed by Broadcom. After the EVS environment is deployed, use <strong>SDDC Manager</strong> to manage and maintain valid VCF solution and vSAN license keys. Amazon EVS requires that valid keys remain in SDDC Manager for the service to function properly.</p>
                 <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem;font-size:0.93rem;color:#374151;">
-                    <li>Perpetual vSphere licenses are <strong>not supported</strong> — VCF subscription keys with portability entitlements only</li>
-                    <li>A license with fewer than 256 cores will cause environment creation to fail</li>
+                    <li>To validate your keys before deployment, visit the Broadcom support portal</li>
+                    <li>A VCF Solution Key covering fewer cores than your host count requires will cause environment creation to fail</li>
                 </ul>
             </div>
 
@@ -954,6 +977,7 @@ aws ec2 describe-capacity-reservations \
                         <thead><tr><th>Check</th><th>Verified?</th></tr></thead>
                         <tbody>
                             <tr><td>AWS Business Support (or higher) active</td><td>&#9744;</td></tr>
+                            <tr><td>Transit Gateway configured (if on-premises connectivity required)</td><td>&#9744;</td></tr>
                             <tr><td>IAM user/role has EVS + EC2 + SLR permissions</td><td>&#9744;</td></tr>
                             <tr><td>VPC created with /22+ CIDR, DNS enabled</td><td>&#9744;</td></tr>
                             <tr><td>Route 53 private hosted zone created and VPC-associated</td><td>&#9744;</td></tr>
