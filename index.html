@@ -843,7 +843,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;font-size:0.93rem;color:#374151;">
                     <li><strong>Security groups do not apply</strong> to EVS VLAN subnet ENIs. NACLs are the only packet-level filtering mechanism for EVS traffic.</li>
                     <li><strong>VPC peering is not a documented supported connectivity option.</strong> Use Transit Gateway for VPC-to-VPC connectivity.</li>
-                    <li><strong>S3 Gateway endpoints are not supported</strong> with EVS. Use S3 Interface endpoints for S3 access from EVS workloads.</li>
+                    <li><strong>S3 Gateway endpoints are not supported</strong> with EVS. To access S3 from EVS workloads, create an <strong>S3 Interface Endpoint (PrivateLink)</strong> in your VPC — this provisions a private IP in your subnet that EVS workloads can route to like any standard network destination, with no route table injection required.</li>
                     <li><strong>Direct Connect Private VIFs and VGW-based VPNs are not supported.</strong> All external paths must terminate on Transit Gateway.</li>
                     <li><strong>IPv6 is not supported.</strong></li>
                 </ul>
