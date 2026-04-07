@@ -478,12 +478,8 @@
 
 <!-- HERO -->
 <section class="hero">
-    <div class="hero-badge">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
-        Amazon EVS &bull; VCF 5.x &bull; NSX-T &bull; Terraform
-    </div>
-    <h1>Enterprise SDDC on AWS.<br><em>Done right, the first time.</em></h1>
-    <p>The complete prerequisite guide for deploying VMware Cloud Foundation on Amazon Elastic VMware Service — with production-ready Terraform automation.</p>
+    <h1>Amazon Elastic VMware Service (EVS)</h1>
+    <p>Running Private Cloud in the Public Cloud, powered by VMware Cloud Foundation</p>
     <div class="hero-ctas">
         <a href="#guide" class="btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
@@ -496,16 +492,6 @@
     </div>
 </section>
 
-<!-- STATS BAR -->
-<div class="stats-bar">
-    <div class="stats-inner">
-        <div class="stat"><span class="stat-dot"></span><strong>11 Steps</strong>&nbsp;Covered</div>
-        <div class="stat"><span class="stat-dot"></span><strong>10 VLANs</strong>&nbsp;Mapped</div>
-        <div class="stat"><span class="stat-dot"></span><strong>256-Core</strong>&nbsp;Min License</div>
-        <div class="stat"><span class="stat-dot"></span><strong>i4i.metal</strong>&nbsp;Bare Metal</div>
-        <div class="stat"><span class="stat-dot"></span><strong>VCF 5.x</strong>&nbsp;Compatible</div>
-    </div>
-</div>
 
 <!-- MAIN CONTENT -->
 <div class="page-wrap" id="guide">
@@ -557,6 +543,7 @@
             <div class="step-card">
                 <h3>1.2 Supported AWS Regions &amp; Availability Zones</h3>
                 <p>Amazon EVS is available in select regions. All EVS resources — VPC, subnets, hosts, and the Route Server — must reside in the <strong>same single AZ</strong>. EVS does not support multi-AZ deployments within a single environment. Choose your target AZ before proceeding and plan all subnets accordingly.</p>
+                <img src="/images/1.2_region_map.jpg" alt="AWS regions supporting Amazon EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <!-- PHASE 2 -->
@@ -621,6 +608,7 @@
                         </tbody>
                     </table>
                 </div>
+                <img src="/images/3.1_vpc_marked.jpg" alt="EVS VPC configuration in AWS console" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -669,6 +657,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             <div class="step-card">
                 <h3>4.1 Create the Route 53 Private Hosted Zone</h3>
                 <p>Create a <strong>private hosted zone</strong> in Route 53 and associate it with the EVS VPC. Choose a domain that matches the <code>domain_name</code> you will put in the DHCP Options Set (e.g., <code>evs.vcloudone.local</code>). This domain must be unique within the VPC — do not reuse an existing zone.</p>
+                <img src="/images/4.1_route53_host_zone.jpg" alt="Route 53 private hosted zone for EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -687,6 +676,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     </table>
                 </div>
                 <p style="margin-top:1rem;">Note both IP addresses. They are used directly as <code>domain-name-servers</code> in the DHCP Options Set in Step 5.</p>
+                <img src="/images/4.2_inbound_resolver.jpg" alt="Route 53 inbound resolver endpoints for EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -713,6 +703,9 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     </table>
                 </div>
                 <p style="margin-top:1rem;">Also create <strong>reverse lookup (PTR) zones</strong> for each subnet: <code>10.0.10.in-addr.arpa</code> (Host Mgmt) and <code>11.0.10.in-addr.arpa</code> (Mgmt VM), associated with the EVS VPC.</p>
+                <img src="/images/4.3_dns_records.jpg" alt="DNS A records for EVS components in Route 53" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img src="/images/4.3_dns_reverse_ptr_10.jpg" alt="Reverse PTR zone for Host Management VLAN (10.0.10.x)" style="width:100%;margin-top:0.75rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img src="/images/4.3_dns_reverse_ptr_11.jpg" alt="Reverse PTR zone for Management VM VLAN (10.0.11.x)" style="width:100%;margin-top:0.75rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="note">
@@ -738,6 +731,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     </table>
                 </div>
                 <p style="margin-top:1rem;">After creating the set, associate it with the EVS VPC: select the VPC &rsaquo; <strong>Actions &rsaquo; Edit DHCP options set</strong> &rsaquo; choose the new set.</p>
+                <img src="/images/5.1_dhcp_option_set.jpg" alt="DHCP Options Set configuration for EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="note">
@@ -762,6 +756,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                         </tbody>
                     </table>
                 </div>
+                <img src="/images/6.1_service_access_subnet.jpg" alt="Service Access Subnet configuration in AWS console" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <!-- PHASE 7 -->
@@ -783,6 +778,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     </table>
                 </div>
                 <p style="margin-top:0.75rem;">Wait for Route Server status to reach <strong>Available</strong> before proceeding.</p>
+                <img src="/images/7.1_route_server.jpg" alt="VPC Route Server creation in AWS console" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -807,6 +803,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <div class="note" style="margin-top:1rem;">
                     <strong>Important:</strong> Use <strong>BGP Keepalive</strong> only. BFD (Bidirectional Forwarding Detection) is not supported for Amazon EVS and will cause undefined session behavior.
                 </div>
+                <img src="/images/7.3_route_server_endpoint_peering.jpg" alt="Route Server endpoint peering configuration" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -815,6 +812,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <div class="note" style="margin-top:1rem;">
                     <strong>Common failure:</strong> Every propagated route table must have an <strong>explicit subnet association</strong>. Route tables that only have the implicit main-route-table association will silently fail to receive BGP routes. Verify explicit associations exist before proceeding.
                 </div>
+                <img src="/images/7.4_route_server_propagation.jpg" alt="Route Server route propagation to service access route table" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
