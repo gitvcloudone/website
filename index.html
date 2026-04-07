@@ -644,7 +644,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                             <tr><td><strong>Host VTEP VLAN</strong></td><td>NSX host tunnel endpoints (Geneve)</td><td>No &mdash; EVS creates</td><td>10.0.14.0/24</td></tr>
                             <tr><td><strong>Edge VTEP VLAN</strong></td><td>NSX Edge tunnel endpoints (Geneve)</td><td>No &mdash; EVS creates</td><td>10.0.15.0/24</td></tr>
                             <tr><td><strong>NSX Uplink VLAN</strong></td><td>Tier-0 north-south BGP peering</td><td>No &mdash; EVS creates</td><td>10.0.16.0/24</td></tr>
-                            <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>No &mdash; EVS creates</td><td>10.0.20.0/28</td></tr>
+                            <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>No &mdash; EVS creates</td><td>10.0.20.0/24</td></tr>
                             <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF segments</td><td>No &mdash; EVS creates</td><td>10.0.21.0/24</td></tr>
                             <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF segments</td><td>No &mdash; EVS creates</td><td>10.0.22.0/24</td></tr>
                         </tbody>
@@ -869,7 +869,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                         <tr><td><strong>Host VTEP</strong></td><td>NSX host tunnel endpoints</td><td>/28 &ndash; /24</td><td>10.0.14.0/24</td></tr>
                         <tr><td><strong>Edge VTEP</strong></td><td>NSX Edge tunnel endpoints</td><td>/28 &ndash; /24</td><td>10.0.15.0/24</td></tr>
                         <tr><td><strong>NSX Uplink</strong></td><td>Tier-0 BGP peering (source IPs for Route Server peers)</td><td>/28 &ndash; /24</td><td>10.0.16.0/24</td></tr>
-                        <tr><td><strong>HCX Uplink</strong></td><td>(Optional) HCX-IX &amp; HCX-NE</td><td>/28 &ndash; /24</td><td>10.0.20.0/28</td></tr>
+                        <tr><td><strong>HCX Uplink</strong></td><td>(Optional) HCX-IX &amp; HCX-NE</td><td>/28 &ndash; /24</td><td>10.0.20.0/24</td></tr>
                         <tr><td><strong>Expansion VLAN 1</strong></td><td>Future workload segments</td><td>/28 &ndash; /24</td><td>10.0.21.0/24</td></tr>
                         <tr><td><strong>Expansion VLAN 2</strong></td><td>Future workload segments</td><td>/28 &ndash; /24</td><td>10.0.22.0/24</td></tr>
                     </tbody>
