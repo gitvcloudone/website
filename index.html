@@ -818,8 +818,8 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="step-card">
-                <h3>7.5 Network ACL Requirements for BGP</h3>
-                <p>Ensure the NACL on the Service Access Subnet allows BGP traffic. NACLs are stateless — both directions must be explicitly permitted. The NSX Uplink VLAN subnet is <strong>not pre-created</strong> — it is automatically provisioned by EVS during bring-up.</p>
+                <h3>7.5 Network ACL Best Practice for BGP</h3>
+                <p>AWS does not explicitly require BGP NACL rules as a deployment prerequisite — EVS bring-up will not fail without them. However, AWS recommends allowing BGP traffic on the Service Access Subnet NACL as an underlay hygiene best practice. NACLs are stateless — both directions must be explicitly permitted. The NSX Uplink VLAN subnet is <strong>not pre-created</strong> — it is automatically provisioned by EVS during bring-up.</p>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Direction</th><th>Protocol</th><th>Ports</th><th>Source / Destination</th></tr></thead>
