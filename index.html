@@ -512,7 +512,7 @@
 
             <p>What makes or breaks a successful deployment is everything <em>before</em> you click deploy. Just like an on-premises VCF deployment, EVS expects a fully prepared environment — DNS resolving correctly, networking in place, IP plans finalized, licenses procured. The difference is that on-premises you have time to fix things mid-deployment; with EVS, the automation validates prerequisites upfront and will fail fast if anything is missing or misconfigured. Getting the prep right the first time is the entire point of this guide.</p>
 
-            <p>This guide covers every prerequisite required before submitting an Amazon EVS environment creation request. Complete all <strong>11</strong> steps in order — EVS will validate most of these during bring-up and fail with a specific error if any are missing.</p>
+            <p>This guide covers every prerequisite required before submitting an Amazon EVS environment creation request. Complete all <strong>10</strong> steps in order — EVS will validate most of these during bring-up and fail with a specific error if any are missing.</p>
 
             <div class="table-wrap">
                 <table>
@@ -525,10 +525,9 @@
                         <tr><td>5</td><td>Route 53 Private Zone &amp; Inbound Resolvers</td><td>Yes</td></tr>
                         <tr><td>6</td><td>DHCP Options Set</td><td>Yes</td></tr>
                         <tr><td>7</td><td>VPC Route Server &amp; BGP (AWS side)</td><td>Yes</td></tr>
-                        <tr><td>8</td><td>VLAN IP Planning (10 VLANs)</td><td>Plan only &mdash; EVS creates</td></tr>
-                        <tr><td>9</td><td>On-Demand Capacity Reservation (ODCR)</td><td>Yes</td></tr>
-                        <tr><td>10</td><td>VCF Licensing (256-core key + vSAN key)</td><td>Procure before bring-up</td></tr>
-                        <tr><td>11</td><td>EC2 Key Pair &amp; Service Quotas</td><td>Yes</td></tr>
+                        <tr><td>8</td><td>On-Demand Capacity Reservation (ODCR)</td><td>Yes</td></tr>
+                        <tr><td>9</td><td>VCF Licensing (256-core key + vSAN key)</td><td>Procure before bring-up</td></tr>
+                        <tr><td>10</td><td>EC2 Key Pair &amp; Service Quotas</td><td>Yes</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -608,25 +607,33 @@
 
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>Subnet / VLAN</th><th>Purpose</th><th>Pre-Create?</th><th>Example CIDR</th></tr></thead>
+                    <thead><tr><th>Subnet / VLAN</th><th>Purpose</th><th>Allowed Size</th><th>Pre-Create?</th><th>Example CIDR</th></tr></thead>
                     <tbody>
-                        <tr><td><strong>Service Access Subnet</strong></td><td>Route Server endpoints, DNS Resolver ENIs</td><td><strong>Yes &mdash; Step 4.3</strong></td><td>10.0.0.0/24</td></tr>
-                        <tr><td><strong>Host Management VLAN</strong></td><td>ESXi host management interfaces</td><td>No &mdash; EVS creates</td><td>10.0.10.0/24</td></tr>
-                        <tr><td><strong>Management VM VLAN</strong></td><td>vCenter, SDDC Manager, NSX Managers, NSX Edges</td><td>No &mdash; EVS creates</td><td>10.0.11.0/24</td></tr>
-                        <tr><td><strong>vMotion VLAN</strong></td><td>Live VM migration</td><td>No &mdash; EVS creates</td><td>10.0.12.0/24</td></tr>
-                        <tr><td><strong>vSAN VLAN</strong></td><td>Storage traffic</td><td>No &mdash; EVS creates</td><td>10.0.13.0/24</td></tr>
-                        <tr><td><strong>Host VTEP VLAN</strong></td><td>NSX host tunnel endpoints (Geneve)</td><td>No &mdash; EVS creates</td><td>10.0.14.0/24</td></tr>
-                        <tr><td><strong>Edge VTEP VLAN</strong></td><td>NSX Edge tunnel endpoints (Geneve)</td><td>No &mdash; EVS creates</td><td>10.0.15.0/24</td></tr>
-                        <tr><td><strong>NSX Uplink VLAN</strong></td><td>Tier-0 north-south BGP peering</td><td>No &mdash; EVS creates</td><td>10.0.16.0/24</td></tr>
-                        <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>No &mdash; EVS creates</td><td>10.0.20.0/24</td></tr>
-                        <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF segments</td><td>No &mdash; EVS creates</td><td>10.0.21.0/24</td></tr>
-                        <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF segments</td><td>No &mdash; EVS creates</td><td>10.0.22.0/24</td></tr>
+                        <tr><td><strong>Service Access Subnet</strong></td><td>Route Server endpoints, DNS Resolver ENIs</td><td>/28 &ndash; /24</td><td><strong>Yes &mdash; Step 4.3</strong></td><td>10.0.0.0/24</td></tr>
+                        <tr><td><strong>Host Management VLAN</strong></td><td>ESXi host management interfaces</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.10.0/24</td></tr>
+                        <tr><td><strong>Management VM VLAN</strong></td><td>vCenter, SDDC Manager, NSX Managers, NSX Edges</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.11.0/24</td></tr>
+                        <tr><td><strong>vMotion VLAN</strong></td><td>Live VM migration</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.12.0/24</td></tr>
+                        <tr><td><strong>vSAN VLAN</strong></td><td>Storage traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.13.0/24</td></tr>
+                        <tr><td><strong>Host VTEP VLAN</strong></td><td>NSX host tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.14.0/24</td></tr>
+                        <tr><td><strong>Edge VTEP VLAN</strong></td><td>NSX Edge tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.15.0/24</td></tr>
+                        <tr><td><strong>NSX Uplink VLAN</strong></td><td>Tier-0 north-south BGP peering</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.16.0/24</td></tr>
+                        <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.20.0/24</td></tr>
+                        <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.21.0/24</td></tr>
+                        <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.22.0/24</td></tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="note">
                 <strong>Critical:</strong> Only the <strong>Service Access Subnet</strong> is pre-created by you (Step 4.3). All 10 VLAN subnets are automatically provisioned by EVS during bring-up using the CIDRs you specify in the <code>CreateEnvironment</code> request. Reserve these ranges now and do not create overlapping subnets in the VPC.
+            </div>
+
+            <div class="note">
+                <strong>Sizing constraints:</strong> vMotion, vSAN, and Host VTEP VLANs must be the same size as the Host Management VLAN — they cannot be independently sized. The Host VTEP subnet consumes multiple IP addresses per host (exact count is NSX-version dependent), so size accordingly. No customer workloads (including bastion hosts or monitoring agents) may be launched in EVS-managed subnets — these are dedicated exclusively to VCF components.
+            </div>
+
+            <div class="note">
+                <strong>HCX internet connectivity (optional):</strong> If you plan to use HCX for workload migration, AWS requires an IPAM (IP Address Manager) pool configured with public IP addresses for the HCX Uplink VLAN. Allocate at least <strong>2 Elastic IP addresses (EIPs)</strong> from the IPAM pool — one for the HCX Manager appliance and one for the HCX Interconnect (HCX-IX) appliance. Configure the IPAM pool before EVS deployment so the EIPs are available when HCX is activated.
             </div>
 
             <!-- PHASE 4 -->
@@ -903,43 +910,12 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <!-- PHASE 8 -->
-            <h2 id="phase8"><span class="step-num">8</span> Step 8: VLAN Subnet Sizing</h2>
-
-            <p>You do not create these subnets — you provide the CIDRs in the EVS <code>CreateEnvironment</code> API call. Plan them now against your VPC CIDR to ensure zero overlap. All VLANs accept <strong>/28 to /24</strong>.</p>
-
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>VLAN</th><th>Description</th><th>Allowed Size</th><th>Example CIDR</th></tr></thead>
-                    <tbody>
-                        <tr><td><strong>Host Management</strong></td><td>ESXi host management interfaces</td><td>/28 &ndash; /24</td><td>10.0.10.0/24</td></tr>
-                        <tr><td><strong>Management VM</strong></td><td>vCenter, SDDC Manager, NSX Managers, Edges</td><td>/28 &ndash; /24</td><td>10.0.11.0/24</td></tr>
-                        <tr><td><strong>vMotion</strong></td><td>Live VM migration</td><td>/28 &ndash; /24</td><td>10.0.12.0/24</td></tr>
-                        <tr><td><strong>vSAN</strong></td><td>Storage traffic</td><td>/28 &ndash; /24</td><td>10.0.13.0/24</td></tr>
-                        <tr><td><strong>Host VTEP</strong></td><td>NSX host tunnel endpoints</td><td>/28 &ndash; /24</td><td>10.0.14.0/24</td></tr>
-                        <tr><td><strong>Edge VTEP</strong></td><td>NSX Edge tunnel endpoints</td><td>/28 &ndash; /24</td><td>10.0.15.0/24</td></tr>
-                        <tr><td><strong>NSX Uplink</strong></td><td>Tier-0 BGP peering (source IPs for Route Server peers)</td><td>/28 &ndash; /24</td><td>10.0.16.0/24</td></tr>
-                        <tr><td><strong>HCX Uplink</strong></td><td>(Optional) HCX-IX &amp; HCX-NE</td><td>/28 &ndash; /24</td><td>10.0.20.0/24</td></tr>
-                        <tr><td><strong>Expansion VLAN 1</strong></td><td>Future workload segments</td><td>/28 &ndash; /24</td><td>10.0.21.0/24</td></tr>
-                        <tr><td><strong>Expansion VLAN 2</strong></td><td>Future workload segments</td><td>/28 &ndash; /24</td><td>10.0.22.0/24</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="note">
-                <strong>Sizing constraints:</strong> vMotion, vSAN, and Host VTEP VLANs must be the same size as the Host Management VLAN — they cannot be independently sized. The Host VTEP subnet consumes multiple IP addresses per host (exact count is NSX-version dependent), so size accordingly. No customer workloads (including bastion hosts or monitoring agents) may be launched in EVS-managed subnets — these are dedicated exclusively to VCF components.
-            </div>
-
-            <div class="note">
-                <strong>HCX internet connectivity (optional):</strong> If you plan to use HCX for workload migration, AWS requires an IPAM (IP Address Manager) pool configured with public IP addresses for the HCX Uplink VLAN. Allocate at least <strong>2 Elastic IP addresses (EIPs)</strong> from the IPAM pool — one for the HCX Manager appliance and one for the HCX Interconnect (HCX-IX) appliance. Configure the IPAM pool before EVS deployment so the EIPs are available when HCX is activated.
-            </div>
-
-            <!-- PHASE 9 -->
-            <h2 id="phase9"><span class="step-num">9</span> Step 9: On-Demand Capacity Reservation (ODCR)</h2>
+            <h2 id="phase8"><span class="step-num">8</span> Step 8: On-Demand Capacity Reservation (ODCR)</h2>
 
             <p>Amazon EVS runs on bare-metal instances. Because bare-metal capacity can be constrained in specific AZs, AWS recommends creating an On-Demand Capacity Reservation (ODCR) before deployment to improve your chances of securing capacity. At the time of writing, <strong>i4i.metal</strong> is the only supported instance type. Additional instance types — including <strong>i7i.metal-24xl</strong> and <strong>i7i.metal-48xl</strong> — are coming. Choose the instance type that matches your planned EVS environment.</p>
 
             <div class="step-card">
-                <h3>9.1 Supported Instance Types</h3>
+                <h3>8.1 Supported Instance Types</h3>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Instance Type</th><th>vCPUs</th><th>Physical Cores</th><th>NVMe Storage</th><th>Availability</th></tr></thead>
@@ -953,7 +929,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="step-card">
-                <h3>9.2 Create the Capacity Reservation</h3>
+                <h3>8.2 Create the Capacity Reservation</h3>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Setting</th><th>Value</th></tr></thead>
@@ -987,13 +963,13 @@ aws ec2 describe-capacity-reservations \
                 <strong>EC2 vCPU Quota:</strong> The required vCPU quota depends on your chosen instance type. A 4-host cluster requires: <strong>512 vCPUs</strong> for i4i.metal &nbsp;|&nbsp; <strong>384 vCPUs</strong> for i7i.metal-24xl &nbsp;|&nbsp; <strong>768 vCPUs</strong> for i7i.metal-48xl. Check and request a quota increase at <code>Service Quotas &rsaquo; Amazon EC2 &rsaquo; Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances</code> before deployment if needed.
             </div>
 
-            <!-- PHASE 10 -->
-            <h2 id="phase10"><span class="step-num">10</span> Step 10: VCF Licensing</h2>
+            <!-- PHASE 9 -->
+            <h2 id="phase9"><span class="step-num">9</span> Step 9: VCF Licensing</h2>
 
             <p>Amazon EVS is a BYOL (Bring Your Own License) service. You must procure VCF licenses from Broadcom before bring-up. License keys are entered in the AWS Console (or via the <code>CreateEnvironment</code> API call) at the time of environment creation — AWS accepts the keys and applies them during the EVS deployment process itself.</p>
 
             <div class="step-card">
-                <h3>10.1 Required License Keys</h3>
+                <h3>9.1 Required License Keys</h3>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>License</th><th>Minimum</th><th>Notes</th></tr></thead>
@@ -1007,7 +983,7 @@ aws ec2 describe-capacity-reservations \
             </div>
 
             <div class="step-card">
-                <h3>10.2 License Application Process</h3>
+                <h3>9.2 License Application Process</h3>
                 <p>Enter your license keys directly in the <strong>AWS Console environment creation wizard</strong> or as parameters in the <code>CreateEnvironment</code> API call. <strong>AWS does not validate license keys</strong> — validation is performed by Broadcom. After the EVS environment is deployed, use <strong>SDDC Manager</strong> to manage and maintain valid VCF solution and vSAN license keys. Amazon EVS requires that valid keys remain in SDDC Manager for the service to function properly.</p>
                 <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem;font-size:0.93rem;color:#374151;">
                     <li>To validate your keys before deployment, visit the Broadcom support portal</li>
@@ -1015,16 +991,16 @@ aws ec2 describe-capacity-reservations \
                 </ul>
             </div>
 
-            <!-- PHASE 11 -->
-            <h2 id="phase11"><span class="step-num">11</span> Step 11: EC2 Key Pair &amp; Final Checks</h2>
+            <!-- PHASE 10 -->
+            <h2 id="phase10"><span class="step-num">10</span> Step 10: EC2 Key Pair &amp; Final Checks</h2>
 
             <div class="step-card">
-                <h3>11.1 EC2 Key Pair</h3>
+                <h3>10.1 EC2 Key Pair</h3>
                 <p>Create an EC2 key pair in the same region as the EVS environment. This key pair is used for SSH access to ESXi hosts during and after deployment. Navigate to <code>EC2 &rsaquo; Key Pairs &rsaquo; Create key pair</code>. Store the private key securely &mdash; it cannot be recovered after creation.</p>
             </div>
 
             <div class="step-card">
-                <h3>11.2 Pre-Deployment Validation Checklist</h3>
+                <h3>10.2 Pre-Deployment Validation Checklist</h3>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Check</th><th>Verified?</th></tr></thead>
@@ -1059,7 +1035,7 @@ aws ec2 describe-capacity-reservations \
             <!-- TERRAFORM -->
             <h2 id="terraform"><span class="step-num">&#9889;</span> Automation: Terraform Deployment</h2>
 
-            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Steps 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options set, service access subnet with explicit route table, and Route Server with BGP peers. Step 9 (ODCR) is included in <code>odcr.tf</code> as commented-out code &mdash; uncomment when ready. All defaults match the IP plan in this guide and are production-ready.</p>
+            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Steps 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options set, service access subnet with explicit route table, and Route Server with BGP peers. Step 8 (ODCR) is included in <code>odcr.tf</code> as commented-out code &mdash; uncomment when ready. All defaults match the IP plan in this guide and are production-ready.</p>
 
             <h3>File descriptions</h3>
 
@@ -1219,7 +1195,7 @@ terraform output</pre></div>
             </div>
 
             <div class="note" style="margin-bottom:1.5rem;">
-                <strong>ODCR (Step 9):</strong> The <code>odcr.tf</code> file contains a commented-out <code>aws_ec2_capacity_reservation</code> resource for <code>i4i.metal</code>. Uncomment it when your EC2 vCPU On-Demand Standard quota is &ge; 512 and you are ready to reserve capacity before deploying EVS. The reservation uses <code>instance_match_criteria = "targeted"</code> so only your EVS deployment will consume it.
+                <strong>ODCR (Step 8):</strong> The <code>odcr.tf</code> file contains a commented-out <code>aws_ec2_capacity_reservation</code> resource for <code>i4i.metal</code>. Uncomment it when your EC2 vCPU On-Demand Standard quota is &ge; 512 and you are ready to reserve capacity before deploying EVS. The reservation uses <code>instance_match_criteria = "targeted"</code> so only your EVS deployment will consume it.
             </div>
 
             <h3>Terraform file reference</h3>
@@ -1564,10 +1540,9 @@ Exit code 0 — environment is ready for EVS deployment.
                 <li><a href="#phase5">5. Route 53 &amp; DNS Resolvers</a></li>
                 <li><a href="#phase6">6. DHCP Options Set</a></li>
                 <li><a href="#phase7">7. Route Server &amp; BGP</a></li>
-                <li><a href="#phase8">8. VLAN Subnet Sizing</a></li>
-                <li><a href="#phase9">9. Capacity Reservation</a></li>
-                <li><a href="#phase10">10. VCF Licensing</a></li>
-                <li><a href="#phase11">11. Key Pair &amp; Quotas</a></li>
+                <li><a href="#phase8">8. Capacity Reservation</a></li>
+                <li><a href="#phase9">9. VCF Licensing</a></li>
+                <li><a href="#phase10">10. Key Pair &amp; Quotas</a></li>
                 <li><a href="#terraform">Terraform Automation</a></li>
                 <li><a href="#validator">Prereq Validator</a></li>
             </ul>
@@ -1575,7 +1550,7 @@ Exit code 0 — environment is ready for EVS deployment.
 
         <div class="sidebar-card tf-download">
             <h4>Terraform Kit</h4>
-            <p>Automates Steps 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options, and Route Server. ODCR (Step 9) included as commented-out code.</p>
+            <p>Automates Steps 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options, and Route Server. ODCR (Step 8) included as commented-out code.</p>
             <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform/archive/refs/heads/main.zip" class="btn-download">
                 &#8595; Download .zip
             </a>
