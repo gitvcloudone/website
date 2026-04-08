@@ -719,6 +719,23 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <strong>DNS Validation:</strong> EVS performs DNS resolution checks for every record listed above during environment creation. Missing A records, missing PTR records, or records that resolve to wrong IPs will cause bring-up to fail with a specific validation error. Do not proceed to Step 5 until all records resolve correctly.
             </div>
 
+            <div class="step-card">
+                <h3>4.4 Alternative: Use Your Own DNS Server (Optional)</h3>
+                <p>If your organization already runs its own DNS infrastructure — Microsoft DNS, Infoblox, BIND, or any other provider — you can skip Steps 4.1 and 4.2 and use it instead of Route 53. Your DNS server must be reachable from the EVS VPC on UDP/TCP port 53, either running as a VM inside the VPC or accessible via Transit Gateway from on-premises.</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Requirement</th><th>Details</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Reachability</strong></td><td>DNS server IPs must be reachable from the EVS VPC on UDP/TCP port 53</td></tr>
+                            <tr><td><strong>Two server IPs</strong></td><td>EVS requires both a primary and secondary DNS IP in the DHCP Options Set — ensure two IPs are available (two servers, or one server with two IPs)</td></tr>
+                            <tr><td><strong>Records</strong></td><td>All A and PTR records from Step 4.3 must still be created on your DNS server — the record requirements do not change</td></tr>
+                            <tr><td><strong>Forward &amp; reverse zones</strong></td><td>Both forward and reverse (PTR) zones must exist, just as they would in Route 53</td></tr>
+                            <tr><td><strong>Domain name</strong></td><td>Must exactly match what you enter in the DHCP Options Set domain name field</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- PHASE 5 -->
             <h2 id="phase5"><span class="step-num">5</span> Step 5: DHCP Options Set</h2>
 
@@ -743,6 +760,22 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
 
             <div class="note">
                 <strong>Why two DNS servers?</strong> EVS validates that both primary and secondary DNS IPs are reachable from the VPC before proceeding with bring-up. A single DNS server is not sufficient — if it fails, VCF has no fallback and bring-up will stall.
+            </div>
+
+            <div class="step-card">
+                <h3>5.2 Alternative: Use Your Own NTP Server (Optional)</h3>
+                <p>If your organization runs its own NTP infrastructure, replace <code>169.254.169.123</code> with your NTP server IP in the DHCP Options Set. Your NTP server must be reachable from the EVS VPC. Time accuracy is critical for VCF — certificate validation, vSAN, and NSX all depend on synchronized time across all hosts and management VMs.</p>
+                <p style="margin-top:0.75rem;">When using your own DNS and NTP, configure the DHCP Options Set as follows:</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Field</th><th>Value</th><th>Notes</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Domain name</strong></td><td>Your DNS zone name</td><td>Must exactly match the zone on your DNS server</td></tr>
+                            <tr><td><strong>Domain name servers</strong></td><td>Your DNS server IPs (primary, secondary)</td><td>Both must be reachable from the VPC on port 53</td></tr>
+                            <tr><td><strong>NTP servers</strong></td><td>Your NTP server IP</td><td>Must be reachable from the VPC</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- PHASE 6 -->
