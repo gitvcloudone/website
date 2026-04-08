@@ -527,7 +527,7 @@
                         <tr><td>7</td><td>VPC Route Server &amp; BGP (AWS side)</td><td>Yes</td></tr>
                         <tr><td>8</td><td>On-Demand Capacity Reservation (ODCR)</td><td>Yes</td></tr>
                         <tr><td>9</td><td>VCF Licensing (256-core key + vSAN key)</td><td>Procure before bring-up</td></tr>
-                        <tr><td>10</td><td>EC2 Key Pair &amp; Service Quotas</td><td>Yes</td></tr>
+                        <tr><td>10</td><td>EC2 Key Pair</td><td>Yes</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -991,44 +991,45 @@ aws ec2 describe-capacity-reservations \
             </div>
 
             <!-- PHASE 10 -->
-            <h2 id="phase10"><span class="step-num">10</span> Step 10: EC2 Key Pair &amp; Final Checks</h2>
+            <h2 id="phase10"><span class="step-num">10</span> Step 10: EC2 Key Pair</h2>
 
             <div class="step-card">
                 <h3>10.1 EC2 Key Pair</h3>
                 <p>Create an EC2 key pair in the same region as the EVS environment. This key pair is used for SSH access to ESXi hosts during and after deployment. Navigate to <code>EC2 &rsaquo; Key Pairs &rsaquo; Create key pair</code>. Store the private key securely &mdash; it cannot be recovered after creation.</p>
             </div>
 
-            <div class="step-card">
-                <h3>10.2 Pre-Deployment Validation Checklist</h3>
-                <div class="table-wrap">
-                    <table>
-                        <thead><tr><th>Check</th><th>Verified?</th></tr></thead>
-                        <tbody>
-                            <tr><td>AWS Business Support (or higher) active</td><td>&#9744;</td></tr>
-                            <tr><td>Transit Gateway configured (if on-premises connectivity required)</td><td>&#9744;</td></tr>
-                            <tr><td>IAM user/role has EVS + EC2 + SLR permissions</td><td>&#9744;</td></tr>
-                            <tr><td>All VLAN CIDRs planned, non-overlapping, within VPC CIDR</td><td>&#9744;</td></tr>
-                            <tr><td>VPC created with /22+ CIDR, DNS enabled</td><td>&#9744;</td></tr>
-                            <tr><td>Service Access Subnet created with explicit route table association</td><td>&#9744;</td></tr>
-                            <tr><td>Route 53 private hosted zone created and VPC-associated</td><td>&#9744;</td></tr>
-                            <tr><td>Two inbound resolver endpoints created (IPs noted)</td><td>&#9744;</td></tr>
-                            <tr><td>All A and PTR records created and resolving correctly</td><td>&#9744;</td></tr>
-                            <tr><td>DHCP Options Set created with domain, 2 DNS IPs, NTP</td><td>&#9744;</td></tr>
-                            <tr><td>DHCP Options Set associated with EVS VPC</td><td>&#9744;</td></tr>
-                            <tr><td>VPC Route Server in Available state</td><td>&#9744;</td></tr>
-                            <tr><td>Two Route Server endpoints in Available state</td><td>&#9744;</td></tr>
-                            <tr><td>Two Route Server peers created (NSX Uplink VLAN IPs, BGP Keepalive)</td><td>&#9744;</td></tr>
-                            <tr><td>Route propagation enabled on target route tables</td><td>&#9744;</td></tr>
-                            <tr><td>Service Access Subnet NACL allows UDP/TCP 53 (DNS) and TCP 179 (BGP) bidirectionally</td><td>&#9744;</td></tr>
-                            <tr><td>ODCR created for target instance type in correct AZ (state: active) — recommended</td><td>&#9744;</td></tr>
-                            <tr><td>EC2 vCPU quota &ge; 512 (for 4-host cluster)</td><td>&#9744;</td></tr>
-                            <tr><td>VCF Solution Key procured (256+ cores)</td><td>&#9744;</td></tr>
-                            <tr><td>vSAN License Key procured (110+ TiB)</td><td>&#9744;</td></tr>
-                            <tr><td>Broadcom Site ID available</td><td>&#9744;</td></tr>
-                            <tr><td>EC2 key pair created in target region</td><td>&#9744;</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <!-- CHECKLIST -->
+            <h2 id="checklist"><span class="step-num">&#10003;</span> Pre-Deployment Checklist</h2>
+
+            <p>Complete all 10 steps before submitting <code>CreateEnvironment</code>. Use this checklist as your final gate — EVS validates most of these during bring-up and will fail with a specific error for anything missing.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Check</th><th>Step</th><th>Verified?</th></tr></thead>
+                    <tbody>
+                        <tr><td>AWS Business Support (or higher) active</td><td>1</td><td>&#9744;</td></tr>
+                        <tr><td>Transit Gateway configured (if on-premises connectivity required)</td><td>1.3</td><td>&#9744;</td></tr>
+                        <tr><td>IAM user/role has EVS + EC2 + SLR permissions</td><td>2</td><td>&#9744;</td></tr>
+                        <tr><td>All VLAN CIDRs planned, non-overlapping, within VPC CIDR</td><td>3</td><td>&#9744;</td></tr>
+                        <tr><td>VPC created with /22+ CIDR, DNS enabled</td><td>4.1</td><td>&#9744;</td></tr>
+                        <tr><td>Service Access Subnet created with explicit route table association</td><td>4.3</td><td>&#9744;</td></tr>
+                        <tr><td>Service Access Subnet NACL allows UDP/TCP 53 (DNS) and TCP 179 (BGP)</td><td>4.3</td><td>&#9744;</td></tr>
+                        <tr><td>Route 53 private hosted zone created and VPC-associated</td><td>5.1</td><td>&#9744;</td></tr>
+                        <tr><td>Two inbound resolver endpoints created (IPs noted)</td><td>5.2</td><td>&#9744;</td></tr>
+                        <tr><td>All A and PTR records created and resolving correctly</td><td>5.3</td><td>&#9744;</td></tr>
+                        <tr><td>DHCP Options Set created with domain, 2 DNS IPs, NTP &mdash; associated with VPC</td><td>6</td><td>&#9744;</td></tr>
+                        <tr><td>VPC Route Server in Available state</td><td>7.1</td><td>&#9744;</td></tr>
+                        <tr><td>Two Route Server endpoints in Available state</td><td>7.2</td><td>&#9744;</td></tr>
+                        <tr><td>Two BGP peers created (NSX Uplink VLAN IPs, BGP Keepalive)</td><td>7.3</td><td>&#9744;</td></tr>
+                        <tr><td>Route propagation enabled on Service Access Subnet route table</td><td>7.4</td><td>&#9744;</td></tr>
+                        <tr><td>ODCR created for target instance type in correct AZ (state: active) — recommended</td><td>8</td><td>&#9744;</td></tr>
+                        <tr><td>EC2 vCPU quota sufficient for planned cluster size</td><td>8</td><td>&#9744;</td></tr>
+                        <tr><td>VCF Solution Key procured (core count matches instance type &times; hosts)</td><td>9</td><td>&#9744;</td></tr>
+                        <tr><td>vSAN License Key procured (110+ TiB)</td><td>9</td><td>&#9744;</td></tr>
+                        <tr><td>Broadcom Site ID available</td><td>9</td><td>&#9744;</td></tr>
+                        <tr><td>EC2 key pair created in target region</td><td>10</td><td>&#9744;</td></tr>
+                    </tbody>
+                </table>
             </div>
 
             <!-- TERRAFORM -->
@@ -1541,7 +1542,8 @@ Exit code 0 — environment is ready for EVS deployment.
                 <li><a href="#phase7">7. Route Server &amp; BGP</a></li>
                 <li><a href="#phase8">8. Capacity Reservation</a></li>
                 <li><a href="#phase9">9. VCF Licensing</a></li>
-                <li><a href="#phase10">10. Key Pair &amp; Quotas</a></li>
+                <li><a href="#phase10">10. EC2 Key Pair</a></li>
+                <li><a href="#checklist">Pre-Deployment Checklist</a></li>
                 <li><a href="#terraform">Terraform Automation</a></li>
                 <li><a href="#validator">Prereq Validator</a></li>
             </ul>
