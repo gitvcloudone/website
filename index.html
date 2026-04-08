@@ -512,7 +512,7 @@
 
             <p>What makes or breaks a successful deployment is everything <em>before</em> you click deploy. Just like an on-premises VCF deployment, EVS expects a fully prepared environment — DNS resolving correctly, networking in place, IP plans finalized, licenses procured. The difference is that on-premises you have time to fix things mid-deployment; with EVS, the automation validates prerequisites upfront and will fail fast if anything is missing or misconfigured. Getting the prep right the first time is the entire point of this guide.</p>
 
-            <p>This guide covers every prerequisite required before submitting an Amazon EVS environment creation request. Complete all 10 steps in order — EVS will validate most of these during bring-up and fail with a specific error if any are missing.</p>
+            <p>This guide covers every prerequisite required before submitting an Amazon EVS environment creation request. Complete all <strong>11</strong> steps in order — EVS will validate most of these during bring-up and fail with a specific error if any are missing.</p>
 
             <div class="table-wrap">
                 <table>
@@ -520,14 +520,15 @@
                     <tbody>
                         <tr><td>1</td><td>AWS Account &amp; Business Support Plan</td><td>Yes</td></tr>
                         <tr><td>2</td><td>IAM Permissions &amp; Service-Linked Role</td><td>Yes</td></tr>
-                        <tr><td>3</td><td>VPC, IP Planning &amp; Service Access Subnet</td><td>Yes</td></tr>
-                        <tr><td>4</td><td>Route 53 Private Zone &amp; Inbound Resolvers</td><td>Yes</td></tr>
-                        <tr><td>5</td><td>DHCP Options Set</td><td>Yes</td></tr>
-                        <tr><td>6</td><td>VPC Route Server &amp; BGP (AWS side)</td><td>Yes</td></tr>
-                        <tr><td>7</td><td>VLAN IP Planning (10 VLANs)</td><td>Plan only &mdash; EVS creates</td></tr>
-                        <tr><td>8</td><td>On-Demand Capacity Reservation (ODCR)</td><td>Yes</td></tr>
-                        <tr><td>9</td><td>VCF Licensing (256-core key + vSAN key)</td><td>Procure before bring-up</td></tr>
-                        <tr><td>10</td><td>EC2 Key Pair &amp; Service Quotas</td><td>Yes</td></tr>
+                        <tr><td>3</td><td>IP Address Planning</td><td>Plan only</td></tr>
+                        <tr><td>4</td><td>VPC &amp; Service Access Subnet</td><td>Yes</td></tr>
+                        <tr><td>5</td><td>Route 53 Private Zone &amp; Inbound Resolvers</td><td>Yes</td></tr>
+                        <tr><td>6</td><td>DHCP Options Set</td><td>Yes</td></tr>
+                        <tr><td>7</td><td>VPC Route Server &amp; BGP (AWS side)</td><td>Yes</td></tr>
+                        <tr><td>8</td><td>VLAN IP Planning (10 VLANs)</td><td>Plan only &mdash; EVS creates</td></tr>
+                        <tr><td>9</td><td>On-Demand Capacity Reservation (ODCR)</td><td>Yes</td></tr>
+                        <tr><td>10</td><td>VCF Licensing (256-core key + vSAN key)</td><td>Procure before bring-up</td></tr>
+                        <tr><td>11</td><td>EC2 Key Pair &amp; Service Quotas</td><td>Yes</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -601,10 +602,38 @@
             </div>
 
             <!-- PHASE 3 -->
-            <h2 id="phase3"><span class="step-num">3</span> Step 3: VPC &amp; IP Planning</h2>
+            <h2 id="phase3"><span class="step-num">3</span> Step 3: IP Address Planning</h2>
+
+            <p>Plan all CIDRs before creating any AWS resources. Overlapping ranges will cause EVS bring-up to fail and cannot be corrected without redeployment. The table below shows the recommended layout for a <code>10.0.0.0/16</code> VPC — reserve all ranges now even though most subnets are created automatically by EVS during bring-up.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Subnet / VLAN</th><th>Purpose</th><th>Pre-Create?</th><th>Example CIDR</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>Service Access Subnet</strong></td><td>Route Server endpoints, DNS Resolver ENIs</td><td><strong>Yes &mdash; Step 4.3</strong></td><td>10.0.0.0/24</td></tr>
+                        <tr><td><strong>Host Management VLAN</strong></td><td>ESXi host management interfaces</td><td>No &mdash; EVS creates</td><td>10.0.10.0/24</td></tr>
+                        <tr><td><strong>Management VM VLAN</strong></td><td>vCenter, SDDC Manager, NSX Managers, NSX Edges</td><td>No &mdash; EVS creates</td><td>10.0.11.0/24</td></tr>
+                        <tr><td><strong>vMotion VLAN</strong></td><td>Live VM migration</td><td>No &mdash; EVS creates</td><td>10.0.12.0/24</td></tr>
+                        <tr><td><strong>vSAN VLAN</strong></td><td>Storage traffic</td><td>No &mdash; EVS creates</td><td>10.0.13.0/24</td></tr>
+                        <tr><td><strong>Host VTEP VLAN</strong></td><td>NSX host tunnel endpoints (Geneve)</td><td>No &mdash; EVS creates</td><td>10.0.14.0/24</td></tr>
+                        <tr><td><strong>Edge VTEP VLAN</strong></td><td>NSX Edge tunnel endpoints (Geneve)</td><td>No &mdash; EVS creates</td><td>10.0.15.0/24</td></tr>
+                        <tr><td><strong>NSX Uplink VLAN</strong></td><td>Tier-0 north-south BGP peering</td><td>No &mdash; EVS creates</td><td>10.0.16.0/24</td></tr>
+                        <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>No &mdash; EVS creates</td><td>10.0.20.0/24</td></tr>
+                        <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF segments</td><td>No &mdash; EVS creates</td><td>10.0.21.0/24</td></tr>
+                        <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF segments</td><td>No &mdash; EVS creates</td><td>10.0.22.0/24</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="note">
+                <strong>Critical:</strong> Only the <strong>Service Access Subnet</strong> is pre-created by you (Step 4.3). All 10 VLAN subnets are automatically provisioned by EVS during bring-up using the CIDRs you specify in the <code>CreateEnvironment</code> request. Reserve these ranges now and do not create overlapping subnets in the VPC.
+            </div>
+
+            <!-- PHASE 4 -->
+            <h2 id="phase4"><span class="step-num">4</span> Step 4: VPC &amp; Service Access Subnet</h2>
 
             <div class="step-card">
-                <h3>3.1 Create the EVS VPC</h3>
+                <h3>4.1 Create the EVS VPC</h3>
                 <p>Create a dedicated VPC for the EVS environment. Key requirements:</p>
                 <div class="table-wrap">
                     <table>
@@ -622,7 +651,7 @@
             </div>
 
             <div class="step-card">
-                <h3>3.2 Enable DNS on the VPC</h3>
+                <h3>4.2 Enable DNS on the VPC</h3>
                 <p>Both DNS attributes must be enabled or EVS environment creation will fail:</p>
             </div>
 
@@ -633,47 +662,20 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="step-card">
-                <h3>3.3 IP Address Planning</h3>
-                <p>Plan all CIDRs before any deployment. Overlapping ranges will cause EVS bring-up to fail and cannot be corrected without redeployment. The table below shows the recommended layout for a <code>10.0.0.0/16</code> VPC:</p>
-                <div class="table-wrap">
-                    <table>
-                        <thead><tr><th>Subnet / VLAN</th><th>Purpose</th><th>Pre-Create?</th><th>Example CIDR</th></tr></thead>
-                        <tbody>
-                            <tr><td><strong>Service Access Subnet</strong></td><td>Route Server endpoints, DNS Resolver ENIs</td><td><strong>Yes</strong></td><td>10.0.0.0/24</td></tr>
-                            <tr><td><strong>Host Management VLAN</strong></td><td>ESXi host management interfaces</td><td>No &mdash; EVS creates</td><td>10.0.10.0/24</td></tr>
-                            <tr><td><strong>Management VM VLAN</strong></td><td>vCenter, SDDC Manager, NSX Managers, NSX Edges</td><td>No &mdash; EVS creates</td><td>10.0.11.0/24</td></tr>
-                            <tr><td><strong>vMotion VLAN</strong></td><td>Live VM migration</td><td>No &mdash; EVS creates</td><td>10.0.12.0/24</td></tr>
-                            <tr><td><strong>vSAN VLAN</strong></td><td>Storage traffic</td><td>No &mdash; EVS creates</td><td>10.0.13.0/24</td></tr>
-                            <tr><td><strong>Host VTEP VLAN</strong></td><td>NSX host tunnel endpoints (Geneve)</td><td>No &mdash; EVS creates</td><td>10.0.14.0/24</td></tr>
-                            <tr><td><strong>Edge VTEP VLAN</strong></td><td>NSX Edge tunnel endpoints (Geneve)</td><td>No &mdash; EVS creates</td><td>10.0.15.0/24</td></tr>
-                            <tr><td><strong>NSX Uplink VLAN</strong></td><td>Tier-0 north-south BGP peering</td><td>No &mdash; EVS creates</td><td>10.0.16.0/24</td></tr>
-                            <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>No &mdash; EVS creates</td><td>10.0.20.0/24</td></tr>
-                            <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF segments</td><td>No &mdash; EVS creates</td><td>10.0.21.0/24</td></tr>
-                            <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF segments</td><td>No &mdash; EVS creates</td><td>10.0.22.0/24</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="note">
-                <strong>Critical:</strong> Only the <strong>Service Access Subnet</strong> is pre-created by you. All 10 VLAN subnets are automatically provisioned by EVS during bring-up using the CIDRs you specify in the CreateEnvironment request. Reserve these ranges now and do not create overlapping subnets in the VPC.
-            </div>
-
-            <div class="step-card">
-                <h3>3.4 Create the Service Access Subnet</h3>
+                <h3>4.3 Create the Service Access Subnet</h3>
 
                 <p>The Service Access Subnet is a dedicated subnet within the EVS VPC that serves as the <strong>control plane landing zone</strong> for two critical services:</p>
                 <ul style="margin:0.5rem 0 0.75rem 1.5rem;line-height:1.8;">
                     <li><strong>VPC Route Server endpoints</strong> — the BGP termination points that NSX Tier-0 peers with to exchange routing information between the NSX overlay and the AWS VPC underlay</li>
                     <li><strong>Route 53 Resolver inbound ENIs</strong> — the DNS interfaces that VCF components use to resolve private hostnames in the Route 53 private hosted zone</li>
                 </ul>
-                <p>No EVS workload traffic flows through this subnet. It is strictly a management plane subnet — it carries DNS queries and BGP sessions, not VM data-plane traffic. Create it now, before Step 4, because the Route 53 Resolver endpoints (Step 4.2) must be placed into this subnet when they are created.</p>
+                <p>No EVS workload traffic flows through this subnet. It is strictly a management plane subnet — it carries DNS queries and BGP sessions, not VM data-plane traffic. Create it now, before Step 5, because the Route 53 Resolver endpoints (Step 5.2) must be placed into this subnet when they are created.</p>
 
                 <h4 style="margin:1rem 0 0.5rem;">AWS recommendations</h4>
                 <ul style="margin:0.5rem 0 0.75rem 1.5rem;line-height:1.8;">
                     <li><strong>Use /24:</strong> AWS recommends a /24. Although the minimum required IPs are few (2 resolver ENIs + 2 route server endpoints), a /24 gives headroom for future infrastructure additions</li>
                     <li><strong>Single AZ:</strong> Place the subnet in the same Availability Zone as the EVS environment — all EVS resources must be in a single AZ</li>
-                    <li><strong>Explicit route table association:</strong> The subnet must have an explicitly associated route table (not relying on the VPC main route table). Without this, BGP routes propagated by the Route Server (Step 6) will silently fail to appear</li>
+                    <li><strong>Explicit route table association:</strong> The subnet must have an explicitly associated route table (not relying on the VPC main route table). Without this, BGP routes propagated by the Route Server (Step 7) will silently fail to appear</li>
                     <li><strong>No workloads:</strong> Do not launch EC2 instances or other workloads in this subnet — keep it dedicated to EVS control plane services</li>
                 </ul>
 
@@ -684,26 +686,26 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                             <tr><td><strong>VPC</strong></td><td>The EVS VPC</td></tr>
                             <tr><td><strong>CIDR size</strong></td><td>/24 recommended (minimum /28 for Route Server endpoints alone)</td></tr>
                             <tr><td><strong>Availability Zone</strong></td><td>Same AZ as the planned EVS environment</td></tr>
-                            <tr><td><strong>Route Table</strong></td><td>Must have an <strong>explicit subnet association</strong> &mdash; not just the implicit main route table. This is required for BGP route propagation in Step 6.</td></tr>
+                            <tr><td><strong>Route Table</strong></td><td>Must have an <strong>explicit subnet association</strong> &mdash; not just the implicit main route table. This is required for BGP route propagation in Step 7.</td></tr>
                         </tbody>
                     </table>
                 </div>
                 <img src="/images/6.1_service_access_subnet.jpg" alt="Service Access Subnet configuration in AWS console" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
-            <!-- PHASE 4 -->
-            <h2 id="phase4"><span class="step-num">4</span> Step 4: Route 53 Private Zone &amp; Inbound Resolvers</h2>
+            <!-- PHASE 5 -->
+            <h2 id="phase5"><span class="step-num">5</span> Step 5: Route 53 Private Zone &amp; Inbound Resolvers</h2>
 
             <p>VCF is extremely sensitive to DNS. EVS validates every DNS record during bring-up and will fail with a specific error for each missing or incorrect record. Complete this phase fully before creating the DHCP Options Set or the EVS environment.</p>
 
             <div class="step-card">
-                <h3>4.1 Create the Route 53 Private Hosted Zone</h3>
+                <h3>5.1 Create the Route 53 Private Hosted Zone</h3>
                 <p>Create a <strong>private hosted zone</strong> in Route 53 and associate it with the EVS VPC. Choose a domain that matches the <code>domain_name</code> you will put in the DHCP Options Set (e.g., <code>evs.vcloudone.local</code>). This domain must be unique within the VPC — do not reuse an existing zone.</p>
                 <img src="/images/4.1_route53_host_zone.jpg" alt="Route 53 private hosted zone for EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
-                <h3>4.2 Create Two Inbound Resolver Endpoints</h3>
+                <h3>5.2 Create Two Inbound Resolver Endpoints</h3>
                 <p>Route 53 Resolver inbound endpoints allow VCF components running in the EVS VLANs to reach the private hosted zone. You must create <strong>two endpoints</strong> — each receives its own ENI and a dedicated IP address from the Service Access Subnet. These two IPs become the primary and secondary DNS servers in your DHCP Options Set.</p>
                 <p>Navigate to <code>Route 53 &rsaquo; Resolver &rsaquo; Inbound endpoints &rsaquo; Create inbound endpoint</code> and configure:</p>
                 <div class="table-wrap">
@@ -717,12 +719,12 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                         </tbody>
                     </table>
                 </div>
-                <p style="margin-top:1rem;">Note both IP addresses. They are used directly as <code>domain-name-servers</code> in the DHCP Options Set in Step 5.</p>
+                <p style="margin-top:1rem;">Note both IP addresses. They are used directly as <code>domain-name-servers</code> in the DHCP Options Set in Step 6.</p>
                 <img src="/images/4.2_inbound_resolver.jpg" alt="Route 53 inbound resolver endpoints for EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
-                <h3>4.3 Create DNS Records &mdash; A and PTR for All Components</h3>
+                <h3>5.3 Create DNS Records &mdash; A and PTR for All Components</h3>
                 <p>All forward (A) and reverse (PTR) records must exist <strong>before</strong> EVS bring-up. Use IPs from your Management VM VLAN (10.0.11.0/24) for appliances and Host Management VLAN (10.0.10.0/24) for ESXi hosts. Create the following records in the private hosted zone:</p>
                 <div class="table-wrap">
                     <table>
@@ -751,11 +753,11 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="note">
-                <strong>DNS Validation:</strong> EVS performs DNS resolution checks for every record listed above during environment creation. Missing A records, missing PTR records, or records that resolve to wrong IPs will cause bring-up to fail with a specific validation error. Do not proceed to Step 5 until all records resolve correctly.
+                <strong>DNS Validation:</strong> EVS performs DNS resolution checks for every record listed above during environment creation. Missing A records, missing PTR records, or records that resolve to wrong IPs will cause bring-up to fail with a specific validation error. Do not proceed to Step 6 until all records resolve correctly.
             </div>
 
             <div class="step-card">
-                <h3>4.4 Alternative: Use Your Own DNS Server (Optional)</h3>
+                <h3>5.4 Alternative: Use Your Own DNS Server (Optional)</h3>
                 <p>If your organization already runs its own DNS infrastructure — Microsoft DNS, Infoblox, BIND, or any other provider — you can skip Steps 4.1 and 4.2 and use it instead of Route 53. Your DNS server must be reachable from the EVS VPC on UDP/TCP port 53, either running as a VM inside the VPC or accessible via Transit Gateway from on-premises.</p>
                 <div class="table-wrap">
                     <table>
@@ -763,7 +765,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                         <tbody>
                             <tr><td><strong>Reachability</strong></td><td>DNS server IPs must be reachable from the EVS VPC on UDP/TCP port 53</td></tr>
                             <tr><td><strong>Two server IPs</strong></td><td>EVS requires both a primary and secondary DNS IP in the DHCP Options Set — ensure two IPs are available (two servers, or one server with two IPs)</td></tr>
-                            <tr><td><strong>Records</strong></td><td>All A and PTR records from Step 4.3 must still be created on your DNS server — the record requirements do not change</td></tr>
+                            <tr><td><strong>Records</strong></td><td>All A and PTR records from Step 5.3 must still be created on your DNS server — the record requirements do not change</td></tr>
                             <tr><td><strong>Forward &amp; reverse zones</strong></td><td>Both forward and reverse (PTR) zones must exist, just as they would in Route 53</td></tr>
                             <tr><td><strong>Domain name</strong></td><td>Must exactly match what you enter in the DHCP Options Set domain name field</td></tr>
                         </tbody>
@@ -771,20 +773,20 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 </div>
             </div>
 
-            <!-- PHASE 5 -->
-            <h2 id="phase5"><span class="step-num">5</span> Step 5: DHCP Options Set</h2>
+            <!-- PHASE 6 -->
+            <h2 id="phase6"><span class="step-num">6</span> Step 6: DHCP Options Set</h2>
 
             <p>The DHCP Options Set tells EVS-managed hosts how to resolve DNS and synchronize time. It must be associated with the VPC <strong>before</strong> environment creation — not after.</p>
 
             <div class="step-card">
-                <h3>5.1 Create and Associate the DHCP Options Set</h3>
+                <h3>6.1 Create and Associate the DHCP Options Set</h3>
                 <p>Navigate to <code>VPC &rsaquo; DHCP Option Sets &rsaquo; Create DHCP options set</code> and configure:</p>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Field</th><th>Value</th><th>Notes</th></tr></thead>
                         <tbody>
                             <tr><td><strong>Domain name</strong></td><td>evs.vcloudone.local</td><td>Must exactly match the Route 53 private hosted zone name</td></tr>
-                            <tr><td><strong>Domain name servers</strong></td><td>10.0.0.10, 10.0.0.11</td><td>The two inbound resolver IPs from Step 4.2 &mdash; primary first</td></tr>
+                            <tr><td><strong>Domain name servers</strong></td><td>10.0.0.10, 10.0.0.11</td><td>The two inbound resolver IPs from Step 5.2 &mdash; primary first</td></tr>
                             <tr><td><strong>NTP servers</strong></td><td>169.254.169.123</td><td>AWS Time Sync Service &mdash; link-local, no internet required</td></tr>
                         </tbody>
                     </table>
@@ -798,7 +800,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="step-card">
-                <h3>5.2 Alternative: Use Your Own NTP Server (Optional)</h3>
+                <h3>6.2 Alternative: Use Your Own NTP Server (Optional)</h3>
                 <p>If your organization runs its own NTP infrastructure, replace <code>169.254.169.123</code> with your NTP server IP in the DHCP Options Set. Your NTP server must be reachable from the EVS VPC. Time accuracy is critical for VCF — certificate validation, vSAN, and NSX all depend on synchronized time across all hosts and management VMs.</p>
                 <p style="margin-top:0.75rem;">When using your own DNS and NTP, configure the DHCP Options Set as follows:</p>
                 <div class="table-wrap">
@@ -813,13 +815,13 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 </div>
             </div>
 
-            <!-- PHASE 6 -->
-            <h2 id="phase6"><span class="step-num">6</span> Step 6: VPC Route Server &amp; BGP</h2>
+            <!-- PHASE 7 -->
+            <h2 id="phase7"><span class="step-num">7</span> Step 7: VPC Route Server &amp; BGP</h2>
 
             <p>The VPC Route Server is the BGP bridge between the AWS underlay and the NSX overlay. You configure the <strong>AWS side entirely before bring-up</strong>. NSX Tier-0 BGP is <strong>automatically configured by EVS</strong> during environment creation — you do not need to touch NSX for this.</p>
 
             <div class="step-card">
-                <h3>6.1 Create the VPC Route Server</h3>
+                <h3>7.1 Create the VPC Route Server</h3>
                 <p>Navigate to <code>VPC &rsaquo; Route Servers &rsaquo; Create route server</code>:</p>
                 <div class="table-wrap">
                     <table>
@@ -836,12 +838,12 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="step-card">
-                <h3>6.2 Associate with the Service Access Subnet</h3>
-                <p>Select the Route Server &rsaquo; <strong>Associations &rsaquo; Associate route server</strong>. Select the Service Access Subnet created in Step 3.4. AWS will automatically deploy <strong>two Route Server endpoints</strong> into that subnet. Note the IP address of each endpoint &mdash; EVS uses these as the BGP neighbor addresses when it auto-configures the NSX Tier-0 gateway during bring-up.</p>
+                <h3>7.2 Associate with the Service Access Subnet</h3>
+                <p>Select the Route Server &rsaquo; <strong>Associations &rsaquo; Associate route server</strong>. Select the Service Access Subnet created in Step 4.3. AWS will automatically deploy <strong>two Route Server endpoints</strong> into that subnet. Note the IP address of each endpoint &mdash; EVS uses these as the BGP neighbor addresses when it auto-configures the NSX Tier-0 gateway during bring-up.</p>
             </div>
 
             <div class="step-card">
-                <h3>6.3 Create Two Route Server Peers</h3>
+                <h3>7.3 Create Two Route Server Peers</h3>
                 <p>Navigate to <strong>Route server peers &rsaquo; Create route server peer</strong>. Create one peer per NSX Edge node. The <strong>peer address</strong> must be an IP from the NSX Uplink VLAN CIDR (e.g., 10.0.16.0/24) — these IPs will be assigned to NSX Edge uplink interfaces during EVS bring-up.</p>
                 <div class="table-wrap">
                     <table>
@@ -861,7 +863,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="step-card">
-                <h3>6.4 Enable Route Propagation</h3>
+                <h3>7.4 Enable Route Propagation</h3>
                 <p>Select the Route Server &rsaquo; <strong>Propagations &rsaquo; Create propagation</strong>. Select the Service Access Subnet route table and any workload subnet route tables that need to receive NSX overlay routes.</p>
                 <div class="note" style="margin-top:1rem;">
                     <strong>Common failure:</strong> Every propagated route table must have an <strong>explicit subnet association</strong>. Route tables that only have the implicit main-route-table association will silently fail to receive BGP routes. Verify explicit associations exist before proceeding.
@@ -870,7 +872,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="step-card">
-                <h3>6.5 Network ACL Best Practice for BGP</h3>
+                <h3>7.5 Network ACL Best Practice for BGP</h3>
                 <p>AWS does not explicitly require BGP NACL rules as a deployment prerequisite — EVS bring-up will not fail without them. However, AWS recommends allowing BGP traffic on the Service Access Subnet NACL as an underlay hygiene best practice. NACLs are stateless — both directions must be explicitly permitted. The NSX Uplink VLAN subnet is <strong>not pre-created</strong> — it is automatically provisioned by EVS during bring-up.</p>
                 <div class="table-wrap">
                     <table>
@@ -886,7 +888,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="step-card">
-                <h3>6.6 EVS Networking Limitations</h3>
+                <h3>7.6 EVS Networking Limitations</h3>
                 <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;font-size:0.93rem;color:#374151;">
                     <li><strong>Security groups do not apply</strong> to EVS VLAN subnet ENIs. NACLs are the only packet-level filtering mechanism for EVS traffic.</li>
                     <li><strong>VPC peering is not a documented supported connectivity option.</strong> Use Transit Gateway for VPC-to-VPC connectivity.</li>
@@ -900,8 +902,8 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <strong>NSX Tier-0 BGP is auto-configured.</strong> EVS automatically configures the NSX Tier-0 gateway BGP neighbors using the Route Server endpoint IPs and the peer ASN you specified. You do not need to log into NSX Manager to configure BGP — this is handled entirely during EVS bring-up.
             </div>
 
-            <!-- PHASE 7 -->
-            <h2 id="phase7"><span class="step-num">7</span> Step 7: VLAN Subnet Sizing</h2>
+            <!-- PHASE 8 -->
+            <h2 id="phase8"><span class="step-num">8</span> Step 8: VLAN Subnet Sizing</h2>
 
             <p>You do not create these subnets — you provide the CIDRs in the EVS <code>CreateEnvironment</code> API call. Plan them now against your VPC CIDR to ensure zero overlap. All VLANs accept <strong>/28 to /24</strong>.</p>
 
@@ -931,13 +933,13 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <strong>HCX internet connectivity (optional):</strong> If you plan to use HCX for workload migration, AWS requires an IPAM (IP Address Manager) pool configured with public IP addresses for the HCX Uplink VLAN. Allocate at least <strong>2 Elastic IP addresses (EIPs)</strong> from the IPAM pool — one for the HCX Manager appliance and one for the HCX Interconnect (HCX-IX) appliance. Configure the IPAM pool before EVS deployment so the EIPs are available when HCX is activated.
             </div>
 
-            <!-- PHASE 8 -->
-            <h2 id="phase8"><span class="step-num">8</span> Step 8: On-Demand Capacity Reservation (ODCR)</h2>
+            <!-- PHASE 9 -->
+            <h2 id="phase9"><span class="step-num">9</span> Step 9: On-Demand Capacity Reservation (ODCR)</h2>
 
             <p>Amazon EVS runs on bare-metal instances. Because bare-metal capacity can be constrained in specific AZs, AWS recommends creating an On-Demand Capacity Reservation (ODCR) before deployment to improve your chances of securing capacity. At the time of writing, <strong>i4i.metal</strong> is the only supported instance type. Additional instance types — including <strong>i7i.metal-24xl</strong> and <strong>i7i.metal-48xl</strong> — are coming. Choose the instance type that matches your planned EVS environment.</p>
 
             <div class="step-card">
-                <h3>8.1 Supported Instance Types</h3>
+                <h3>9.1 Supported Instance Types</h3>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Instance Type</th><th>vCPUs</th><th>Physical Cores</th><th>NVMe Storage</th><th>Availability</th></tr></thead>
@@ -951,7 +953,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="step-card">
-                <h3>8.2 Create the Capacity Reservation</h3>
+                <h3>9.2 Create the Capacity Reservation</h3>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Setting</th><th>Value</th></tr></thead>
@@ -985,13 +987,13 @@ aws ec2 describe-capacity-reservations \
                 <strong>EC2 vCPU Quota:</strong> The required vCPU quota depends on your chosen instance type. A 4-host cluster requires: <strong>512 vCPUs</strong> for i4i.metal &nbsp;|&nbsp; <strong>384 vCPUs</strong> for i7i.metal-24xl &nbsp;|&nbsp; <strong>768 vCPUs</strong> for i7i.metal-48xl. Check and request a quota increase at <code>Service Quotas &rsaquo; Amazon EC2 &rsaquo; Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances</code> before deployment if needed.
             </div>
 
-            <!-- PHASE 9 -->
-            <h2 id="phase9"><span class="step-num">9</span> Step 9: VCF Licensing</h2>
+            <!-- PHASE 10 -->
+            <h2 id="phase10"><span class="step-num">10</span> Step 10: VCF Licensing</h2>
 
             <p>Amazon EVS is a BYOL (Bring Your Own License) service. You must procure VCF licenses from Broadcom before bring-up. License keys are entered in the AWS Console (or via the <code>CreateEnvironment</code> API call) at the time of environment creation — AWS accepts the keys and applies them during the EVS deployment process itself.</p>
 
             <div class="step-card">
-                <h3>9.1 Required License Keys</h3>
+                <h3>10.1 Required License Keys</h3>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>License</th><th>Minimum</th><th>Notes</th></tr></thead>
@@ -1005,7 +1007,7 @@ aws ec2 describe-capacity-reservations \
             </div>
 
             <div class="step-card">
-                <h3>9.2 License Application Process</h3>
+                <h3>10.2 License Application Process</h3>
                 <p>Enter your license keys directly in the <strong>AWS Console environment creation wizard</strong> or as parameters in the <code>CreateEnvironment</code> API call. <strong>AWS does not validate license keys</strong> — validation is performed by Broadcom. After the EVS environment is deployed, use <strong>SDDC Manager</strong> to manage and maintain valid VCF solution and vSAN license keys. Amazon EVS requires that valid keys remain in SDDC Manager for the service to function properly.</p>
                 <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem;font-size:0.93rem;color:#374151;">
                     <li>To validate your keys before deployment, visit the Broadcom support portal</li>
@@ -1013,16 +1015,16 @@ aws ec2 describe-capacity-reservations \
                 </ul>
             </div>
 
-            <!-- PHASE 10 -->
-            <h2 id="phase10"><span class="step-num">10</span> Step 10: EC2 Key Pair &amp; Final Checks</h2>
+            <!-- PHASE 11 -->
+            <h2 id="phase11"><span class="step-num">11</span> Step 11: EC2 Key Pair &amp; Final Checks</h2>
 
             <div class="step-card">
-                <h3>10.1 EC2 Key Pair</h3>
+                <h3>11.1 EC2 Key Pair</h3>
                 <p>Create an EC2 key pair in the same region as the EVS environment. This key pair is used for SSH access to ESXi hosts during and after deployment. Navigate to <code>EC2 &rsaquo; Key Pairs &rsaquo; Create key pair</code>. Store the private key securely &mdash; it cannot be recovered after creation.</p>
             </div>
 
             <div class="step-card">
-                <h3>10.2 Pre-Deployment Validation Checklist</h3>
+                <h3>11.2 Pre-Deployment Validation Checklist</h3>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Check</th><th>Verified?</th></tr></thead>
@@ -1057,7 +1059,7 @@ aws ec2 describe-capacity-reservations \
             <!-- TERRAFORM -->
             <h2 id="terraform"><span class="step-num">&#9889;</span> Automation: Terraform Deployment</h2>
 
-            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Steps 2&ndash;6: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options set, service access subnet with explicit route table, and Route Server with BGP peers. Step 8 (ODCR) is included in <code>odcr.tf</code> as commented-out code &mdash; uncomment when ready. All defaults match the IP plan in this guide and are production-ready.</p>
+            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Steps 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options set, service access subnet with explicit route table, and Route Server with BGP peers. Step 9 (ODCR) is included in <code>odcr.tf</code> as commented-out code &mdash; uncomment when ready. All defaults match the IP plan in this guide and are production-ready.</p>
 
             <h3>File descriptions</h3>
 
@@ -1077,17 +1079,17 @@ aws ec2 describe-capacity-reservations \
                     </tr>
                     <tr style="background:#fafafa;">
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">main.tf</td>
-                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">2, 3, 4, 5</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">2, 4, 5, 6</td>
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">VPC, service access subnet, explicit route table, DNS security group, Route 53 inbound resolver endpoint (2 IPs), DHCP options set, EVS service-linked role</td>
                     </tr>
                     <tr>
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">dns.tf</td>
-                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">4</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">5</td>
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">Route 53 private hosted zone, two reverse PTR zones (Host VLAN + Mgmt VLAN), A and PTR records for all VCF components and ESXi hosts</td>
                     </tr>
                     <tr style="background:#fafafa;">
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">peering.tf</td>
-                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">6</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">7</td>
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">VPC Route Server, VPC association, two Route Server endpoints in the service access subnet, two BGP peers (NSX Edge uplink IPs, bgp-keepalive), route propagation to the explicit route table</td>
                     </tr>
                     <tr>
@@ -1097,7 +1099,7 @@ aws ec2 describe-capacity-reservations \
                     </tr>
                     <tr style="background:#fafafa;">
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">odcr.tf</td>
-                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">8</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">9</td>
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">On-Demand Capacity Reservation for i4i.metal &mdash; all code is commented out. Uncomment when EC2 vCPU quota &ge; 512 and you are ready to reserve capacity.</td>
                     </tr>
                     <tr>
@@ -1217,14 +1219,14 @@ terraform output</pre></div>
             </div>
 
             <div class="note" style="margin-bottom:1.5rem;">
-                <strong>ODCR (Step 8):</strong> The <code>odcr.tf</code> file contains a commented-out <code>aws_ec2_capacity_reservation</code> resource for <code>i4i.metal</code>. Uncomment it when your EC2 vCPU On-Demand Standard quota is &ge; 512 and you are ready to reserve capacity before deploying EVS. The reservation uses <code>instance_match_criteria = "targeted"</code> so only your EVS deployment will consume it.
+                <strong>ODCR (Step 9):</strong> The <code>odcr.tf</code> file contains a commented-out <code>aws_ec2_capacity_reservation</code> resource for <code>i4i.metal</code>. Uncomment it when your EC2 vCPU On-Demand Standard quota is &ge; 512 and you are ready to reserve capacity before deploying EVS. The reservation uses <code>instance_match_criteria = "targeted"</code> so only your EVS deployment will consume it.
             </div>
 
             <h3>Terraform file reference</h3>
 
             <div class="code-wrap">
                 <div class="code-header"><span>main.tf &mdash; VPC, Subnet, Route Table, Resolvers, DHCP, SLR</span><span>v2.0</span></div>
-                <div class="code-body"><pre><span class="cm"># Phase 3 — VPC (DNS attributes required by EVS)</span>
+                <div class="code-body"><pre><span class="cm"># Phase 4 — VPC &amp; Service Access Subnet</span>
 <span class="kw">resource</span> <span class="str">"aws_vpc"</span> <span class="str">"evs_vpc"</span> {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = <span class="num">true</span>
@@ -1232,7 +1234,7 @@ terraform output</pre></div>
   tags = { Name = <span class="str">"evs-vpc"</span> }
 }
 
-<span class="cm"># Phase 3 — Service Access Subnet + explicit route table association
+<span class="cm"># Phase 4 — Service Access Subnet + explicit route table association
 # Explicit association is required — propagated route tables without it
 # silently fail to receive BGP routes from the Route Server.</span>
 <span class="kw">resource</span> <span class="str">"aws_subnet"</span> <span class="str">"service_access"</span> {
@@ -1249,7 +1251,7 @@ terraform output</pre></div>
   route_table_id = <span class="fn">aws_route_table.service_access.id</span>
 }
 
-<span class="cm"># Phase 4 — Route 53 Inbound Resolver Endpoint
+<span class="cm"># Phase 5 — Route 53 Inbound Resolver Endpoint
 # AWS requires a minimum of 2 IPs per resolver endpoint.
 # Explicit IPs (not dynamic lookup) ensure stable ordering in DHCP options.</span>
 <span class="kw">resource</span> <span class="str">"aws_route53_resolver_endpoint"</span> <span class="str">"evs_dns"</span> {
@@ -1261,7 +1263,7 @@ terraform output</pre></div>
   tags = { Name = <span class="str">"evs-dns-resolver"</span> }
 }
 
-<span class="cm"># Phase 5 — DHCP Options Set
+<span class="cm"># Phase 6 — DHCP Options Set
 # domain_name must match the Route 53 private hosted zone exactly.
 # NTP uses AWS Time Sync Service (169.254.169.123) — no internet required.</span>
 <span class="kw">resource</span> <span class="str">"aws_vpc_dhcp_options"</span> <span class="str">"evs_dhcp"</span> {
@@ -1279,7 +1281,7 @@ terraform output</pre></div>
   aws_service_name = <span class="str">"evs.amazonaws.com"</span>
 }
 
-<span class="cm"># Phase 8 — On-Demand Capacity Reservation (ODCR) — uncomment to enable
+<span class="cm"># Phase 9 — On-Demand Capacity Reservation (ODCR) — uncomment to enable
 # Requires EC2 vCPU quota ≥ 512 (4 × i4i.metal × 128 vCPUs).
 # instance_match_criteria = "targeted" means only launches that explicitly
 # reference this reservation ID will consume capacity.
@@ -1475,12 +1477,12 @@ python evs_validate.py --region eu-west-1</pre></div>
 VPC: evs-vpc  (vpc-0f75dd807fc01abb9)  CIDR: 10.0.0.0/16
 ================================================================</span>
 
-<span class="cm">── Phase 3: VPC</span>
+<span class="cm">── Phase 4: VPC</span>
   <span class="kw">✓ PASS</span>  CIDR 10.0.0.0/16 meets minimum /22 requirement
   <span class="kw">✓ PASS</span>  DNS hostnames enabled
   <span class="kw">✓ PASS</span>  DNS support enabled
 
-<span class="cm">── Phase 5: DHCP Options Set</span>
+<span class="cm">── Phase 6: DHCP Options Set</span>
   <span class="kw">✓ PASS</span>  Domain name = 'evs.vcloudone.local'
   <span class="kw">✓ PASS</span>  DNS servers: 10.0.0.10, 10.0.0.11
   <span class="kw">✓ PASS</span>  NTP = 169.254.169.123 (AWS Time Sync Service)
@@ -1488,7 +1490,7 @@ VPC: evs-vpc  (vpc-0f75dd807fc01abb9)  CIDR: 10.0.0.0/16
   # FAIL on DNS servers: printed IPs must match resolver endpoint IPs (see below).
   # FAIL on NTP: 169.254.169.123 must be in the list — no internet required.</span>
 
-<span class="cm">── Phase 4: Route 53 Private Zones</span>
+<span class="cm">── Phase 5: Route 53 Private Zones</span>
   <span class="kw">✓ PASS</span>  Forward zone(s): ['evs.vcloudone.local']
   <span class="kw">✓ PASS</span>  Reverse PTR zone(s): ['11.0.10.in-addr.arpa', '10.0.10.in-addr.arpa']
     INFO  Zone: evs.vcloudone.local  (Z04587343LEL3Z83E8QNP)  records: 14
@@ -1497,7 +1499,7 @@ VPC: evs-vpc  (vpc-0f75dd807fc01abb9)  CIDR: 10.0.0.0/16
   # FAIL if no reverse zones: EVS requires PTR zones for both ESXi and Mgmt VLANs.
   # records: 14 = 4 ESXi A/PTR + 8 VCF component A/PTR records — verify count matches.</span>
 
-<span class="cm">── Phase 4: Route 53 Inbound Resolver Endpoint</span>
+<span class="cm">── Phase 5: Route 53 Inbound Resolver Endpoint</span>
   <span class="kw">✓ PASS</span>  Inbound resolver endpoint(s): ['evs-dns-resolver']
   <span class="kw">✓ PASS</span>    'evs-dns-resolver' — IPs: 10.0.0.11, 10.0.0.10  (status: OPERATIONAL)
   <span class="kw">✓ PASS</span>    Resolver IPs ['10.0.0.11', '10.0.0.10'] are present in DHCP DNS servers
@@ -1505,7 +1507,7 @@ VPC: evs-vpc  (vpc-0f75dd807fc01abb9)  CIDR: 10.0.0.0/16
   # FAIL on cross-check: DHCP domain-name-servers must exactly match resolver IPs.
   # FAIL if status is not OPERATIONAL: resolver endpoint is still provisioning.</span>
 
-<span class="cm">── Phase 3: Service Access Subnet &amp; Route Tables</span>
+<span class="cm">── Phase 4: Service Access Subnet &amp; Route Tables</span>
   <span class="kw">✓ PASS</span>  1 subnet(s) across AZs: us-east-1a(1)
   <span class="kw">✓ PASS</span>  Explicit route table(s): ['rtb-0b7c5516a85491e95']
   <span class="kw">✓ PASS</span>  Explicit subnet association(s): ['subnet-003763d6fb9af8fca']
@@ -1513,14 +1515,14 @@ VPC: evs-vpc  (vpc-0f75dd807fc01abb9)  CIDR: 10.0.0.0/16
   # A dedicated route table with an explicit subnet association is required so BGP
   # routes propagated by the Route Server are received by this subnet.</span>
 
-<span class="cm">── Phase 6: NACL &amp; Security Groups</span>
+<span class="cm">── Phase 7: NACL &amp; Security Groups</span>
   <span class="kw">✓ PASS</span>  Custom NACL(s): ['acl-06980e7ddc52a53cb']
   <span class="kw">✓ PASS</span>  Security group(s) with port 53 rule: ['evs-dns-sg', 'default']
   <span class="kw">✓ PASS</span>  Security group(s) with port 179 rule: ['VPCRouteServer-rse-...', 'default']
 <span class="cm">  # FAIL on port 179: the Route Server auto-creates its own SGs but verify they exist.
   # FAIL on custom NACL: the default VPC NACL does not count — create one explicitly.</span>
 
-<span class="cm">── Phase 6: VPC Route Server &amp; BGP</span>
+<span class="cm">── Phase 7: VPC Route Server &amp; BGP</span>
   <span class="kw">✓ PASS</span>  Route Server(s): ['rs-0e8e3f3e2278e29fa']
   <span class="kw">✓ PASS</span>    Route Server rs-0e8e3f3e2278e29fa  ASN 65100  state: available
   <span class="kw">✓ PASS</span>    Endpoints: 2  IPs: ['10.0.0.47', '10.0.0.90']
@@ -1532,7 +1534,7 @@ VPC: evs-vpc  (vpc-0f75dd807fc01abb9)  CIDR: 10.0.0.0/16
   # FAIL on propagation targeting main RT: BGP routes would be silently dropped.
   #   Propagation must point to the explicit route table, not the VPC main table.</span>
 
-<span class="cm">── Phase 8: On-Demand Capacity Reservation (ODCR)</span>
+<span class="cm">── Phase 9: On-Demand Capacity Reservation (ODCR)</span>
   <span class="str">⚠ WARN</span>  No active i4i.metal ODCR in us-east-1a — create before deploying EVS
 <span class="cm">  # WARN (not FAIL) — optional until CreateEnvironment is called.
   # Create an ODCR for i4i.metal with instance_match_criteria = "targeted"
@@ -1557,14 +1559,15 @@ Exit code 0 — environment is ready for EVS deployment.
             <ul class="toc-list">
                 <li><a href="#phase1">1. AWS Account &amp; Support</a></li>
                 <li><a href="#phase2">2. IAM Permissions</a></li>
-                <li><a href="#phase3">3. VPC &amp; IP Planning</a></li>
-                <li><a href="#phase4">4. Route 53 &amp; DNS Resolvers</a></li>
-                <li><a href="#phase5">5. DHCP Options Set</a></li>
-                <li><a href="#phase6">6. Route Server &amp; BGP</a></li>
-                <li><a href="#phase7">7. VLAN Subnet Planning</a></li>
-                <li><a href="#phase8">8. Capacity Reservation</a></li>
-                <li><a href="#phase9">9. VCF Licensing</a></li>
-                <li><a href="#phase10">10. Key Pair &amp; Quotas</a></li>
+                <li><a href="#phase3">3. IP Address Planning</a></li>
+                <li><a href="#phase4">4. VPC &amp; Service Access Subnet</a></li>
+                <li><a href="#phase5">5. Route 53 &amp; DNS Resolvers</a></li>
+                <li><a href="#phase6">6. DHCP Options Set</a></li>
+                <li><a href="#phase7">7. Route Server &amp; BGP</a></li>
+                <li><a href="#phase8">8. VLAN Subnet Sizing</a></li>
+                <li><a href="#phase9">9. Capacity Reservation</a></li>
+                <li><a href="#phase10">10. VCF Licensing</a></li>
+                <li><a href="#phase11">11. Key Pair &amp; Quotas</a></li>
                 <li><a href="#terraform">Terraform Automation</a></li>
                 <li><a href="#validator">Prereq Validator</a></li>
             </ul>
@@ -1572,7 +1575,7 @@ Exit code 0 — environment is ready for EVS deployment.
 
         <div class="sidebar-card tf-download">
             <h4>Terraform Kit</h4>
-            <p>Automates Steps 2&ndash;6: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options, and Route Server. ODCR (Step 8) included as commented-out code.</p>
+            <p>Automates Steps 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options, and Route Server. ODCR (Step 9) included as commented-out code.</p>
             <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform/archive/refs/heads/main.zip" class="btn-download">
                 &#8595; Download .zip
             </a>
