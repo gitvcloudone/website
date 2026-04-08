@@ -971,7 +971,7 @@ aws ec2 describe-capacity-reservations \
             <!-- PHASE 9 -->
             <h2 id="phase9"><span class="step-num">9</span> Step 9: VCF Licensing</h2>
 
-            <p>Amazon EVS is a BYOL (Bring Your Own License) service. You must procure VCF licenses from Broadcom before bring-up. License keys are entered in the AWS Console (or via the <code>CreateEnvironment</code> API call) at the time of environment creation — AWS accepts the keys and applies them during the EVS deployment process itself.</p>
+            <p>Amazon EVS is a BYOL (Bring Your Own License) service. Procure all three items from Broadcom before bring-up — you will enter them into the <code>CreateEnvironment</code> wizard during deployment.</p>
 
             <div class="step-card">
                 <h3>9.1 Required License Keys</h3>
@@ -985,15 +985,9 @@ aws ec2 describe-capacity-reservations \
                         </tbody>
                     </table>
                 </div>
-            </div>
-
-            <div class="step-card">
-                <h3>9.2 License Application Process</h3>
-                <p>Enter your license keys directly in the <strong>AWS Console environment creation wizard</strong> or as parameters in the <code>CreateEnvironment</code> API call. <strong>AWS does not validate license keys</strong> — validation is performed by Broadcom. After the EVS environment is deployed, use <strong>SDDC Manager</strong> to manage and maintain valid VCF solution and vSAN license keys. Amazon EVS requires that valid keys remain in SDDC Manager for the service to function properly.</p>
-                <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem;font-size:0.93rem;color:#374151;">
-                    <li>To validate your keys before deployment, visit the Broadcom support portal</li>
-                    <li>A VCF Solution Key covering fewer cores than your host count requires will cause environment creation to fail</li>
-                </ul>
+                <div class="note" style="margin-top:0.75rem;">
+                    Validate your keys against your host count at the Broadcom support portal before deployment — a VCF Solution Key covering fewer cores than your cluster requires will cause <code>CreateEnvironment</code> to fail.
+                </div>
             </div>
 
             <!-- PHASE 10 -->
