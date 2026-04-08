@@ -787,7 +787,32 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
 
             <div class="step-card">
                 <h3>6.1 Create the Service Access Subnet</h3>
-                <p>This is the <strong>only subnet you pre-create</strong> before EVS bring-up. All 10 VLAN subnets are created automatically by EVS. The Service Access Subnet hosts the Route Server endpoints and the Route 53 Resolver ENIs.</p>
+
+                <p>This is the <strong>only subnet you pre-create</strong> before EVS bring-up. All 10 VLAN subnets are created automatically by EVS during environment creation.</p>
+
+                <h4 style="margin:1rem 0 0.5rem;">What is the Service Access Subnet?</h4>
+                <p>The Service Access Subnet is a dedicated AWS subnet within your EVS VPC that serves as the <strong>control plane landing zone</strong> for two critical services:</p>
+                <ul style="margin:0.5rem 0 0.75rem 1.5rem;line-height:1.8;">
+                    <li><strong>VPC Route Server endpoints</strong> — the BGP termination points that NSX Tier-0 peers with to exchange routing information between the NSX overlay and the AWS VPC underlay</li>
+                    <li><strong>Route 53 Resolver inbound ENIs</strong> — the DNS interfaces that VCF components use to resolve private hostnames in the Route 53 private hosted zone</li>
+                </ul>
+                <p>No EVS workload traffic flows through this subnet. It is strictly a management plane subnet — it carries DNS queries and BGP sessions, not VM data-plane traffic.</p>
+
+                <h4 style="margin:1rem 0 0.5rem;">Why configure it before deployment?</h4>
+                <p>EVS bring-up requires all supporting infrastructure to be in place before the <code>CreateEnvironment</code> API call is made. Both the Route Server endpoints (Step 7) and the Resolver ENIs (Step 4) must exist in this subnet with stable, pre-assigned IP addresses prior to deployment:</p>
+                <ul style="margin:0.5rem 0 0.75rem 1.5rem;line-height:1.8;">
+                    <li>The Route Server endpoint IPs are used by EVS to auto-configure NSX Tier-0 BGP neighbors — EVS reads these at bring-up time, so they must already be allocated</li>
+                    <li>The Resolver ENI IPs are written into the DHCP Options Set as DNS servers — VCF components depend on these from the moment they come online</li>
+                </ul>
+
+                <h4 style="margin:1rem 0 0.5rem;">AWS recommendations</h4>
+                <ul style="margin:0.5rem 0 0.75rem 1.5rem;line-height:1.8;">
+                    <li><strong>Use /24:</strong> AWS recommends a /24 for the Service Access Subnet. Although the minimum required IPs are few (2 resolver ENIs + 2 route server endpoints), a /24 gives headroom for future infrastructure additions and avoids address exhaustion</li>
+                    <li><strong>Single AZ:</strong> Place the subnet in the same Availability Zone as the EVS environment — all EVS resources must be in a single AZ</li>
+                    <li><strong>Explicit route table association:</strong> AWS requires the Service Access Subnet to have an explicitly associated route table (not relying on the VPC main route table). Without an explicit association, BGP routes propagated by the Route Server will silently fail to appear in the subnet's routing</li>
+                    <li><strong>No workloads:</strong> Do not launch EC2 instances or other workloads in this subnet — keep it dedicated to EVS control plane services</li>
+                </ul>
+
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Setting</th><th>Requirement</th></tr></thead>
