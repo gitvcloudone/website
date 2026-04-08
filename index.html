@@ -508,7 +508,11 @@
                 <span class="tag">AWS EVS</span>
             </div>
 
-            <p>This guide covers every prerequisite required before submitting an Amazon EVS environment creation request. Complete all 11 phases in order — EVS will validate most of these during bring-up and fail with an error if any are missing.</p>
+            <p>Amazon EVS makes the actual deployment surprisingly straightforward — you fill in your environment details through the AWS Console wizard, click deploy, and the automation takes it from there. Once initiated, a full VCF environment typically comes up in around <strong>3 hours</strong>. Behind the scenes, AWS provisions the underlying EC2 bare-metal infrastructure and then hands off to the native VMware VCF deployment engine — <strong>Cloud Deployer</strong> — which builds out vCenter, SDDC Manager, NSX, and all VCF components exactly as it would in an on-premises deployment.</p>
+
+            <p>What makes or breaks a successful deployment is everything <em>before</em> you click deploy. Just like an on-premises VCF deployment, EVS expects a fully prepared environment — DNS resolving correctly, networking in place, IP plans finalized, licenses procured. The difference is that on-premises you have time to fix things mid-deployment; with EVS, the automation validates prerequisites upfront and will fail fast if anything is missing or misconfigured. Getting the prep right the first time is the entire point of this guide.</p>
+
+            <p>This guide covers every prerequisite required before submitting an Amazon EVS environment creation request. Complete all 11 steps in order — EVS will validate most of these during bring-up and fail with a specific error if any are missing.</p>
 
             <div class="table-wrap">
                 <table>
