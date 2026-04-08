@@ -629,38 +629,40 @@
                 </div>
             </div>
 
-            <h3 style="margin:1.5rem 0 0.75rem;">3.2 VLAN Address Plan</h3>
-            <p>The table below shows the recommended layout for a <code>10.0.0.0/16</code> VPC. Reserve all ranges now — most subnets are created automatically by EVS during bring-up using the CIDRs you supply in the <code>CreateEnvironment</code> request.</p>
+            <div class="step-card">
+                <h3>3.2 VLAN Address Plan</h3>
+                <p>The table below shows the recommended layout for a <code>10.0.0.0/16</code> VPC. Reserve all ranges now — most subnets are created automatically by EVS during bring-up using the CIDRs you supply in the <code>CreateEnvironment</code> request.</p>
 
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Subnet / VLAN</th><th>Purpose</th><th>Allowed Size</th><th>Pre-Create?</th><th>Example CIDR</th></tr></thead>
-                    <tbody>
-                        <tr><td><strong>Service Access Subnet</strong></td><td>Route Server endpoints, DNS Resolver ENIs</td><td>/28 &ndash; /24</td><td><strong>Yes &mdash; Step 4.3</strong></td><td>10.0.0.0/24</td></tr>
-                        <tr><td><strong>Host Management VLAN</strong></td><td>ESXi host management interfaces</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.10.0/24</td></tr>
-                        <tr><td><strong>Management VM VLAN</strong></td><td>vCenter, SDDC Manager, NSX Managers, NSX Edges</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.11.0/24</td></tr>
-                        <tr><td><strong>vMotion VLAN</strong></td><td>Live VM migration</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.12.0/24</td></tr>
-                        <tr><td><strong>vSAN VLAN</strong></td><td>Storage traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.13.0/24</td></tr>
-                        <tr><td><strong>Host VTEP VLAN</strong></td><td>NSX host tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.14.0/24</td></tr>
-                        <tr><td><strong>Edge VTEP VLAN</strong></td><td>NSX Edge tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.15.0/24</td></tr>
-                        <tr><td><strong>NSX Uplink VLAN</strong></td><td>Tier-0 north-south BGP peering</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.16.0/24</td></tr>
-                        <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.20.0/24</td></tr>
-                        <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.21.0/24</td></tr>
-                        <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.22.0/24</td></tr>
-                    </tbody>
-                </table>
-            </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Subnet / VLAN</th><th>Purpose</th><th>Allowed Size</th><th>Pre-Create?</th><th>Example CIDR</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Service Access Subnet</strong></td><td>Route Server endpoints, DNS Resolver ENIs</td><td>/28 &ndash; /24</td><td><strong>Yes &mdash; Step 4.3</strong></td><td>10.0.0.0/24</td></tr>
+                            <tr><td><strong>Host Management VLAN</strong></td><td>ESXi host management interfaces</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.10.0/24</td></tr>
+                            <tr><td><strong>Management VM VLAN</strong></td><td>vCenter, SDDC Manager, NSX Managers, NSX Edges</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.11.0/24</td></tr>
+                            <tr><td><strong>vMotion VLAN</strong></td><td>Live VM migration</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.12.0/24</td></tr>
+                            <tr><td><strong>vSAN VLAN</strong></td><td>Storage traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.13.0/24</td></tr>
+                            <tr><td><strong>Host VTEP VLAN</strong></td><td>NSX host tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.14.0/24</td></tr>
+                            <tr><td><strong>Edge VTEP VLAN</strong></td><td>NSX Edge tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.15.0/24</td></tr>
+                            <tr><td><strong>NSX Uplink VLAN</strong></td><td>Tier-0 north-south BGP peering</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.16.0/24</td></tr>
+                            <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.20.0/24</td></tr>
+                            <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.21.0/24</td></tr>
+                            <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.22.0/24</td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-            <div class="note">
-                <strong>Critical:</strong> Only the <strong>Service Access Subnet</strong> is pre-created by you (Step 4.3). All 10 VLAN subnets are automatically provisioned by EVS during bring-up using the CIDRs you specify in the <code>CreateEnvironment</code> request. Reserve these ranges now and do not create overlapping subnets in the VPC.
-            </div>
+                <div class="note">
+                    <strong>Critical:</strong> Only the <strong>Service Access Subnet</strong> is pre-created by you (Step 4.3). All 10 VLAN subnets are automatically provisioned by EVS during bring-up using the CIDRs you specify in the <code>CreateEnvironment</code> request. Reserve these ranges now and do not create overlapping subnets in the VPC.
+                </div>
 
-            <div class="note">
-                <strong>Sizing constraints:</strong> vMotion, vSAN, and Host VTEP VLANs must be the same size as the Host Management VLAN — they cannot be independently sized. The Host VTEP subnet consumes multiple IP addresses per host (exact count is NSX-version dependent), so size accordingly. No customer workloads (including bastion hosts or monitoring agents) may be launched in EVS-managed subnets — these are dedicated exclusively to VCF components.
-            </div>
+                <div class="note">
+                    <strong>Sizing constraints:</strong> vMotion, vSAN, and Host VTEP VLANs must be the same size as the Host Management VLAN — they cannot be independently sized. The Host VTEP subnet consumes multiple IP addresses per host (exact count is NSX-version dependent), so size accordingly. No customer workloads (including bastion hosts or monitoring agents) may be launched in EVS-managed subnets — these are dedicated exclusively to VCF components.
+                </div>
 
-            <div class="note">
-                <strong>HCX internet connectivity (optional):</strong> If you plan to use HCX for workload migration, AWS requires an IPAM (IP Address Manager) pool configured with public IP addresses for the HCX Uplink VLAN. Allocate at least <strong>2 Elastic IP addresses (EIPs)</strong> from the IPAM pool — one for the HCX Manager appliance and one for the HCX Interconnect (HCX-IX) appliance. Configure the IPAM pool before EVS deployment so the EIPs are available when HCX is activated.
+                <div class="note">
+                    <strong>HCX internet connectivity (optional):</strong> If you plan to use HCX for workload migration, AWS requires an IPAM (IP Address Manager) pool configured with public IP addresses for the HCX Uplink VLAN. Allocate at least <strong>2 Elastic IP addresses (EIPs)</strong> from the IPAM pool — one for the HCX Manager appliance and one for the HCX Interconnect (HCX-IX) appliance. Configure the IPAM pool before EVS deployment so the EIPs are available when HCX is activated.
+                </div>
             </div>
 
             <div class="step-card">
