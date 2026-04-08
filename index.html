@@ -605,7 +605,32 @@
             <!-- PHASE 3 -->
             <h2 id="phase3"><span class="step-num">3</span> Step 3: IP Address Planning</h2>
 
-            <p>Plan all CIDRs before creating any AWS resources. Overlapping ranges will cause EVS bring-up to fail and cannot be corrected without redeployment. The table below shows the recommended layout for a <code>10.0.0.0/16</code> VPC — reserve all ranges now even though most subnets are created automatically by EVS during bring-up.</p>
+            <p>Plan all CIDRs before creating any AWS resources. Overlapping ranges will cause EVS bring-up to fail and cannot be corrected without redeployment. Start with the VPC CIDR (the outer boundary), then plan the VLANs that will live inside it.</p>
+
+            <div class="step-card">
+                <h3>3.1 VPC CIDR</h3>
+                <p>The VPC CIDR is the outer boundary for every VLAN EVS will create. Choose it before anything else — it <strong>cannot be changed after an EVS environment is deployed</strong> into the VPC.</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Requirement</th><th>Detail</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Minimum size</strong></td><td>/22 (1,024 addresses)</td></tr>
+                            <tr><td><strong>Recommended size</strong></td><td>/16 &mdash; provides space for all 10 EVS VLANs, Service Access Subnet, future expansion VLANs, and non-EVS subnets in the same VPC</td></tr>
+                            <tr><td><strong>Address space</strong></td><td>RFC 1918 private only: <code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code></td></tr>
+                            <tr><td><strong>IPv6</strong></td><td>Not supported &mdash; IPv4 only</td></tr>
+                            <tr><td><strong>Immutability</strong></td><td>Cannot be changed after EVS deployment. Plan generously.</td></tr>
+                            <tr><td><strong>VLAN containment</strong></td><td>All VLAN CIDRs specified in <code>CreateEnvironment</code> must fall within this CIDR and must not overlap each other or existing subnets</td></tr>
+                            <tr><td><strong>On-premises overlap</strong></td><td>Must not overlap your on-premises or Transit Gateway-attached networks if you plan to use TGW for connectivity</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="note" style="margin-top:1rem;">
+                    <strong>Why /16?</strong> The /22 minimum gives exactly 1,024 addresses. EVS alone consumes space across 10 VLAN subnets plus the Service Access Subnet. A /16 (65,536 addresses) gives comfortable headroom for future VCF segments, NSX overlay networks, and any non-EVS workloads you run in the same VPC.
+                </div>
+            </div>
+
+            <h3 style="margin:1.5rem 0 0.75rem;">3.2 VLAN Address Plan</h3>
+            <p>The table below shows the recommended layout for a <code>10.0.0.0/16</code> VPC. Reserve all ranges now — most subnets are created automatically by EVS during bring-up using the CIDRs you supply in the <code>CreateEnvironment</code> request.</p>
 
             <div class="table-wrap">
                 <table>
@@ -639,7 +664,7 @@
             </div>
 
             <div class="step-card">
-                <h3>3.1 EVS Networking Constraints</h3>
+                <h3>3.3 EVS Networking Constraints</h3>
                 <p>These constraints affect your network design and must be accounted for before you commit to a topology. Review them now before creating any resources.</p>
                 <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;font-size:0.93rem;color:#374151;">
                     <li><strong>Transit Gateway required for external connectivity.</strong> Direct Connect Private VIFs, VGW-based Site-to-Site VPNs, and VPC peering are not supported for EVS underlay connectivity. All paths to on-premises or other VPCs must go through Transit Gateway.</li>
@@ -1012,7 +1037,8 @@ aws ec2 describe-capacity-reservations \
                         <tr><td>AWS Business Support (or higher) active</td><td>1</td><td><input type="checkbox"></td></tr>
                         <tr><td>Transit Gateway configured (if on-premises connectivity required)</td><td>1.3</td><td><input type="checkbox"></td></tr>
                         <tr><td>IAM user/role has EVS + EC2 + SLR permissions</td><td>2</td><td><input type="checkbox"></td></tr>
-                        <tr><td>All VLAN CIDRs planned, non-overlapping, within VPC CIDR</td><td>3</td><td><input type="checkbox"></td></tr>
+                        <tr><td>VPC CIDR chosen (/16 recommended), RFC 1918, no on-premises overlap</td><td>3.1</td><td><input type="checkbox"></td></tr>
+                        <tr><td>All VLAN CIDRs planned, non-overlapping, within VPC CIDR</td><td>3.2</td><td><input type="checkbox"></td></tr>
                         <tr><td>VPC created with /22+ CIDR, DNS enabled</td><td>4.1</td><td><input type="checkbox"></td></tr>
                         <tr><td>Service Access Subnet created with explicit route table association</td><td>4.3</td><td><input type="checkbox"></td></tr>
                         <tr><td>Service Access Subnet NACL allows UDP/TCP 53 (DNS) and TCP 179 (BGP)</td><td>4.3</td><td><input type="checkbox"></td></tr>
