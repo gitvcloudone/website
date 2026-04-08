@@ -914,13 +914,17 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             </div>
 
             <div class="note">
-                <strong>Sizing constraints:</strong> vMotion, vSAN, and Host VTEP VLANs must be the same size as the Host Management VLAN — they cannot be independently sized. The Host VTEP subnet consumes <strong>2 IP addresses per host</strong>, so a /24 supports a maximum of 112 hosts. No customer workloads (including bastion hosts or monitoring agents) may be launched in EVS-managed subnets — these are dedicated exclusively to VCF components.
+                <strong>Sizing constraints:</strong> vMotion, vSAN, and Host VTEP VLANs must be the same size as the Host Management VLAN — they cannot be independently sized. The Host VTEP subnet consumes multiple IP addresses per host (exact count is NSX-version dependent), so size accordingly. No customer workloads (including bastion hosts or monitoring agents) may be launched in EVS-managed subnets — these are dedicated exclusively to VCF components.
+            </div>
+
+            <div class="note">
+                <strong>HCX internet connectivity (optional):</strong> If you plan to use HCX for workload migration, AWS requires an IPAM (IP Address Manager) pool configured with public IP addresses for the HCX Uplink VLAN. Allocate at least <strong>2 Elastic IP addresses (EIPs)</strong> from the IPAM pool — one for the HCX Manager appliance and one for the HCX Interconnect (HCX-IX) appliance. Configure the IPAM pool before EVS deployment so the EIPs are available when HCX is activated.
             </div>
 
             <!-- PHASE 9 -->
             <h2 id="phase9"><span class="step-num">9</span> Step 9: On-Demand Capacity Reservation (ODCR)</h2>
 
-            <p>Amazon EVS runs on bare-metal instances. Because bare-metal capacity can be constrained in specific AZs, you must create an On-Demand Capacity Reservation (ODCR) before deployment to guarantee availability. At the time of writing, <strong>i4i.metal</strong> is the only supported instance type. Additional instance types — including <strong>i7i.metal-24xl</strong> and <strong>i7i.metal-48xl</strong> — are coming. Choose the instance type that matches your planned EVS environment.</p>
+            <p>Amazon EVS runs on bare-metal instances. Because bare-metal capacity can be constrained in specific AZs, AWS recommends creating an On-Demand Capacity Reservation (ODCR) before deployment to improve your chances of securing capacity. At the time of writing, <strong>i4i.metal</strong> is the only supported instance type. Additional instance types — including <strong>i7i.metal-24xl</strong> and <strong>i7i.metal-48xl</strong> — are coming. Choose the instance type that matches your planned EVS environment.</p>
 
             <div class="step-card">
                 <h3>9.1 Supported Instance Types</h3>
@@ -1029,7 +1033,7 @@ aws ec2 describe-capacity-reservations \
                             <tr><td>Route propagation enabled on target route tables</td><td>&#9744;</td></tr>
                             <tr><td>NACLs allow TCP 179 and ephemeral ports bidirectionally</td><td>&#9744;</td></tr>
                             <tr><td>All 10 VLAN CIDRs planned, non-overlapping</td><td>&#9744;</td></tr>
-                            <tr><td>ODCR created for i4i.metal in correct AZ (state: active)</td><td>&#9744;</td></tr>
+                            <tr><td>ODCR created for target instance type in correct AZ (state: active) — recommended</td><td>&#9744;</td></tr>
                             <tr><td>EC2 vCPU quota &ge; 512 (for 4-host cluster)</td><td>&#9744;</td></tr>
                             <tr><td>VCF Solution Key procured (256+ cores)</td><td>&#9744;</td></tr>
                             <tr><td>vSAN License Key procured (110+ TiB)</td><td>&#9744;</td></tr>
