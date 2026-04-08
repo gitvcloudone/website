@@ -636,6 +636,18 @@
                 <strong>HCX internet connectivity (optional):</strong> If you plan to use HCX for workload migration, AWS requires an IPAM (IP Address Manager) pool configured with public IP addresses for the HCX Uplink VLAN. Allocate at least <strong>2 Elastic IP addresses (EIPs)</strong> from the IPAM pool — one for the HCX Manager appliance and one for the HCX Interconnect (HCX-IX) appliance. Configure the IPAM pool before EVS deployment so the EIPs are available when HCX is activated.
             </div>
 
+            <div class="step-card">
+                <h3>3.1 EVS Networking Constraints</h3>
+                <p>These constraints affect your network design and must be accounted for before you commit to a topology. Review them now before creating any resources.</p>
+                <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;font-size:0.93rem;color:#374151;">
+                    <li><strong>Transit Gateway required for external connectivity.</strong> Direct Connect Private VIFs, VGW-based Site-to-Site VPNs, and VPC peering are not supported for EVS underlay connectivity. All paths to on-premises or other VPCs must go through Transit Gateway.</li>
+                    <li><strong>S3 Gateway endpoints are not supported.</strong> To access S3 from EVS workloads, use an <strong>S3 Interface Endpoint (PrivateLink)</strong> — this provisions a private IP in your VPC that EVS workloads route to like any standard network destination, with no route table injection required.</li>
+                    <li><strong>Security groups do not apply</strong> to EVS VLAN subnet ENIs. NACLs are the only packet-level filtering mechanism for EVS traffic.</li>
+                    <li><strong>IPv6 is not supported.</strong> All EVS subnets and VLANs must use IPv4.</li>
+                    <li><strong>No customer workloads in EVS subnets.</strong> EVS-managed VLAN subnets are exclusively for VCF components — do not launch EC2 instances, bastion hosts, or other workloads in them.</li>
+                </ul>
+            </div>
+
             <!-- PHASE 4 -->
             <h2 id="phase4"><span class="step-num">4</span> Step 4: VPC &amp; Service Access Subnet</h2>
 
@@ -896,17 +908,6 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     <strong>Common failure:</strong> Every propagated route table must have an <strong>explicit subnet association</strong>. Route tables that only have the implicit main-route-table association will silently fail to receive BGP routes. Verify explicit associations exist before proceeding.
                 </div>
                 <img src="/images/7.4_route_server_propagation.jpg" alt="Route Server route propagation to service access route table" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
-            </div>
-
-            <div class="step-card">
-                <h3>7.5 EVS Networking Limitations</h3>
-                <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;font-size:0.93rem;color:#374151;">
-                    <li><strong>Security groups do not apply</strong> to EVS VLAN subnet ENIs. NACLs are the only packet-level filtering mechanism for EVS traffic.</li>
-                    <li><strong>VPC peering is not a documented supported connectivity option.</strong> Use Transit Gateway for VPC-to-VPC connectivity.</li>
-                    <li><strong>S3 Gateway endpoints are not supported</strong> with EVS. To access S3 from EVS workloads, create an <strong>S3 Interface Endpoint (PrivateLink)</strong> in your VPC — this provisions a private IP in your subnet that EVS workloads can route to like any standard network destination, with no route table injection required.</li>
-                    <li><strong>Direct Connect Private VIFs and VGW-based VPNs are not supported.</strong> All external paths must terminate on Transit Gateway.</li>
-                    <li><strong>IPv6 is not supported.</strong></li>
-                </ul>
             </div>
 
             <div class="note">
