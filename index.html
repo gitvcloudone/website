@@ -765,7 +765,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
 
             <div class="step-card">
                 <h3>5.4 Alternative: Use Your Own DNS Server (Optional)</h3>
-                <p>If your organization already runs its own DNS infrastructure — Microsoft DNS, Infoblox, BIND, or any other provider — you can skip Steps 4.1 and 4.2 and use it instead of Route 53. Your DNS server must be reachable from the EVS VPC on UDP/TCP port 53, either running as a VM inside the VPC or accessible via Transit Gateway from on-premises.</p>
+                <p>If your organization already runs its own DNS infrastructure — Microsoft DNS, Infoblox, BIND, or any other provider — you can skip Steps 5.1 and 5.2 and use it instead of Route 53. Your DNS server must be reachable from the EVS VPC on UDP/TCP port 53, either running as a VM inside the VPC or accessible via Transit Gateway from on-premises.</p>
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>Requirement</th><th>Details</th></tr></thead>
@@ -1008,19 +1008,19 @@ aws ec2 describe-capacity-reservations \
                             <tr><td>AWS Business Support (or higher) active</td><td>&#9744;</td></tr>
                             <tr><td>Transit Gateway configured (if on-premises connectivity required)</td><td>&#9744;</td></tr>
                             <tr><td>IAM user/role has EVS + EC2 + SLR permissions</td><td>&#9744;</td></tr>
+                            <tr><td>All VLAN CIDRs planned, non-overlapping, within VPC CIDR</td><td>&#9744;</td></tr>
                             <tr><td>VPC created with /22+ CIDR, DNS enabled</td><td>&#9744;</td></tr>
+                            <tr><td>Service Access Subnet created with explicit route table association</td><td>&#9744;</td></tr>
                             <tr><td>Route 53 private hosted zone created and VPC-associated</td><td>&#9744;</td></tr>
                             <tr><td>Two inbound resolver endpoints created (IPs noted)</td><td>&#9744;</td></tr>
                             <tr><td>All A and PTR records created and resolving correctly</td><td>&#9744;</td></tr>
                             <tr><td>DHCP Options Set created with domain, 2 DNS IPs, NTP</td><td>&#9744;</td></tr>
                             <tr><td>DHCP Options Set associated with EVS VPC</td><td>&#9744;</td></tr>
-                            <tr><td>Service Access Subnet created with explicit route table association</td><td>&#9744;</td></tr>
                             <tr><td>VPC Route Server in Available state</td><td>&#9744;</td></tr>
                             <tr><td>Two Route Server endpoints in Available state</td><td>&#9744;</td></tr>
                             <tr><td>Two Route Server peers created (NSX Uplink VLAN IPs, BGP Keepalive)</td><td>&#9744;</td></tr>
                             <tr><td>Route propagation enabled on target route tables</td><td>&#9744;</td></tr>
                             <tr><td>NACLs allow TCP 179 and ephemeral ports bidirectionally</td><td>&#9744;</td></tr>
-                            <tr><td>All 10 VLAN CIDRs planned, non-overlapping</td><td>&#9744;</td></tr>
                             <tr><td>ODCR created for target instance type in correct AZ (state: active) — recommended</td><td>&#9744;</td></tr>
                             <tr><td>EC2 vCPU quota &ge; 512 (for 4-host cluster)</td><td>&#9744;</td></tr>
                             <tr><td>VCF Solution Key procured (256+ cores)</td><td>&#9744;</td></tr>
@@ -1035,7 +1035,7 @@ aws ec2 describe-capacity-reservations \
             <!-- TERRAFORM -->
             <h2 id="terraform"><span class="step-num">&#9889;</span> Automation: Terraform Deployment</h2>
 
-            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Steps 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options set, service access subnet with explicit route table, and Route Server with BGP peers. Step 8 (ODCR) is included in <code>odcr.tf</code> as commented-out code &mdash; uncomment when ready. All defaults match the IP plan in this guide and are production-ready.</p>
+            <p>The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank" rel="noopener">EVS-PreREQ-Terraform</a> kit automates Steps 2, 4&ndash;7: IAM policy, VPC, service access subnet, DNS resolvers, Route 53 records, DHCP options set, and Route Server with BGP peers. Step 3 (IP address planning) requires no AWS resources. Step 8 (ODCR) is included in <code>odcr.tf</code> as commented-out code &mdash; uncomment when ready. All defaults match the IP plan in this guide and are production-ready.</p>
 
             <h3>File descriptions</h3>
 
@@ -1550,7 +1550,7 @@ Exit code 0 — environment is ready for EVS deployment.
 
         <div class="sidebar-card tf-download">
             <h4>Terraform Kit</h4>
-            <p>Automates Steps 2&ndash;7: IAM policy, VPC, DNS resolvers, Route 53 records, DHCP options, and Route Server. ODCR (Step 8) included as commented-out code.</p>
+            <p>Automates Steps 2, 4&ndash;7: IAM policy, VPC, service access subnet, Route 53, DHCP, and Route Server. ODCR (Step 8) included as commented-out code.</p>
             <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform/archive/refs/heads/main.zip" class="btn-download">
                 &#8595; Download .zip
             </a>
