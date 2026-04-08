@@ -317,6 +317,8 @@
 
         /* ── TABLES ── */
         .table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+        #checklist table td:last-child { text-align: center; }
+        #checklist input[type="checkbox"] { width: 1.1rem; height: 1.1rem; cursor: pointer; accent-color: var(--aws-orange, #f90); }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -1007,27 +1009,27 @@ aws ec2 describe-capacity-reservations \
                 <table>
                     <thead><tr><th>Check</th><th>Step</th><th>Verified?</th></tr></thead>
                     <tbody>
-                        <tr><td>AWS Business Support (or higher) active</td><td>1</td><td>&#9744;</td></tr>
-                        <tr><td>Transit Gateway configured (if on-premises connectivity required)</td><td>1.3</td><td>&#9744;</td></tr>
-                        <tr><td>IAM user/role has EVS + EC2 + SLR permissions</td><td>2</td><td>&#9744;</td></tr>
-                        <tr><td>All VLAN CIDRs planned, non-overlapping, within VPC CIDR</td><td>3</td><td>&#9744;</td></tr>
-                        <tr><td>VPC created with /22+ CIDR, DNS enabled</td><td>4.1</td><td>&#9744;</td></tr>
-                        <tr><td>Service Access Subnet created with explicit route table association</td><td>4.3</td><td>&#9744;</td></tr>
-                        <tr><td>Service Access Subnet NACL allows UDP/TCP 53 (DNS) and TCP 179 (BGP)</td><td>4.3</td><td>&#9744;</td></tr>
-                        <tr><td>Route 53 private hosted zone created and VPC-associated</td><td>5.1</td><td>&#9744;</td></tr>
-                        <tr><td>Two inbound resolver endpoints created (IPs noted)</td><td>5.2</td><td>&#9744;</td></tr>
-                        <tr><td>All A and PTR records created and resolving correctly</td><td>5.3</td><td>&#9744;</td></tr>
-                        <tr><td>DHCP Options Set created with domain, 2 DNS IPs, NTP &mdash; associated with VPC</td><td>6</td><td>&#9744;</td></tr>
-                        <tr><td>VPC Route Server in Available state</td><td>7.1</td><td>&#9744;</td></tr>
-                        <tr><td>Two Route Server endpoints in Available state</td><td>7.2</td><td>&#9744;</td></tr>
-                        <tr><td>Two BGP peers created (NSX Uplink VLAN IPs, BGP Keepalive)</td><td>7.3</td><td>&#9744;</td></tr>
-                        <tr><td>Route propagation enabled on Service Access Subnet route table</td><td>7.4</td><td>&#9744;</td></tr>
-                        <tr><td>ODCR created for target instance type in correct AZ (state: active) — recommended</td><td>8</td><td>&#9744;</td></tr>
-                        <tr><td>EC2 vCPU quota sufficient for planned cluster size</td><td>8</td><td>&#9744;</td></tr>
-                        <tr><td>VCF Solution Key procured (core count matches instance type &times; hosts)</td><td>9</td><td>&#9744;</td></tr>
-                        <tr><td>vSAN License Key procured (110+ TiB)</td><td>9</td><td>&#9744;</td></tr>
-                        <tr><td>Broadcom Site ID available</td><td>9</td><td>&#9744;</td></tr>
-                        <tr><td>EC2 key pair created in target region</td><td>10</td><td>&#9744;</td></tr>
+                        <tr><td>AWS Business Support (or higher) active</td><td>1</td><td><input type="checkbox"></td></tr>
+                        <tr><td>Transit Gateway configured (if on-premises connectivity required)</td><td>1.3</td><td><input type="checkbox"></td></tr>
+                        <tr><td>IAM user/role has EVS + EC2 + SLR permissions</td><td>2</td><td><input type="checkbox"></td></tr>
+                        <tr><td>All VLAN CIDRs planned, non-overlapping, within VPC CIDR</td><td>3</td><td><input type="checkbox"></td></tr>
+                        <tr><td>VPC created with /22+ CIDR, DNS enabled</td><td>4.1</td><td><input type="checkbox"></td></tr>
+                        <tr><td>Service Access Subnet created with explicit route table association</td><td>4.3</td><td><input type="checkbox"></td></tr>
+                        <tr><td>Service Access Subnet NACL allows UDP/TCP 53 (DNS) and TCP 179 (BGP)</td><td>4.3</td><td><input type="checkbox"></td></tr>
+                        <tr><td>Route 53 private hosted zone created and VPC-associated</td><td>5.1</td><td><input type="checkbox"></td></tr>
+                        <tr><td>Two inbound resolver endpoints created (IPs noted)</td><td>5.2</td><td><input type="checkbox"></td></tr>
+                        <tr><td>All A and PTR records created and resolving correctly</td><td>5.3</td><td><input type="checkbox"></td></tr>
+                        <tr><td>DHCP Options Set created with domain, 2 DNS IPs, NTP &mdash; associated with VPC</td><td>6</td><td><input type="checkbox"></td></tr>
+                        <tr><td>VPC Route Server in Available state</td><td>7.1</td><td><input type="checkbox"></td></tr>
+                        <tr><td>Two Route Server endpoints in Available state</td><td>7.2</td><td><input type="checkbox"></td></tr>
+                        <tr><td>Two BGP peers created (NSX Uplink VLAN IPs, BGP Keepalive)</td><td>7.3</td><td><input type="checkbox"></td></tr>
+                        <tr><td>Route propagation enabled on Service Access Subnet route table</td><td>7.4</td><td><input type="checkbox"></td></tr>
+                        <tr><td>ODCR created for target instance type in correct AZ (state: active) — recommended</td><td>8</td><td><input type="checkbox"></td></tr>
+                        <tr><td>EC2 vCPU quota sufficient for planned cluster size</td><td>8</td><td><input type="checkbox"></td></tr>
+                        <tr><td>VCF Solution Key procured (core count matches instance type &times; hosts)</td><td>9</td><td><input type="checkbox"></td></tr>
+                        <tr><td>vSAN License Key procured (110+ TiB)</td><td>9</td><td><input type="checkbox"></td></tr>
+                        <tr><td>Broadcom Site ID available</td><td>9</td><td><input type="checkbox"></td></tr>
+                        <tr><td>EC2 key pair created in target region</td><td>10</td><td><input type="checkbox"></td></tr>
                     </tbody>
                 </table>
             </div>
