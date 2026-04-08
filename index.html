@@ -1061,7 +1061,7 @@ aws ec2 describe-capacity-reservations \
                     <tr style="background:#fafafa;">
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">main.tf</td>
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">2, 4, 5, 6</td>
-                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">VPC, service access subnet, explicit route table, DNS security group, Route 53 inbound resolver endpoint (2 IPs), DHCP options set, EVS service-linked role</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">VPC, service access subnet, explicit route table, Network ACL (DNS + BGP), DNS security group, Route 53 inbound resolver endpoint (2 IPs), DHCP options set, EVS service-linked role</td>
                     </tr>
                     <tr>
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">dns.tf</td>
@@ -1091,7 +1091,7 @@ aws ec2 describe-capacity-reservations \
                     <tr style="background:#fafafa;">
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);font-family:monospace;font-size:0.85rem;">providers.tf</td>
                         <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">&mdash;</td>
-                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">Terraform &ge; 1.3 and AWS provider &ge; 5.84 (required for Route Server resources). No remote state &mdash; local backend.</td>
+                        <td style="padding:0.6rem 0.8rem;border:1px solid var(--border);">Terraform &ge; 1.5 and AWS provider &ge; 5.84 (required for Route Server resources). No remote state &mdash; local backend.</td>
                     </tr>
                 </tbody>
             </table>
