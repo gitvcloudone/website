@@ -445,6 +445,54 @@
             .stats-inner { gap: 1.5rem; }
             .sidebar { grid-template-columns: 1fr; }
         }
+        /* ── LIGHTBOX ── */
+        .lb-trigger { cursor: zoom-in; }
+        #lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.85);
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        #lightbox.open { display: flex; }
+        #lightbox img {
+            max-width: 95vw;
+            max-height: 92vh;
+            border-radius: 6px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+            object-fit: contain;
+        }
+        #lb-close {
+            position: fixed;
+            top: 1rem;
+            right: 1.25rem;
+            font-size: 2rem;
+            line-height: 1;
+            color: #fff;
+            cursor: pointer;
+            background: none;
+            border: none;
+            opacity: 0.8;
+        }
+        #lb-close:hover { opacity: 1; }
+        #lb-caption {
+            position: fixed;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #e5e7eb;
+            font-size: 0.85rem;
+            background: rgba(0,0,0,0.5);
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            max-width: 90vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 <body>
@@ -1638,5 +1686,41 @@ Exit code 0 — environment is ready for EVS deployment.
     </div>
 </footer>
 
+<!-- LIGHTBOX -->
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview">
+    <button id="lb-close" aria-label="Close">&times;</button>
+    <img id="lb-img" src="" alt="">
+    <div id="lb-caption"></div>
+</div>
+
+<script>
+(function () {
+    var lb = document.getElementById('lightbox');
+    var lbImg = document.getElementById('lb-img');
+    var lbCaption = document.getElementById('lb-caption');
+
+    // Make all content images triggers
+    document.querySelectorAll('.step-card img, .note img, #phase1 img, #phase2 img, #phase3 img, #phase4 img, #phase5 img, #phase6 img, #phase7 img, #phase8 img, #phase9 img, #phase10 img').forEach(function (img) {
+        img.classList.add('lb-trigger');
+        img.addEventListener('click', function () {
+            lbImg.src = img.src;
+            lbImg.alt = img.alt;
+            lbCaption.textContent = img.alt;
+            lb.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        });
+    });
+
+    function closeLb() {
+        lb.classList.remove('open');
+        lbImg.src = '';
+        document.body.style.overflow = '';
+    }
+
+    document.getElementById('lb-close').addEventListener('click', closeLb);
+    lb.addEventListener('click', function (e) { if (e.target === lb) closeLb(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLb(); });
+})();
+</script>
 </body>
 </html>
