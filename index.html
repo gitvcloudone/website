@@ -1705,7 +1705,7 @@ Exit code 0 — environment is ready for EVS deployment.
     var lbCaption = document.getElementById('lb-caption');
 
     // Make all content images triggers
-    document.querySelectorAll('.step-card img, .note img, #phase1 img, #phase2 img, #phase3 img, #phase4 img, #phase5 img, #phase6 img, #phase7 img, #phase8 img, #phase9 img, #phase10 img').forEach(function (img) {
+    document.querySelectorAll('.step-card img, .note img, figure img, #phase1 img, #phase2 img, #phase3 img, #phase4 img, #phase5 img, #phase6 img, #phase7 img, #phase8 img, #phase9 img, #phase10 img').forEach(function (img) {
         img.classList.add('lb-trigger');
         img.addEventListener('click', function () {
             lbImg.src = img.src;
