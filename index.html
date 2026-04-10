@@ -716,7 +716,7 @@
 
             <div class="step-card">
                 <h3>3.3 IP Address Inventory</h3>
-                <p>The table below lists every individual IP address that must be assigned before EVS bring-up. Addresses marked <strong>DNS required</strong> must have both forward (A) and reverse (PTR) records resolvable within the VPC — whether via Route 53 private hosted zones or your own DNS servers — before <code>CreateEnvironment</code> is called. Addresses with no DNS requirement are not registered in DNS.</p>
+                <p>The table below lists every individual IP address that must be assigned before EVS bring-up. Addresses marked <strong>Yes</strong> in the DNS Required column must have both forward (A) and reverse (PTR) records resolvable within the VPC — whether via Route 53 private hosted zones or your own DNS servers — before <code>CreateEnvironment</code> is called.</p>
 
                 <div class="table-wrap">
                     <table>
@@ -742,6 +742,9 @@
                             <tr><td>nsx-edge-02 uplink</td><td>NSX Uplink VLAN</td><td>10.0.16.11</td><td>No</td><td>NSX Edge 2 Tier-0 uplink — VPC Route Server BGP peer address</td></tr>
                         </tbody>
                     </table>
+                </div>
+                <div class="note" style="margin-top:0.75rem;">
+                    The Route 53 inbound resolver ENIs and both VPC Route Server endpoints are all placed in the <strong>Service Access Subnet</strong>. Size this subnet to accommodate all four endpoints — a <code>/28</code> (14 usable addresses) is the minimum, a <code>/24</code> is recommended.
                 </div>
                 <div class="note" style="margin-top:0.75rem;">
                     All example IPs above are defaults from the <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank">EVS-PreREQ-Terraform</a> kit. Update them in <code>variables.tf</code> to match your environment before running <code>terraform apply</code>. The resolver IPs (10.0.0.10 / 10.0.0.11) must match exactly what you configure as <code>domain-name-servers</code> in the DHCP Options Set.
