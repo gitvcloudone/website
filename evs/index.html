@@ -435,6 +435,11 @@
         .footer-links { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 0.75rem; }
         .footer-links a { display: flex; align-items: center; gap: 0.35rem; }
 
+        /* ── GLOBAL MOBILE FOUNDATION ── */
+        img { max-width: 100%; height: auto; }
+        .article-card { overflow-wrap: break-word; }
+        .table-wrap, .code-body, .diagram-body { -webkit-overflow-scrolling: touch; }
+
         /* ── HAMBURGER ── */
         .nav-toggle {
             display: none;
@@ -512,9 +517,12 @@
         @media (max-width: 1024px) {
             .page-wrap { grid-template-columns: 1fr; }
             .sidebar { order: -1; display: grid; grid-template-columns: 1fr 1fr; }
+            .article-card { padding: 2rem 1.75rem; }
         }
 
         @media (max-width: 640px) {
+            html { overflow-x: hidden; }
+
             .hero { padding: 2.5rem 1.25rem 2rem; }
             .hero p { font-size: 1rem; }
             .hero-ctas { flex-direction: column; align-items: stretch; }
@@ -527,16 +535,21 @@
                 justify-items: start;
             }
 
-            .page-wrap { padding: 1.5rem 1rem 3rem; }
-            .article-card { padding: 1.5rem 1rem; }
-            .article-card h2 { font-size: 1.3rem; }
-            .article-card h3 { font-size: 1.05rem; }
+            .page-wrap { padding: 1.5rem 0.75rem 3rem; }
+            .article-card { padding: 1.25rem 0.875rem; }
+            .article-card h2 { font-size: 1.2rem; gap: 8px; }
+            .article-card h3 { font-size: 1rem; }
 
             .card-grid-2, .card-grid-3, .resp-grid { grid-template-columns: 1fr; }
             .regions-grid { grid-template-columns: 1fr 1fr; }
 
             .step-card { padding: 1rem; }
-            .note { padding: 0.9rem 1rem; }
+            .note { padding: 0.9rem 1rem; font-size: 0.88rem; }
+
+            table { font-size: 0.82rem; }
+            th, td { padding: 0.5rem 0.65rem; word-break: break-word; }
+
+            .diagram-body { padding: 0.75rem; overflow-x: auto; }
 
             .sidebar { grid-template-columns: 1fr; }
         }
@@ -544,7 +557,8 @@
         @media (max-width: 420px) {
             .stats-inner { grid-template-columns: 1fr; }
             .regions-grid { grid-template-columns: 1fr; }
-            .article-card { padding: 1.25rem 0.875rem; }
+            .article-card { padding: 1rem 0.75rem; }
+            .article-card h2 { font-size: 1.1rem; }
         }
     </style>
 </head>
