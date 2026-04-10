@@ -808,6 +808,9 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <div class="note" style="margin-top:0.75rem;">
                     AWS does not fail EVS bring-up if NACL rules are missing, but they are required for DNS resolution and BGP to function after deployment. Configure them now so the subnet is ready when resolvers (Step 5) and Route Server endpoints (Step 7) are placed into it.
                 </div>
+                <div class="note" style="margin-top:0.75rem;border-color:#6b7280;">
+                    <strong>Terraform note:</strong> The <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank">EVS-PreREQ-Terraform</a> kit deploys the Service Access Subnet NACL with <code>protocol = "-1"</code> (allow all traffic from the VPC CIDR) in both directions. This is functionally permissive — the specific rules in the table above represent best-practice least-privilege and should be used in production environments.
+                </div>
             </div>
 
             <!-- PHASE 5 -->
