@@ -1037,7 +1037,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             <!-- STEP 8 -->
             <h2 id="phase8"><span class="step-num">8</span> Step 8: On-Demand Capacity Reservation (ODCR)</h2>
 
-            <p>Amazon EVS runs on bare-metal instances. Because bare-metal capacity can be constrained in specific AZs, AWS recommends creating an On-Demand Capacity Reservation (ODCR) before deployment to improve your chances of securing capacity. Both <strong>i4i.metal</strong> and <strong>i7i.metal-24xl</strong> are now supported. <strong>i7i.metal-48xl</strong> is coming soon. Choose the instance type that matches your planned EVS environment.</p>
+            <p>Amazon EVS runs on bare-metal instances. Because bare-metal capacity can be constrained in specific AZs, AWS recommends creating an On-Demand Capacity Reservation (ODCR) before deployment to improve your chances of securing capacity. <strong>i4i.metal</strong> is the confirmed EVS instance type. Check the <a href="https://docs.aws.amazon.com/evs/latest/userguide/versions-provided.html" target="_blank" rel="noopener">official EVS versions page</a> for current instance type availability before creating your ODCR.</p>
 
             <div class="step-card">
                 <h3>8.1 Supported Instance Types</h3>
@@ -1046,8 +1046,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                         <thead><tr><th>Instance Type</th><th>vCPUs</th><th>Physical Cores</th><th>NVMe Storage</th><th>Availability</th></tr></thead>
                         <tbody>
                             <tr><td><strong>i4i.metal</strong></td><td>128</td><td>64</td><td>Up to 30 TB</td><td>Available now</td></tr>
-                            <tr><td><strong>i7i.metal-24xl</strong></td><td>96</td><td>48</td><td>Up to 15 TB</td><td>Available now</td></tr>
-                            <tr><td><strong>i7i.metal-48xl</strong></td><td>192</td><td>96</td><td>Up to 30 TB</td><td>Coming soon</td></tr>
+                            <tr><td><strong>i7i.metal-24xl</strong></td><td>96</td><td>48</td><td>Up to 15 TB</td><td>Verify with official EVS docs</td></tr>
                         </tbody>
                     </table>
                 </div>
