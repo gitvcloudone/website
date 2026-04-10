@@ -435,8 +435,11 @@
         footer a:hover { text-decoration: underline; }
 
         /* ── GLOBAL MOBILE FOUNDATION ── */
+        html { overflow-x: hidden; }
+        body { overflow-x: hidden; }
+        .page-wrap > * { min-width: 0; }
         img { max-width: 100%; height: auto; }
-        .article-card { overflow-wrap: break-word; }
+        .article-card { overflow-wrap: break-word; word-break: break-word; }
         .table-wrap, .code-body { -webkit-overflow-scrolling: touch; }
 
         /* ── HAMBURGER ── */
@@ -520,8 +523,6 @@
         }
 
         @media (max-width: 640px) {
-            html { overflow-x: hidden; }
-
             .hero { padding: 2.5rem 1.25rem 2rem; }
             .hero p { font-size: 1rem; }
             .hero-ctas { flex-direction: column; align-items: stretch; }
