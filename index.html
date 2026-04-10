@@ -832,11 +832,11 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     <table>
                         <thead><tr><th>Direction</th><th>Protocol</th><th>Ports</th><th>Source / Destination</th></tr></thead>
                         <tbody>
-                            <tr><td>Inbound</td><td>UDP/TCP</td><td>53</td><td>VPC CIDR</td></tr>
-                            <tr><td>Inbound</td><td>TCP</td><td>179</td><td>VPC CIDR</td></tr>
-                            <tr><td>Inbound</td><td>UDP/TCP</td><td>49152&ndash;65535</td><td>VPC CIDR</td></tr>
-                            <tr><td>Outbound</td><td>UDP/TCP</td><td>49152&ndash;65535</td><td>VPC CIDR</td></tr>
-                            <tr><td>Outbound</td><td>TCP</td><td>179</td><td>VPC CIDR</td></tr>
+                            <tr><td>Inbound</td><td>UDP/TCP</td><td>53</td><td>10.0.0.0/16 (VPC CIDR)</td></tr>
+                            <tr><td>Inbound</td><td>TCP</td><td>179</td><td>10.0.0.0/16 (VPC CIDR)</td></tr>
+                            <tr><td>Inbound</td><td>UDP/TCP</td><td>49152&ndash;65535</td><td>10.0.0.0/16 (VPC CIDR)</td></tr>
+                            <tr><td>Outbound</td><td>UDP/TCP</td><td>49152&ndash;65535</td><td>10.0.0.0/16 (VPC CIDR)</td></tr>
+                            <tr><td>Outbound</td><td>TCP</td><td>179</td><td>10.0.0.0/16 (VPC CIDR)</td></tr>
                         </tbody>
                     </table>
                 </div>
