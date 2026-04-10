@@ -830,15 +830,13 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <p>The Service Access Subnet hosts both the Route 53 Resolver inbound ENIs (DNS) and the VPC Route Server endpoints (BGP). Configure the NACL now to allow both protocols. NACLs are stateless — both directions must be explicitly permitted.</p>
                 <div class="table-wrap">
                     <table>
-                        <thead><tr><th>Direction</th><th>Protocol</th><th>Ports</th><th>Source / Destination</th><th>Purpose</th></tr></thead>
+                        <thead><tr><th>Direction</th><th>Protocol</th><th>Ports</th><th>Source / Destination</th></tr></thead>
                         <tbody>
-                            <tr><td>Inbound</td><td>UDP</td><td>53</td><td>VPC CIDR</td><td>DNS queries to resolver ENIs</td></tr>
-                            <tr><td>Inbound</td><td>TCP</td><td>53</td><td>VPC CIDR</td><td>DNS over TCP to resolver ENIs</td></tr>
-                            <tr><td>Inbound</td><td>TCP</td><td>179 (BGP)</td><td>VPC CIDR</td><td>BGP sessions from NSX Edge</td></tr>
-                            <tr><td>Inbound</td><td>TCP</td><td>49152&ndash;65535 (ephemeral)</td><td>VPC CIDR</td><td>Return traffic for outbound BGP</td></tr>
-                            <tr><td>Outbound</td><td>UDP</td><td>49152&ndash;65535 (ephemeral)</td><td>VPC CIDR</td><td>DNS responses back to clients</td></tr>
-                            <tr><td>Outbound</td><td>TCP</td><td>49152&ndash;65535 (ephemeral)</td><td>VPC CIDR</td><td>DNS over TCP &amp; BGP return traffic</td></tr>
-                            <tr><td>Outbound</td><td>TCP</td><td>179 (BGP)</td><td>VPC CIDR</td><td>BGP sessions to NSX Edge</td></tr>
+                            <tr><td>Inbound</td><td>UDP/TCP</td><td>53</td><td>VPC CIDR</td></tr>
+                            <tr><td>Inbound</td><td>TCP</td><td>179</td><td>VPC CIDR</td></tr>
+                            <tr><td>Inbound</td><td>UDP/TCP</td><td>49152&ndash;65535</td><td>VPC CIDR</td></tr>
+                            <tr><td>Outbound</td><td>UDP/TCP</td><td>49152&ndash;65535</td><td>VPC CIDR</td></tr>
+                            <tr><td>Outbound</td><td>TCP</td><td>179</td><td>VPC CIDR</td></tr>
                         </tbody>
                     </table>
                 </div>
