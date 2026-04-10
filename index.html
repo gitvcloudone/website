@@ -716,7 +716,7 @@
 
             <div class="step-card">
                 <h3>3.3 IP Address Inventory</h3>
-                <p>The table below lists every individual IP address that must be assigned before EVS bring-up. Addresses marked <strong>DNS required</strong> must have both forward (A) and reverse (PTR) records in Route 53 before <code>CreateEnvironment</code> is called. Addresses marked <strong>BGP only</strong> are not registered in DNS — they are assigned to NSX Edge uplink interfaces and used exclusively as BGP peer addresses by the VPC Route Server.</p>
+                <p>The table below lists every individual IP address that must be assigned before EVS bring-up. Addresses marked <strong>DNS required</strong> must have both forward (A) and reverse (PTR) records resolvable within the VPC — whether via Route 53 private hosted zones or your own DNS servers — before <code>CreateEnvironment</code> is called. Addresses with no DNS requirement are not registered in DNS.</p>
 
                 <div class="table-wrap">
                     <table>
