@@ -715,7 +715,41 @@
             </div>
 
             <div class="step-card">
-                <h3>3.3 EVS Networking Constraints</h3>
+                <h3>3.3 IP Address Inventory</h3>
+                <p>The table below lists every individual IP address that must be assigned before EVS bring-up. Addresses marked <strong>DNS required</strong> must have both forward (A) and reverse (PTR) records in Route 53 before <code>CreateEnvironment</code> is called. Addresses marked <strong>BGP only</strong> are not registered in DNS — they are assigned to NSX Edge uplink interfaces and used exclusively as BGP peer addresses by the VPC Route Server.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Hostname</th><th>VLAN / Subnet</th><th>Example IP</th><th>DNS Required</th><th>Purpose</th></tr></thead>
+                        <tbody>
+                            <tr><td>evs-dns-resolver-1</td><td>Service Access Subnet</td><td>10.0.0.10</td><td>No</td><td>Route 53 inbound resolver endpoint 1 — primary DHCP DNS server</td></tr>
+                            <tr><td>evs-dns-resolver-2</td><td>Service Access Subnet</td><td>10.0.0.11</td><td>No</td><td>Route 53 inbound resolver endpoint 2 — secondary DHCP DNS server</td></tr>
+                            <tr><td>route-server-endpoint-1</td><td>Service Access Subnet</td><td>Dynamic</td><td>No</td><td>VPC Route Server endpoint 1 — IP assigned by AWS at deploy time</td></tr>
+                            <tr><td>route-server-endpoint-2</td><td>Service Access Subnet</td><td>Dynamic</td><td>No</td><td>VPC Route Server endpoint 2 — IP assigned by AWS at deploy time</td></tr>
+                            <tr><td>esxi-01</td><td>Host Management VLAN</td><td>10.0.10.21</td><td>Yes</td><td>ESXi host 1 management interface</td></tr>
+                            <tr><td>esxi-02</td><td>Host Management VLAN</td><td>10.0.10.22</td><td>Yes</td><td>ESXi host 2 management interface</td></tr>
+                            <tr><td>esxi-03</td><td>Host Management VLAN</td><td>10.0.10.23</td><td>Yes</td><td>ESXi host 3 management interface</td></tr>
+                            <tr><td>esxi-04</td><td>Host Management VLAN</td><td>10.0.10.24</td><td>Yes</td><td>ESXi host 4 management interface</td></tr>
+                            <tr><td>cloud-builder</td><td>Management VM VLAN</td><td>10.0.11.9</td><td>Yes</td><td>VMware Cloud Builder — orchestrates VCF bring-up</td></tr>
+                            <tr><td>sddc-manager</td><td>Management VM VLAN</td><td>10.0.11.10</td><td>Yes</td><td>SDDC Manager</td></tr>
+                            <tr><td>vcenter</td><td>Management VM VLAN</td><td>10.0.11.11</td><td>Yes</td><td>vCenter Server</td></tr>
+                            <tr><td>nsx-mgr-01</td><td>Management VM VLAN</td><td>10.0.11.12</td><td>Yes</td><td>NSX Manager node 1</td></tr>
+                            <tr><td>nsx-mgr-02</td><td>Management VM VLAN</td><td>10.0.11.13</td><td>Yes</td><td>NSX Manager node 2</td></tr>
+                            <tr><td>nsx-mgr-03</td><td>Management VM VLAN</td><td>10.0.11.14</td><td>Yes</td><td>NSX Manager node 3</td></tr>
+                            <tr><td>nsx-edge-01</td><td>Management VM VLAN</td><td>10.0.11.21</td><td>Yes</td><td>NSX Edge node 1 management interface</td></tr>
+                            <tr><td>nsx-edge-02</td><td>Management VM VLAN</td><td>10.0.11.22</td><td>Yes</td><td>NSX Edge node 2 management interface</td></tr>
+                            <tr><td>nsx-edge-01 uplink</td><td>NSX Uplink VLAN</td><td>10.0.16.10</td><td>No</td><td>NSX Edge 1 Tier-0 uplink — VPC Route Server BGP peer address</td></tr>
+                            <tr><td>nsx-edge-02 uplink</td><td>NSX Uplink VLAN</td><td>10.0.16.11</td><td>No</td><td>NSX Edge 2 Tier-0 uplink — VPC Route Server BGP peer address</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="note" style="margin-top:0.75rem;">
+                    All example IPs above are defaults from the <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" target="_blank">EVS-PreREQ-Terraform</a> kit. Update them in <code>variables.tf</code> to match your environment before running <code>terraform apply</code>. The resolver IPs (10.0.0.10 / 10.0.0.11) must match exactly what you configure as <code>domain-name-servers</code> in the DHCP Options Set.
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>3.4 EVS Networking Constraints</h3>
                 <p>These constraints affect your network design and must be accounted for before you commit to a topology. Review them now before creating any resources.</p>
                 <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.5rem;font-size:0.93rem;color:#374151;">
                     <li><strong>Transit Gateway required for external connectivity.</strong> Direct Connect Private VIFs, VGW-based Site-to-Site VPNs, and VPC peering are not supported for EVS underlay connectivity. All paths to on-premises or other VPCs must go through Transit Gateway.</li>
