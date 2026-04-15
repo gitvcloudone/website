@@ -606,6 +606,8 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        .ex { color: #bf00ff; font-style: italic; }
     </style>
 </head>
 <body>
@@ -808,17 +810,17 @@
                     <table>
                         <thead><tr><th>Subnet / VLAN</th><th>Purpose</th><th>Allowed Size</th><th>Pre-Create?</th><th>Example CIDR</th></tr></thead>
                         <tbody>
-                            <tr><td><strong>Service Access Subnet</strong></td><td>Route Server endpoints, DNS Resolver ENIs</td><td>/28 &ndash; /24</td><td><strong>Yes &mdash; Step 4.3</strong></td><td>10.0.0.0/24</td></tr>
-                            <tr><td><strong>Host Management VLAN</strong></td><td>ESXi host management interfaces</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.10.0/24</td></tr>
-                            <tr><td><strong>Management VM VLAN</strong></td><td>vCenter, SDDC Manager, NSX Managers, NSX Edges</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.11.0/24</td></tr>
-                            <tr><td><strong>vMotion VLAN</strong></td><td>Live VM migration</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.12.0/24</td></tr>
-                            <tr><td><strong>vSAN VLAN</strong></td><td>Storage traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.13.0/24</td></tr>
-                            <tr><td><strong>Host VTEP VLAN</strong></td><td>NSX host tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.14.0/24</td></tr>
-                            <tr><td><strong>Edge VTEP VLAN</strong></td><td>NSX Edge tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.15.0/24</td></tr>
-                            <tr><td><strong>NSX Uplink VLAN</strong></td><td>Tier-0 north-south BGP peering</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.16.0/24</td></tr>
-                            <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.20.0/24</td></tr>
-                            <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.21.0/24</td></tr>
-                            <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td>10.0.22.0/24</td></tr>
+                            <tr><td><strong>Service Access Subnet</strong></td><td>Route Server endpoints, DNS Resolver ENIs</td><td>/28 &ndash; /24</td><td><strong>Yes &mdash; Step 4.3</strong></td><td class="ex">10.0.0.0/24</td></tr>
+                            <tr><td><strong>Host Management VLAN</strong></td><td>ESXi host management interfaces</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.10.0/24</td></tr>
+                            <tr><td><strong>Management VM VLAN</strong></td><td>vCenter, SDDC Manager, NSX Managers, NSX Edges</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.11.0/24</td></tr>
+                            <tr><td><strong>vMotion VLAN</strong></td><td>Live VM migration</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.12.0/24</td></tr>
+                            <tr><td><strong>vSAN VLAN</strong></td><td>Storage traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.13.0/24</td></tr>
+                            <tr><td><strong>Host VTEP VLAN</strong></td><td>NSX host tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.14.0/24</td></tr>
+                            <tr><td><strong>Edge VTEP VLAN</strong></td><td>NSX Edge tunnel endpoints (Geneve)</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.15.0/24</td></tr>
+                            <tr><td><strong>NSX Uplink VLAN</strong></td><td>Tier-0 north-south BGP peering</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.16.0/24</td></tr>
+                            <tr><td><strong>HCX Uplink VLAN</strong></td><td>(Optional) HCX-IX &amp; HCX-NE traffic</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.20.0/24</td></tr>
+                            <tr><td><strong>Expansion VLAN 1</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.21.0/24</td></tr>
+                            <tr><td><strong>Expansion VLAN 2</strong></td><td>Reserved for future VCF segments</td><td>/28 &ndash; /24</td><td>No &mdash; EVS creates</td><td class="ex">10.0.22.0/24</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -844,24 +846,24 @@
                     <table>
                         <thead><tr><th>Hostname</th><th>VLAN / Subnet</th><th>Example IP</th><th>DNS Required</th></tr></thead>
                         <tbody>
-                            <tr><td>evs-dns-resolver-1</td><td>Service Access Subnet</td><td>10.0.0.10</td><td>No</td></tr>
-                            <tr><td>evs-dns-resolver-2</td><td>Service Access Subnet</td><td>10.0.0.11</td><td>No</td></tr>
+                            <tr><td>evs-dns-resolver-1</td><td>Service Access Subnet</td><td class="ex">10.0.0.10</td><td>No</td></tr>
+                            <tr><td>evs-dns-resolver-2</td><td>Service Access Subnet</td><td class="ex">10.0.0.11</td><td>No</td></tr>
                             <tr><td>route-server-endpoint-1</td><td>Service Access Subnet</td><td>Dynamic</td><td>No</td></tr>
                             <tr><td>route-server-endpoint-2</td><td>Service Access Subnet</td><td>Dynamic</td><td>No</td></tr>
-                            <tr><td>esxi-01</td><td>Host Management VLAN</td><td>10.0.10.21</td><td>Yes</td></tr>
-                            <tr><td>esxi-02</td><td>Host Management VLAN</td><td>10.0.10.22</td><td>Yes</td></tr>
-                            <tr><td>esxi-03</td><td>Host Management VLAN</td><td>10.0.10.23</td><td>Yes</td></tr>
-                            <tr><td>esxi-04</td><td>Host Management VLAN</td><td>10.0.10.24</td><td>Yes</td></tr>
-                            <tr><td>cloud-builder</td><td>Management VM VLAN</td><td>10.0.11.9</td><td>Yes</td></tr>
-                            <tr><td>sddc-manager</td><td>Management VM VLAN</td><td>10.0.11.10</td><td>Yes</td></tr>
-                            <tr><td>vcenter</td><td>Management VM VLAN</td><td>10.0.11.11</td><td>Yes</td></tr>
-                            <tr><td>nsx-mgr-01</td><td>Management VM VLAN</td><td>10.0.11.12</td><td>Yes</td></tr>
-                            <tr><td>nsx-mgr-02</td><td>Management VM VLAN</td><td>10.0.11.13</td><td>Yes</td></tr>
-                            <tr><td>nsx-mgr-03</td><td>Management VM VLAN</td><td>10.0.11.14</td><td>Yes</td></tr>
-                            <tr><td>nsx-edge-01</td><td>Management VM VLAN</td><td>10.0.11.21</td><td>Yes</td></tr>
-                            <tr><td>nsx-edge-02</td><td>Management VM VLAN</td><td>10.0.11.22</td><td>Yes</td></tr>
-                            <tr><td>nsx-edge-01 uplink</td><td>NSX Uplink VLAN</td><td>10.0.16.10</td><td>No</td></tr>
-                            <tr><td>nsx-edge-02 uplink</td><td>NSX Uplink VLAN</td><td>10.0.16.11</td><td>No</td></tr>
+                            <tr><td>esxi-01</td><td>Host Management VLAN</td><td class="ex">10.0.10.21</td><td>Yes</td></tr>
+                            <tr><td>esxi-02</td><td>Host Management VLAN</td><td class="ex">10.0.10.22</td><td>Yes</td></tr>
+                            <tr><td>esxi-03</td><td>Host Management VLAN</td><td class="ex">10.0.10.23</td><td>Yes</td></tr>
+                            <tr><td>esxi-04</td><td>Host Management VLAN</td><td class="ex">10.0.10.24</td><td>Yes</td></tr>
+                            <tr><td>cloud-builder</td><td>Management VM VLAN</td><td class="ex">10.0.11.9</td><td>Yes</td></tr>
+                            <tr><td>sddc-manager</td><td>Management VM VLAN</td><td class="ex">10.0.11.10</td><td>Yes</td></tr>
+                            <tr><td>vcenter</td><td>Management VM VLAN</td><td class="ex">10.0.11.11</td><td>Yes</td></tr>
+                            <tr><td>nsx-mgr-01</td><td>Management VM VLAN</td><td class="ex">10.0.11.12</td><td>Yes</td></tr>
+                            <tr><td>nsx-mgr-02</td><td>Management VM VLAN</td><td class="ex">10.0.11.13</td><td>Yes</td></tr>
+                            <tr><td>nsx-mgr-03</td><td>Management VM VLAN</td><td class="ex">10.0.11.14</td><td>Yes</td></tr>
+                            <tr><td>nsx-edge-01</td><td>Management VM VLAN</td><td class="ex">10.0.11.21</td><td>Yes</td></tr>
+                            <tr><td>nsx-edge-02</td><td>Management VM VLAN</td><td class="ex">10.0.11.22</td><td>Yes</td></tr>
+                            <tr><td>nsx-edge-01 uplink</td><td>NSX Uplink VLAN</td><td class="ex">10.0.16.10</td><td>No</td></tr>
+                            <tr><td>nsx-edge-02 uplink</td><td>NSX Uplink VLAN</td><td class="ex">10.0.16.11</td><td>No</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1007,19 +1009,19 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     <table>
                         <thead><tr><th>Component</th><th>Forward A Record</th><th>Reverse PTR IP</th><th>VLAN</th></tr></thead>
                         <tbody>
-                            <tr><td><strong>Cloud Builder</strong></td><td>cloud-builder.evs.vcloudone.local</td><td>10.0.11.9</td><td>Mgmt VM</td></tr>
-                            <tr><td><strong>ESXi Host 01</strong></td><td>esxi-01.evs.vcloudone.local</td><td>10.0.10.21</td><td>Host Mgmt</td></tr>
-                            <tr><td><strong>ESXi Host 02</strong></td><td>esxi-02.evs.vcloudone.local</td><td>10.0.10.22</td><td>Host Mgmt</td></tr>
-                            <tr><td><strong>ESXi Host 03</strong></td><td>esxi-03.evs.vcloudone.local</td><td>10.0.10.23</td><td>Host Mgmt</td></tr>
-                            <tr><td><strong>ESXi Host 04</strong></td><td>esxi-04.evs.vcloudone.local</td><td>10.0.10.24</td><td>Host Mgmt</td></tr>
-                            <tr><td><strong>SDDC Manager</strong></td><td>sddc-manager.evs.vcloudone.local</td><td>10.0.11.10</td><td>Mgmt VM</td></tr>
-                            <tr><td><strong>vCenter Server</strong></td><td>vcenter.evs.vcloudone.local</td><td>10.0.11.11</td><td>Mgmt VM</td></tr>
-                            <tr><td><strong>NSX Manager 01</strong></td><td>nsx-mgr-01.evs.vcloudone.local</td><td>10.0.11.12</td><td>Mgmt VM</td></tr>
-                            <tr><td><strong>NSX Manager 02</strong></td><td>nsx-mgr-02.evs.vcloudone.local</td><td>10.0.11.13</td><td>Mgmt VM</td></tr>
-                            <tr><td><strong>NSX Manager 03</strong></td><td>nsx-mgr-03.evs.vcloudone.local</td><td>10.0.11.14</td><td>Mgmt VM</td></tr>
-                            <tr><td><strong>NSX Edge 01</strong></td><td>nsx-edge-01.evs.vcloudone.local</td><td>10.0.11.21</td><td>Mgmt VM</td></tr>
-                            <tr><td><strong>NSX Edge 02</strong></td><td>nsx-edge-02.evs.vcloudone.local</td><td>10.0.11.22</td><td>Mgmt VM</td></tr>
-                            <tr><td><strong>HCX Manager</strong></td><td>(Optional) hcx.evs.vcloudone.local</td><td>10.0.20.10</td><td>HCX Uplink</td></tr>
+                            <tr><td><strong>Cloud Builder</strong></td><td class="ex">cloud-builder.evs.vcloudone.local</td><td class="ex">10.0.11.9</td><td>Mgmt VM</td></tr>
+                            <tr><td><strong>ESXi Host 01</strong></td><td class="ex">esxi-01.evs.vcloudone.local</td><td class="ex">10.0.10.21</td><td>Host Mgmt</td></tr>
+                            <tr><td><strong>ESXi Host 02</strong></td><td class="ex">esxi-02.evs.vcloudone.local</td><td class="ex">10.0.10.22</td><td>Host Mgmt</td></tr>
+                            <tr><td><strong>ESXi Host 03</strong></td><td class="ex">esxi-03.evs.vcloudone.local</td><td class="ex">10.0.10.23</td><td>Host Mgmt</td></tr>
+                            <tr><td><strong>ESXi Host 04</strong></td><td class="ex">esxi-04.evs.vcloudone.local</td><td class="ex">10.0.10.24</td><td>Host Mgmt</td></tr>
+                            <tr><td><strong>SDDC Manager</strong></td><td class="ex">sddc-manager.evs.vcloudone.local</td><td class="ex">10.0.11.10</td><td>Mgmt VM</td></tr>
+                            <tr><td><strong>vCenter Server</strong></td><td class="ex">vcenter.evs.vcloudone.local</td><td class="ex">10.0.11.11</td><td>Mgmt VM</td></tr>
+                            <tr><td><strong>NSX Manager 01</strong></td><td class="ex">nsx-mgr-01.evs.vcloudone.local</td><td class="ex">10.0.11.12</td><td>Mgmt VM</td></tr>
+                            <tr><td><strong>NSX Manager 02</strong></td><td class="ex">nsx-mgr-02.evs.vcloudone.local</td><td class="ex">10.0.11.13</td><td>Mgmt VM</td></tr>
+                            <tr><td><strong>NSX Manager 03</strong></td><td class="ex">nsx-mgr-03.evs.vcloudone.local</td><td class="ex">10.0.11.14</td><td>Mgmt VM</td></tr>
+                            <tr><td><strong>NSX Edge 01</strong></td><td class="ex">nsx-edge-01.evs.vcloudone.local</td><td class="ex">10.0.11.21</td><td>Mgmt VM</td></tr>
+                            <tr><td><strong>NSX Edge 02</strong></td><td class="ex">nsx-edge-02.evs.vcloudone.local</td><td class="ex">10.0.11.22</td><td>Mgmt VM</td></tr>
+                            <tr><td><strong>HCX Manager</strong></td><td class="ex">(Optional) hcx.evs.vcloudone.local</td><td class="ex">10.0.20.10</td><td>HCX Uplink</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1062,8 +1064,8 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     <table>
                         <thead><tr><th>Field</th><th>Value</th><th>Notes</th></tr></thead>
                         <tbody>
-                            <tr><td><strong>Domain name</strong></td><td>evs.vcloudone.local</td><td>Must exactly match the Route 53 private hosted zone name</td></tr>
-                            <tr><td><strong>Domain name servers</strong></td><td>10.0.0.10, 10.0.0.11</td><td>The two inbound resolver IPs from Step 5.2 &mdash; primary first</td></tr>
+                            <tr><td><strong>Domain name</strong></td><td class="ex">evs.vcloudone.local</td><td>Must exactly match the Route 53 private hosted zone name</td></tr>
+                            <tr><td><strong>Domain name servers</strong></td><td class="ex">10.0.0.10, 10.0.0.11</td><td>The two inbound resolver IPs from Step 5.2 &mdash; primary first</td></tr>
                             <tr><td><strong>NTP servers</strong></td><td>169.254.169.123</td><td>AWS Time Sync Service &mdash; link-local, no internet required</td></tr>
                         </tbody>
                     </table>
