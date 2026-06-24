@@ -834,7 +834,7 @@
                 </div>
 
                 <div class="note">
-                    <strong>HCX internet connectivity (optional):</strong> If you plan to use HCX for workload migration, AWS requires an IPAM (IP Address Manager) pool configured with public IP addresses for the HCX Uplink VLAN. Allocate at least <strong>2 Elastic IP addresses (EIPs)</strong> from the IPAM pool — one for the HCX Manager appliance and one for the HCX Interconnect (HCX-IX) appliance. Configure the IPAM pool before EVS deployment so the EIPs are available when HCX is activated.
+                    <strong>HCX internet connectivity (optional):</strong> If you plan to use HCX for workload migration, AWS requires an IPAM (IP Address Manager) pool configured with public IP addresses for the HCX Uplink VLAN. Allocate a minimum of <strong>3 Elastic IP addresses (EIPs)</strong> from the IPAM pool — one each for the HCX Manager appliance, the HCX Interconnect (HCX-IX) appliance, and the HCX Network Extension (HCX-NE) appliance. Configure the IPAM pool before EVS deployment so the EIPs are available when HCX is activated.
                 </div>
             </div>
 
@@ -860,6 +860,7 @@
                             <tr><td>nsx-mgr-01</td><td>Management VM VLAN</td><td class="ex">10.0.11.12</td><td>Yes</td></tr>
                             <tr><td>nsx-mgr-02</td><td>Management VM VLAN</td><td class="ex">10.0.11.13</td><td>Yes</td></tr>
                             <tr><td>nsx-mgr-03</td><td>Management VM VLAN</td><td class="ex">10.0.11.14</td><td>Yes</td></tr>
+                            <tr><td>nsx-mgr (cluster VIP)</td><td>Management VM VLAN</td><td class="ex">10.0.11.15</td><td>Yes</td></tr>
                             <tr><td>nsx-edge-01</td><td>Management VM VLAN</td><td class="ex">10.0.11.21</td><td>Yes</td></tr>
                             <tr><td>nsx-edge-02</td><td>Management VM VLAN</td><td class="ex">10.0.11.22</td><td>Yes</td></tr>
                             <tr><td>nsx-edge-01 uplink</td><td>NSX Uplink VLAN</td><td class="ex">10.0.16.10</td><td>No</td></tr>
@@ -1019,6 +1020,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                             <tr><td><strong>NSX Manager 01</strong></td><td class="ex">nsx-mgr-01.evs.vcloudone.local</td><td class="ex">10.0.11.12</td><td>Mgmt VM</td></tr>
                             <tr><td><strong>NSX Manager 02</strong></td><td class="ex">nsx-mgr-02.evs.vcloudone.local</td><td class="ex">10.0.11.13</td><td>Mgmt VM</td></tr>
                             <tr><td><strong>NSX Manager 03</strong></td><td class="ex">nsx-mgr-03.evs.vcloudone.local</td><td class="ex">10.0.11.14</td><td>Mgmt VM</td></tr>
+                            <tr><td><strong>NSX Manager Cluster (VIP)</strong></td><td class="ex">nsx-mgr.evs.vcloudone.local</td><td class="ex">10.0.11.15</td><td>Mgmt VM</td></tr>
                             <tr><td><strong>NSX Edge 01</strong></td><td class="ex">nsx-edge-01.evs.vcloudone.local</td><td class="ex">10.0.11.21</td><td>Mgmt VM</td></tr>
                             <tr><td><strong>NSX Edge 02</strong></td><td class="ex">nsx-edge-02.evs.vcloudone.local</td><td class="ex">10.0.11.22</td><td>Mgmt VM</td></tr>
                             <tr><td><strong>HCX Manager</strong></td><td class="ex">(Optional) hcx.evs.vcloudone.local</td><td class="ex">10.0.20.10</td><td>HCX Uplink</td></tr>
@@ -1388,6 +1390,7 @@ variable <span class="str">"vcf_components"</span> {
     <span class="str">"nsx-mgr-01"</span>    = <span class="str">"10.0.11.12"</span>
     <span class="str">"nsx-mgr-02"</span>    = <span class="str">"10.0.11.13"</span>
     <span class="str">"nsx-mgr-03"</span>    = <span class="str">"10.0.11.14"</span>
+    <span class="str">"nsx-mgr"</span>       = <span class="str">"10.0.11.15"</span>
     <span class="str">"nsx-edge-01"</span>   = <span class="str">"10.0.11.21"</span>
     <span class="str">"nsx-edge-02"</span>   = <span class="str">"10.0.11.22"</span>
   }
@@ -1600,7 +1603,7 @@ terraform output</pre></div>
 }
 
 <span class="cm"># VCF appliance A + PTR records (cloud-builder, sddc-manager, vcenter,
-# nsx-mgr-01/02/03, nsx-edge-01/02) — all in Management VM VLAN (10.0.11.x)</span>
+# nsx-mgr-01/02/03, nsx-mgr cluster VIP, nsx-edge-01/02) — all in Management VM VLAN (10.0.11.x)</span>
 <span class="kw">resource</span> <span class="str">"aws_route53_record"</span> <span class="str">"vcf_a"</span> {
   for_each = var.vcf_components
   zone_id  = <span class="fn">aws_route53_zone.forward.zone_id</span>
