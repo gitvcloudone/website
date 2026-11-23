@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EVS Sizing | vCloudOne</title>
+<meta name="description" content="Amazon EVS sizing calculator: hosts, instances, clusters and VCF core licences from RVTools exports or manual totals. VCF 9.1 and later.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☁</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* Layout idea: form on the left, live results pinned on the right – an engineer's worksheet. */
+/* Layout idea: form on the left, live results pinned on the right – an engineer's worksheet. Colours follow vcloudone.com. */
+:root {
+  --bg: #f8fafc; --panel: #ffffff; --ink: #1a1a2e; --muted: #6b7280; --line: #e5e7eb;
+  --accent: #0073bb; --accent-soft: #e8f4fd; --orange: #ff9900; --orange-dk: #e68900; --orange-soft: #fff4e0;
+  --nav-bg: #161f2c; --primary: #0f1923; --white: #ffffff;
+  --good: #1f7a45; --warn: #b45309; --crit: #b42318;
+  --good-soft: #e7f6ec; --warn-soft: #fff4e0; --crit-soft: #fde8e6;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--body); }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: 22px; letter-spacing: .2px; }
+h2 { font-size: 16px; text-transform: uppercase; letter-spacing: .6px; color: var(--accent); }
+h3 { font-size: 15px; }
+.num, td.n, .big { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+header.top { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; justify-content: space-between;
+  padding: 16px 20px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+header.top p { margin: 0; color: var(--muted); font-size: 13px; }
+.wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; padding: 16px 20px 40px; max-width: 1500px; margin: 0 auto; }
+@media (max-width: 980px) { .wrap { grid-template-columns: 1fr; padding: 12px 16px 40px; } .results { position: static !important; max-height: none !important; } }
+.col { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 12px; min-width: 0; }
+.card > header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.hint { color: var(--muted); font-size: 12.5px; }
+.results { position: sticky; top: 72px; max-height: calc(100vh - 84px); overflow: auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 14px; }
+label.f { display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); }
+label.f span.u { color: var(--muted); }
+input[type=number], input[type=text], select, textarea {
+  font: 14px var(--mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; width: 100%; }
+input[type=text], textarea { font-family: var(--body); }
+input:focus-visible, select:focus-visible, button:focus-visible, textarea:focus-visible, .hostcard:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.toggle { display: inline-flex; gap: 8px; align-items: center; font-weight: 500; cursor: pointer; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+button { font: 500 13px var(--body); border-radius: 5px; border: 1px solid var(--accent); background: var(--accent); color: #fff; padding: 7px 12px; cursor: pointer; }
+button.ghost { background: transparent; color: var(--accent); }
+button.link { border: 0; background: none; color: var(--accent); padding: 0; text-decoration: underline; font-size: 12px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.drop { border: 2px dashed var(--line); border-radius: 8px; padding: 16px; text-align: center; color: var(--muted); cursor: pointer; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+.drop strong { color: var(--ink); }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 5px 7px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; white-space: nowrap; }
+th { font: 600 11.5px var(--body); text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+td.n, th.n { text-align: right; }
+tr.tot td { font-weight: 600; border-top: 2px solid var(--line); }
+tr.sel td { background: var(--accent-soft); }
+td input[type=number] { width: 92px; padding: 3px 6px; text-align: right; }
+td input.ov { border-color: var(--warn); background: var(--warn-soft); }
+td input[type=text] { min-width: 150px; padding: 3px 6px; }
+.hosts { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.hostcard { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; display: grid; gap: 3px; cursor: pointer; position: relative; }
+.hostcard input { position: absolute; opacity: 0; }
+.hostcard.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+.hostcard b { font-family: var(--mono); font-size: 13.5px; }
+.hostcard small { color: var(--muted); font-size: 12px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+.pill.good { background: var(--good-soft); color: var(--good); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.crit { background: var(--crit-soft); color: var(--crit); }
+.headline { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; display: grid; gap: 2px; }
+.tile .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+.tile .big { font-size: 26px; font-weight: 500; line-height: 1.1; }
+.tile.main { border-color: var(--orange); background: var(--orange-soft); }
+.tile .d { font-size: 12px; color: var(--muted); }
+.delta.down { color: var(--good); } .delta.up { color: var(--crit); }
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 92px 1fr 64px; gap: 8px; align-items: center; font-size: 12.5px; }
+.bar .t { height: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+.bar .t i { display: block; height: 100%; background: var(--accent); }
+.bar.lim .t i { background: var(--orange); }
+.warns { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.warns li { padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 4px; font-size: 13px; }
+.warns li.warn { border-color: var(--warn); background: var(--warn-soft); } .warns li.crit { border-color: var(--crit); background: var(--crit-soft); }
+.grid2 { display: grid; grid-template-columns: auto 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-size: 13px; }
+.grid2 > div { background: var(--panel); padding: 6px 9px; }
+.grid2 .h { font-weight: 600; color: var(--muted); font-size: 12px; }
+.grid2 .best { background: var(--good-soft); font-weight: 600; }
+details summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+.note { font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 8px; }
+.statusline { font-size: 12.5px; color: var(--muted); }
+dialog { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); max-width: 640px; width: 92vw; }
+dialog::backdrop { background: rgb(0 0 0 / .35); }
+.mgmt { font-family: var(--mono); font-size: 13px; background: var(--bg); border-radius: 6px; padding: 8px 10px; }
+.hidden { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ── vCloudOne site nav and footer ── */
+        /* ── NAV ── */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--nav-bg);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 1.15rem;
+            letter-spacing: -0.3px;
+        }
+        .nav-logo img { height: 36px; width: auto; }
+        .nav-logo .sep { color: rgba(255,255,255,0.3); margin: 0 2px; }
+        .nav-logo .page-name { color: var(--orange); }
+        .nav-links { display: flex; align-items: center; gap: 0.25rem; }
+        .nav-links a {
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-links a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nav-links .btn-nav {
+            background: var(--orange);
+            color: var(--primary);
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        .nav-links .btn-nav:hover { background: var(--orange-dk); color: var(--primary); }
+        .nav-social { display: flex; align-items: center; gap: 0.25rem; margin-left: 0.25rem; }
+        .nav-social a {
+            display: flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 6px;
+            color: rgba(255,255,255,0.65);
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-social a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nav-social svg { width: 18px; height: 18px; }
+
+        footer {
+            background: var(--nav-bg);
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            padding: 2.5rem 1.5rem;
+            font-size: 0.88rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        footer strong { color: rgba(255,255,255,0.8); }
+        footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
+        footer a:hover { color: white; }
+        .footer-links { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 0.75rem; }
+        .footer-links a { display: flex; align-items: center; gap: 0.35rem; }
+
+        /* ── HAMBURGER ── */
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            color: rgba(255,255,255,0.8);
+            border-radius: 6px;
+            transition: background 0.15s;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+        .nav-toggle:hover { background: rgba(255,255,255,0.08); }
+        .nav-toggle-bar {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: currentColor;
+            border-radius: 2px;
+            transition: transform 0.25s ease, opacity 0.2s ease;
+        }
+        .nav-toggle.is-open .nav-toggle-bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .nav-toggle.is-open .nav-toggle-bar:nth-child(2) { opacity: 0; transform: scaleX(0); }
+        .nav-toggle.is-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .nav-toggle { display: flex; }
+
+            .nav-links {
+                display: none;
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                background: var(--nav-bg);
+                border-top: 1px solid rgba(255,255,255,0.08);
+                border-bottom: 1px solid rgba(255,255,255,0.08);
+                padding: 0.5rem 1.5rem 1rem;
+                gap: 0;
+                z-index: 99;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            }
+            .nav-links.is-open { display: flex; }
+
+            .nav-links a {
+                padding: 0.75rem 0;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+                border-radius: 0;
+                font-size: 0.95rem;
+                width: 100%;
+            }
+            .nav-links .btn-nav {
+                margin-left: 0;
+                margin-top: 0.6rem;
+                text-align: center;
+                padding: 0.75rem 1rem;
+                border-radius: 8px;
+                border-bottom: none;
+            }
+            .nav-social {
+                flex-direction: row;
+                justify-content: flex-start;
+                margin-left: 0;
+                padding: 0.75rem 0;
+                gap: 0.5rem;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+            }
+
+        nav button.nav-toggle { background: none; border: none; color: rgba(255,255,255,0.8); padding: 8px; }
+        footer { margin-top: 24px; }
+</style>
+</head>
+<body>
+<nav>
+    <div class="nav-inner">
+        <a href="/" class="nav-logo">
+            <img src="/vcloudone_button.png" alt="vCloudOne">
+            vCloudOne<span class="sep">/</span><span class="page-name">EVS Sizing</span>
+        </a>
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+            <span class="nav-toggle-bar"></span>
+            <span class="nav-toggle-bar"></span>
+            <span class="nav-toggle-bar"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+            <a href="/evs/">EVS Overview</a>
+            <a href="/#guide">Prereq Guide</a>
+            <a href="/#terraform">Terraform</a>
+            <a href="/#validator">Validator</a>
+            <div class="nav-social">
+                <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="@dchung615 on X">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="GitHub">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                </a>
+            </div>
+            <a href="/" class="btn-nav">&larr; Home</a>
+        </div>
+    </div>
+</nav>
+<header class="top">
+  <h1>Amazon EVS Sizing Calculator</h1>
+  <p>VCF 9.1 and later · hosts, instances and VCF core licences from RVTools or manual totals</p>
+</header>
+
+<div class="wrap">
+<main class="col" id="form">
+
+  <section class="card">
+    <header><h2>Project</h2></header>
+    <div class="grid">
+      <label class="f">Customer <input type="text" id="p_customer" data-k="customer" placeholder="Customer name"></label>
+      <label class="f">AWS region <input type="text" id="p_region" data-k="region" placeholder="e.g. us-east-1"></label>
+    </div>
+    <label class="f">Notes <textarea id="p_notes" data-k="notes" rows="2" placeholder="Assumptions specific to this deal (carried into the export)"></textarea></label>
+  </section>
+
+  <section class="card">
+    <header><h2>Workload</h2><span class="hint">Import RVTools, enter totals by hand, or both</span></header>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add RVTools exports">
+      <strong>Drop RVTools exports here</strong> or click to choose (.xlsx / .xlsm, several files at once).<br>
+      <span class="hint">Files are read in your browser and never uploaded.</span>
+      <input type="file" id="file" accept=".xlsx,.xlsm" multiple class="hidden">
+    </div>
+    <div id="filelist"></div>
+    <div id="scope" class="hidden">
+      <div class="row">
+        <label class="toggle"><input type="checkbox" id="sc_off" checked> Include powered-off VMs</label>
+        <label class="toggle"><input type="checkbox" id="sc_tpl" checked> Count templates (storage only)</label>
+        <label class="f" style="min-width:150px">Group by
+          <select id="sc_group"><option value="file">vCenter (file)</option><option value="cluster">vSphere cluster</option></select></label>
+      </div>
+      <label class="f">Exclude VMs whose name matches (regular expression)
+        <input type="text" id="sc_ex" value="^vCLS" placeholder="e.g. ^vCLS|^Z-VRA"></label>
+      <div class="statusline" id="scopestat"></div>
+    </div>
+    <div class="tablewrap"><table id="groups"></table></div>
+    <div class="row"><button class="ghost" id="addgrp" type="button">Add manual group</button>
+      <span class="hint">Amber cells are overridden by hand. Storage basis is set under Storage.</span></div>
+    <div id="estate" class="hidden"></div>
+  </section>
+
+  <section class="card">
+    <header><h2>Host type</h2><span class="hint">All hosts in a cluster use one type</span></header>
+    <div class="hosts" id="hosts"></div>
+  </section>
+
+  <section class="card">
+    <header><h2>VCF deployment profile</h2><span class="hint">VCF Installer default profiles (VCF 9.1)</span></header>
+    <label class="f">Profile
+      <select id="profile" data-k="profile"></select></label>
+    <div class="mgmt" id="mgmtnote"></div>
+  </section>
+
+  <section class="card">
+    <header><h2>Sizing policy</h2><button class="link" type="button" id="resetpol">Reset to defaults</button></header>
+    <div class="grid">
+      <label class="f">CPU ratio (vCPU : physical core)<input type="number" id="cpuRatio" data-k="cpuRatio" step="0.1" min="0.5"></label>
+      <label class="f">Host memory reserve (%)<input type="number" id="memReserve" data-k="memReserve" step="1" min="0" max="50"></label>
+      <label class="f">Memory fill target (%)<input type="number" id="memFill" data-k="memFill" step="1" min="10" max="100"></label>
+      <label class="f">VM memory overhead (%)<input type="number" id="vmOverhead" data-k="vmOverhead" step="1" min="0" max="30"></label>
+      <label class="f">Growth over contract term (%)<input type="number" id="growth" data-k="growth" step="1" min="0"></label>
+      <label class="f">Management cluster<select id="mgmtCluster" data-k="mgmtCluster"><option value="dedicated">Dedicated</option><option value="shared">Shared with workloads</option></select></label>
+      <label class="f">Workload clusters per instance<select id="wlClusters" data-k="wlClusters" data-num="1"></select></label>
+      <label class="f">HA spare hosts per cluster<input type="number" id="spares" data-k="spares" step="1" min="0" max="4"></label>
+      <label class="f">Max hosts per cluster<input type="number" id="maxCluster" data-k="maxCluster" step="1" min="2" max="96"></label>
+      <label class="f">Max hosts per EVS instance<input type="number" id="hostsPerInstance" data-k="hostsPerInstance" step="1" min="2"></label>
+    </div>
+    <p class="hint" style="margin:0" id="growthhint"></p>
+    <p class="hint" style="margin:0">Every cluster gets its own HA spare host(s). Minimum hosts per cluster are set automatically: management (or the shared cluster) 4 for HA profiles, 3 for Simple on vSAN, 2 on r7i; workload clusters 3 on vSAN (6 for manual RAID-6), 2 on r7i. No memory overcommit. Past the per-instance limit, the calculator adds EVS instances.</p>
+  </section>
+
+  <section class="card">
+    <header><h2>Storage</h2></header>
+    <div class="grid">
+      <label class="f">Size storage on
+        <select id="storageBasis" data-k="storageBasis"><option value="used">Guest used (vPartition)</option><option value="allocated">Allocated (vDisk capacity)</option></select></label>
+      <label class="f">vSAN protection
+        <select id="protection" data-k="protection">
+          <option value="auto">Auto: RAID-6 at 6+ hosts, RAID-5 2+1 below</option><option value="raid5">FTT=1 RAID-5 (ESA adaptive)</option><option value="raid6">FTT=2 RAID-6 (6+ hosts)</option><option value="raid1">FTT=1 RAID-1</option></select></label>
+      <label class="f">vSAN compression ratio<input type="number" id="compression" data-k="compression" step="0.05" min="1" max="3"></label>
+      <label class="f">vSAN free-space reserve (%)<input type="number" id="vsanSlack" data-k="vsanSlack" step="1" min="0" max="50"></label>
+    </div>
+    <div class="row">
+      <label class="toggle"><input type="checkbox" id="extOn" data-k="extOn"> External storage (FSx for NetApp ONTAP)</label>
+      <label class="f" style="min-width:220px" id="extPctWrap">Share of workload storage on FSxN: <b class="num" id="extPctV"></b>
+        <input type="range" id="extPct" data-k="extPct" min="0" max="100" step="5"></label>
+    </div>
+    <p class="hint" style="margin:0" id="storhint"></p>
+    <div id="storneed"></div>
+  </section>
+
+  <section class="card" id="tiercard">
+    <header><h2>Memory tiering</h2><span class="hint">NVMe as a second memory tier (VCF 9.x)</span></header>
+    <div id="tierbody">
+      <p class="mgmt" id="tierinv" style="margin:0 0 10px"></p>
+      <div class="row"><label class="toggle"><input type="checkbox" id="tierOn" data-k="tierOn"> Use memory tiering</label></div>
+      <div class="grid" id="tierfields" style="margin-top:10px">
+        <label class="f">Drives for memory tier<select id="tierDrives" data-k="tierDrives" data-num="1"></select></label>
+        <label class="f">Tier ratio (% of DRAM)<input type="number" id="tierRatio" data-k="tierRatio" step="25" min="25" max="400"></label>
+        <label class="f">Workload active memory (% of vRAM)<input type="number" id="activePct" data-k="activePct" step="1" min="0" max="100"></label>
+        <label class="toggle" style="align-self:end"><input type="checkbox" id="tierMirror" data-k="tierMirror"> Mirror NVMe tier</label>
+      </div>
+      <p class="hint" id="tierhint" style="margin:8px 0 0"></p>
+    </div>
+    <p class="hint hidden" id="tieroff" style="margin:0"></p>
+  </section>
+
+  <section class="card">
+    <header><h2>Settings</h2></header>
+    <div class="row">
+      <button type="button" class="ghost" id="copyset">Copy settings</button>
+      <button type="button" class="ghost" id="loadset">Load settings</button>
+      <span class="hint" id="setmsg">Settings and workload totals as text, to save or send to someone.</span>
+    </div>
+  </section>
+
+  <section class="card note">
+    <h3>Sources and assumptions</h3>
+    <ul style="margin:0;padding-left:18px">
+      <li>Host types and VCF versions: AWS EVS User Guide, "Supported VCF versions and instance types" (r7i added Nov 2026; diskless types need external principal storage). EC2 instance specifications for cores and memory.</li>
+      <li>Hosts per instance: 32 (AWS, May 2026; service quota increase needed above the default).</li>
+      <li>Management resources: Broadcom VCF 9.1 "VCF Fleet Sizing Models" (first and additional instance totals per profile). Minimum hosts: VCF 9.x docs – Simple 2 (external) or 3 (vSAN); HA 4 (NSX Manager anti-affinity).</li>
+      <li>Memory tiering: AWS "Increase your cluster density with Memory Tiering in Amazon EVS" – default tier 1:1, drives leave vSAN, keep active memory under ~50% of DRAM.</li>
+      <li>Licensing: Broadcom VCF SPD – per-core, 16-core minimum per CPU. vSAN capacity is covered by the 1 TiB per core included with VCF: every EVS host type's raw NVMe is below its core entitlement.</li>
+      <li>On i-type hosts the local drives are always vSAN ESA (principal storage) minus memory-tier drives; FSxN is a supplemental datastore for a share of workload storage, and VCF management stays on vSAN. r7i uses FSxN for everything.</li>
+      <li>vSAN usable = raw × (1 − reserve) × compression ÷ protection factor per cluster. Auto policy: RAID-6 4+2 at 6+ hosts, RAID-5 2+1 at 3–5 (both 1.5); manual RAID-5 adaptive 4+1 = 1.25 at 6+; RAID-1 = 2. Spare hosts' drives aren't counted toward capacity. Workload is spread evenly across instances. Growth is one uplift for the contract term. Data last verified 23 Nov 2026.</li>
+    </ul>
+  </section>
+</main>
+
+<aside class="col results" id="results" aria-live="polite"></aside>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" style="display:grid;gap:10px">
+    <h3 id="dlgtitle">Settings</h3>
+    <textarea id="dlgtext" rows="12" style="font-family:var(--mono);font-size:12px"></textarea>
+    <p class="hint" id="dlgmsg" style="margin:0"></p>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="ghost" id="dlgclose">Close</button>
+      <button type="button" id="dlgok">Apply</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+// ===== EVS sizing engine (pure functions; no DOM) =====
+const DRIVE_BYTES = 3.75e12;                 // 3,750 GB NVMe drive
+const TIB = 1024 ** 4, GIB = 1024 ** 3;
+const DRIVE_TIB = DRIVE_BYTES / TIB;         // 3.41 TiB
+const DRIVE_GIB = DRIVE_BYTES / GIB;         // 3,492 GiB
+
+const HOSTS = [
+  { id: "i4i.metal", cpu: "Intel Xeon 8375C (Ice Lake)", gen: "AWS 4th-gen instance · Intel 3rd-gen Xeon", sockets: 2, cores: 64, ramGiB: 1024, drives: 8, tiering: true,
+    storage: "Local NVMe, 8 × 3,750 GB" },
+  { id: "i7i.metal-24xl", cpu: "Intel Xeon (Emerald Rapids)", gen: "AWS 7th-gen instance · Intel 5th-gen Xeon", sockets: 2, cores: 48, ramGiB: 768, drives: 6, tiering: true,
+    storage: "Local NVMe, 6 × 3,750 GB" },
+  { id: "i7i.metal-48xl", cpu: "Intel Xeon (Emerald Rapids)", gen: "AWS 7th-gen instance · Intel 5th-gen Xeon", sockets: 2, cores: 96, ramGiB: 1536, drives: 12, tiering: true,
+    storage: "Local NVMe, 12 × 3,750 GB" },
+  { id: "r7i.metal-24xl", cpu: "Intel Xeon (Sapphire Rapids)", gen: "AWS 7th-gen instance · Intel 4th-gen Xeon", sockets: 2, cores: 48, ramGiB: 768, drives: 0, tiering: false,
+    storage: "Diskless – external principal storage required" },
+  { id: "r7i.metal-48xl", cpu: "Intel Xeon (Sapphire Rapids)", gen: "AWS 7th-gen instance · Intel 4th-gen Xeon", sockets: 2, cores: 96, ramGiB: 1536, drives: 0, tiering: false,
+    storage: "Diskless – external principal storage required" },
+];
+
+// Broadcom VCF 9.1 fleet sizing models (VCF Installer default profiles). RAM and disk in GB as published.
+const PROFILES = {
+  "Simple":    { ha: false, nsx: 1, first: { vcpu: 76,  ram: 251, disk: 7448 },  add: { vcpu: 34,  ram: 111, disk: 4562 } },
+  "HA Small":  { ha: true,  nsx: 3, first: { vcpu: 106, ram: 335, disk: 8422 },  add: { vcpu: 62,  ram: 187, disk: 5462 } },
+  "HA Medium": { ha: true,  nsx: 3, first: { vcpu: 184, ram: 656, disk: 11445 }, add: { vcpu: 74,  ram: 244, disk: 5813 } },
+  "HA Large":  { ha: true,  nsx: 3, first: { vcpu: 298, ram: 949, disk: 15357 }, add: { vcpu: 120, ram: 353, disk: 8321 } },
+};
+
+const DEFAULTS = {
+  hostType: "i7i.metal-24xl", profile: "HA Medium",
+  cpuRatio: 3, memReserve: 8, memFill: 90, vmOverhead: 3, growth: 0,
+  spares: 1, maxCluster: 32, hostsPerInstance: 32, mgmtCluster: "dedicated", wlClusters: 0,
+  storageBasis: "used", vsanSlack: 25, compression: 1.25, protection: "auto",
+  extOn: false, extPct: 100,
+  tierOn: false, tierRatio: 100, tierMirror: false, tierDrives: 0, activePct: 20,
+};
+
+function hostById(id) { return HOSTS.find(h => h.id === id); }
+
+// Workload totals from groups (already aggregated per group)
+function workloadTotals(groups) {
+  const t = { vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, templTiB: 0 };
+  for (const g of groups) {
+    if (!g.include) continue;
+    for (const k of Object.keys(t)) t[k] += Number(g.values[k]) || 0;
+  }
+  return t;
+}
+
+// Per-host capacities for a given configuration
+function hostConfig(h, s, tierOn, extOn) {
+  const diskless = h.drives === 0;
+  const extPct = diskless ? 100 : (extOn ? Math.min(100, Math.max(0, s.extPct)) : 0);
+  const tiering = !!(tierOn && h.tiering);
+  const vsanInUse = !diskless;                 // local drives are always vSAN (minus memory-tier drives)
+  const mirror = s.tierMirror ? 2 : 1;
+  const maxTier = h.tiering ? h.drives - 1 : 0;   // at least 1 drive stays in vSAN
+  const wantGiB = tiering ? h.ramGiB * s.tierRatio / 100 : 0;
+  const tierNeed = tiering ? Math.ceil(wantGiB / DRIVE_GIB) * mirror : 0;
+  const tierDrives = tiering ? Math.min(s.tierDrives > 0 ? s.tierDrives : tierNeed, maxTier) : 0;
+  const tierCapGiB = Math.floor(tierDrives / mirror) * DRIVE_GIB;
+  const tierGiB = Math.min(wantGiB, tierCapGiB);
+  const ratio = tiering ? tierGiB / h.ramGiB : 0;
+  const vsanDrives = vsanInUse ? Math.max(0, h.drives - tierDrives) : 0;
+  const rawVsanTiB = vsanDrives * DRIVE_TIB;
+  const memUsable = (h.ramGiB * (1 - s.memReserve / 100) + tierGiB) * (s.memFill / 100);
+  return {
+    host: h, diskless, extPct, tiering, ratio, tierDrives, tierNeed, maxTier, wantGiB, tierGiB, tierShort: tiering && tierGiB < wantGiB,
+    vsanInUse, vsanDrives, rawVsanTiB, memUsable, effRamGiB: h.ramGiB + tierGiB, cpuCap: h.cores * s.cpuRatio,
+  };
+}
+
+function protFactor(prot, n) {
+  if (prot === "raid1") return 2.0;
+  if (prot === "raid5") return n >= 6 ? 1.25 : 1.5;   // ESA adaptive RAID-5: 2+1 below 6 hosts, 4+1 at 6+
+  return 1.5;                                          // auto (RAID-6 4+2 at 6+, RAID-5 2+1 at 3–5) and raid6 are both 1.5
+}
+function protLabel(prot, n) {
+  if (prot === "raid1") return "RAID-1 (FTT=1)";
+  if (prot === "raid6") return "RAID-6 4+2 (FTT=2)";
+  if (prot === "raid5") return n >= 6 ? "RAID-5 4+1 (FTT=1)" : "RAID-5 2+1 (FTT=1)";
+  return n >= 6 ? "RAID-6 4+2 (FTT=2)" : "RAID-5 2+1 (FTT=1)";
+}
+function storageMin(cfg, s) { return cfg.diskless ? 2 : (s.protection === "raid6" ? 6 : 3); }
+
+// Size one cluster. d = {vcpu, ram, vsan} ; floor = minimum hosts for this cluster
+function sizeCluster(d, cfg, s, floor) {
+  const sp = s.spares;
+  const cpuH = Math.ceil(d.vcpu / cfg.cpuCap - 1e-9);
+  const ramH = Math.ceil(d.ram / cfg.memUsable - 1e-9);
+  const perHost = (n) => cfg.rawVsanTiB * (1 - s.vsanSlack / 100) * s.compression / protFactor(s.protection, n + sp);
+  let storH = 0, storOK = true;
+  if (d.vsan > 0) {
+    if (cfg.rawVsanTiB <= 0) { storOK = false; storH = Infinity; }
+    else { let n = Math.max(1, Math.ceil(d.vsan / perHost(10))); while (n * perHost(n) < d.vsan) n++; storH = n; }
+  }
+  const need = Math.max(cpuH, ramH, storOK ? storH : 0, 1);
+  let total = need + sp, atMin = false;
+  if (total < floor) { total = floor; atMin = true; }
+  let limiter = "CPU";
+  if (ramH > cpuH) limiter = "RAM";
+  if (storOK && storH > Math.max(cpuH, ramH)) limiter = "Storage";
+  if (atMin) limiter = "Minimum";
+  const crH = Math.max(cpuH, ramH, 1);
+  const capCR = cfg.vsanInUse ? perHost(crH) * crH : 0;
+  return { d, cpuH, ramH, storH: storOK ? storH : null, storOK, need, spares: sp, total, floor, atMin, limiter, crH, capCR,
+    vsanUsable: cfg.vsanInUse ? perHost(total - sp) * (total - sp) : 0, prot: cfg.vsanInUse ? protLabel(s.protection, total) : "External" };
+}
+
+// Size one instance: management (dedicated or shared) + workload clusters
+function sizeInstance(Wi, m, cfg, s, prof) {
+  const ext = cfg.extPct / 100;
+  const profMin = prof.ha ? 4 : (cfg.diskless ? 2 : 3);
+  const sMin = storageMin(cfg, s);
+  const mgmtVsan = cfg.diskless ? 0 : m.stor;
+  const build = (k) => {
+    const cl = [];
+    if (s.mgmtCluster === "dedicated") {
+      cl.push({ role: "mgmt", ...sizeCluster({ vcpu: m.vcpu, ram: m.ram, vsan: mgmtVsan }, cfg, s, Math.max(profMin, sMin)) });
+    }
+    for (let c = 0; c < k; c++) {
+      const shared = s.mgmtCluster !== "dedicated" && c === 0;
+      const wv = cfg.diskless ? 0 : (Wi.stor / k) * (1 - ext);
+      const d = { vcpu: Wi.vcpu / k + (shared ? m.vcpu : 0), ram: Wi.ram / k + (shared ? m.ram : 0), vsan: wv + (shared ? mgmtVsan : 0) };
+      cl.push({ role: shared ? "shared" : "work", ...sizeCluster(d, cfg, s, shared ? Math.max(profMin, sMin) : sMin) });
+    }
+    return cl;
+  };
+  let k = s.wlClusters > 0 ? s.wlClusters : 1, clusters = build(k);
+  if (!(s.wlClusters > 0)) while (clusters.some(c => c.total > s.maxCluster) && k < 64) clusters = build(++k);
+  const total = clusters.reduce((a, c) => a + c.total, 0);
+  const work = Wi.stor;
+  return { clusters, k, total, work, fsx: cfg.diskless ? Wi.stor + m.stor : Wi.stor * ext, mgmt: m, Wi,
+    vsanDemand: clusters.reduce((a, c) => a + c.d.vsan, 0), capCR: clusters.reduce((a, c) => a + c.capCR, 0),
+    vsanUsableTiB: clusters.reduce((a, c) => a + c.vsanUsable, 0) };
+}
+
+// Full sizing across one or more instances
+function size(s, groups, opts = {}) {
+  const h = hostById(opts.hostId || s.hostType);
+  const tierOn = opts.tierOn !== undefined ? opts.tierOn : s.tierOn;
+  const extOn = opts.extOn !== undefined ? opts.extOn : s.extOn;
+  const cfg = hostConfig(h, s, tierOn, extOn);
+  const prof = PROFILES[s.profile];
+  const w = workloadTotals(groups);
+  const g = 1 + s.growth / 100;
+  const storWork = (s.storageBasis === "allocated" ? w.allocTiB : w.usedTiB) * g;
+  const W = { vcpu: w.vcpu * g, ram: w.vramGiB * (1 + s.vmOverhead / 100) * g, stor: storWork + w.templTiB };
+  const mg = (p) => ({ vcpu: p.vcpu, ram: p.ram, stor: p.disk * 1e9 / TIB });
+  let inst = [], n = 1;
+  for (; n <= 64; n++) {
+    inst = [];
+    for (let i = 0; i < n; i++) inst.push(sizeInstance({ vcpu: W.vcpu / n, ram: W.ram / n, stor: W.stor / n }, mg(i === 0 ? prof.first : prof.add), cfg, s, prof));
+    if (inst.every(x => x.total <= s.hostsPerInstance && x.clusters.every(c => c.total <= s.maxCluster))) break;
+  }
+  const all = inst.flatMap(x => x.clusters);
+  const hosts = inst.reduce((a, x) => a + x.total, 0);
+  const cores = hosts * h.cores;
+  const licCores = hosts * h.sockets * Math.max(16, h.cores / h.sockets);
+  const D = { vcpu: W.vcpu + inst.reduce((a, x) => a + x.mgmt.vcpu, 0), ram: W.ram + inst.reduce((a, x) => a + x.mgmt.ram, 0),
+              stor: W.stor + inst.reduce((a, x) => a + x.mgmt.stor, 0) };
+  const storMgmt = inst.reduce((a, x) => a + x.mgmt.stor, 0);
+  const vsanDemand = inst.reduce((a, x) => a + x.vsanDemand, 0);
+  const vsanUsable = inst.reduce((a, x) => a + x.vsanUsableTiB, 0);
+  const activeGiB = w.vramGiB * (s.activePct / 100) * g;
+  const capCR = inst.reduce((a, x) => a + x.capCR, 0);
+  const vsanAt0 = cfg.diskless ? 0 : W.stor + storMgmt;
+  const minExtTiB = Math.max(0, vsanAt0 - capCR);
+  const head = !cfg.diskless ? {
+    vsanNeed: vsanDemand, capCR, crHosts: all.reduce((a, c) => a + c.crH, 0), storHosts: all.reduce((a, c) => a + (c.storH || 0), 0),
+    limiting: all.some(c => c.limiter === "Storage"), headroom: capCR - vsanDemand, mgmtOnVsan: storMgmt,
+    minExtTiB, minExtPct: W.stor > 0 ? Math.min(1, minExtTiB / W.stor) : 0, cannot: minExtTiB > W.stor + 1e-9,
+  } : null;
+  const wl = all.filter(c => c.role !== "mgmt");
+  const order = ["Storage", "RAM", "CPU", "Minimum"];
+  const limiter = order.find(l => wl.some(c => c.limiter === l)) || "CPU";
+  const res = {
+    host: h, cfg, profile: s.profile, prof, workload: w, W, D, instances: inst, n: inst.length, hosts, cores, licCores,
+    clusters: all.length, spares: all.reduce((a, c) => a + c.spares, 0),
+    need: { cpu: wl.reduce((a, c) => a + c.cpuH, 0), ram: wl.reduce((a, c) => a + c.ramH, 0), stor: cfg.vsanInUse ? wl.reduce((a, c) => a + (c.storH || 0), 0) : null },
+    vcpuPerCore: D.vcpu / cores, vsanDemand, vsanUsable, vsanPct: vsanUsable > 0 ? vsanDemand / vsanUsable : null,
+    fsxTiB: inst.reduce((a, x) => a + x.fsx, 0), activePctOfDram: cfg.tiering ? activeGiB / (hosts * h.ramGiB) : null,
+    growthFactor: g, storWork, storTempl: w.templTiB, storMgmt, head, limiter,
+    feasible: all.every(c => c.storOK) && inst.every(x => x.total <= s.hostsPerInstance),
+  };
+  res.warnings = warnings(res, s);
+  return res;
+}
+
+function warnings(r, s) {
+  const w = [];
+  if (!r.feasible) w.push({ lvl: "crit", t: "vSAN can't hold the storage on this configuration (no local drives left for vSAN). Turn on external storage or reduce the memory tier." });
+  if (r.cfg.diskless) w.push({ lvl: "info", t: `${r.host.id} has no local NVMe: principal storage is external (e.g. FSx for NetApp ONTAP) and memory tiering isn't available.` });
+  if (r.cfg.tierShort) w.push({ lvl: "warn", t: `${r.cfg.tierDrives} tier drive(s) hold ${Math.round(r.cfg.tierGiB)} GiB per host, less than the ${Math.round(r.cfg.wantGiB)} GiB the tier ratio asks for. The tier is limited to ${Math.round(r.cfg.ratio * 100)}% of DRAM.` });
+  if (r.cfg.tiering && r.cfg.tierDrives > r.cfg.tierNeed) w.push({ lvl: "info", t: `${r.cfg.tierDrives - r.cfg.tierNeed} drive(s) per host beyond what the tier ratio needs are taken from vSAN without adding memory.` });
+  if (r.cfg.tiering && r.activePctOfDram > 0.5) w.push({ lvl: "warn", t: `Active memory is ~${Math.round(r.activePctOfDram * 100)}% of DRAM. Broadcom guidance is to keep it below ~50% with tiering on.` });
+  if (r.cfg.tiering) w.push({ lvl: "info", t: "Don't combine memory tiering with memory overcommit." });
+  if (r.cfg.vsanInUse && r.instances.some(x => x.clusters.some(c => c.total === 3))) w.push({ lvl: "info", t: "A 3-host vSAN cluster with RAID-5 2+1 stays available after a host failure but can't fully rebuild until the host is back." });
+  if (r.n > 1) w.push({ lvl: "info", t: `Total exceeds ${s.hostsPerInstance} hosts, so the sizing uses ${r.n} EVS instances. Each additional instance carries its own SDDC Manager, vCenter and NSX (VCF Operations and Automation stay in the first).` });
+  const maxH = Math.max(...r.instances.map(x => x.total));
+  if (maxH > 5 || r.n > 3) w.push({ lvl: "info", t: `Service quota: default is 5 hosts per environment and 3 environments per account. Request ${maxH} hosts per environment${r.n > 3 ? ` and ${r.n} environments` : ""}.` });
+  return w;
+}
+
+// Smallest FSxN share (5% steps) at which storage no longer sets any cluster's host count
+function breakEven(s, groups, hostId) {
+  const base = size(s, groups, { hostId });
+  if (base.cfg.diskless || base.limiter !== "Storage") return null;
+  for (let p = 5; p <= 100; p += 5) {
+    const r = size({ ...s, extOn: true, extPct: p }, groups, { hostId });
+    if (!r.instances.some(x => x.clusters.some(c => c.limiter === "Storage")))
+      return { pct: p, tib: r.fsxTiB, hosts: r.hosts, from: base.hosts };
+  }
+  return { pct: null, from: base.hosts };
+}
+
+if (typeof module !== "undefined") module.exports = { breakEven, HOSTS, PROFILES, DEFAULTS, DRIVE_TIB, DRIVE_GIB, size, hostConfig, workloadTotals, protLabel };
+
+// ===== RVTools parsing (pure: takes sheet rows as arrays of objects) =====
+const COLS = {
+  name: ["VM"], power: ["Powerstate", "Power state"], template: ["Template"], cpus: ["CPUs", "# CPU"], mem: ["Memory", "Memory MiB", "Memory MB"],
+  prov: ["Provisioned MiB", "Provisioned MB"], inuse: ["In Use MiB", "In Use MB"], uuid: ["VM UUID", "SMBIOS UUID"],
+  server: ["VI SDK Server", "VI SDK Server type"], cluster: ["Cluster"], os: ["OS according to the configuration file", "OS according to the VMware Tools", "OS"],
+};
+const HCOLS = { host: ["Host"], cores: ["# Cores"], mem: ["# Memory"], model: ["CPU Model"], cluster: ["Cluster"] };
+
+function pick(row, names) { for (const n of names) if (row[n] !== undefined && row[n] !== null && row[n] !== "") return row[n]; return null; }
+function findCol(headers, names) { for (const n of names) if (headers.includes(n)) return n; return null; }
+function truthy(v) { return v === true || String(v).toLowerCase() === "true"; }
+
+function parseRVTools(vInfo, vHost, vDisk, vPartition, fileName) {
+  const issues = [];
+  if (!vInfo || !vInfo.length) return { fileName, error: "No vInfo sheet found. Export from RVTools with 'Export all to Excel'.", vms: [] };
+  const headers = Object.keys(vInfo[0]);
+  const col = {};
+  for (const [k, names] of Object.entries(COLS)) {
+    col[k] = findCol(headers, names);
+    if (!col[k] && ["name", "cpus", "mem"].includes(k)) return { fileName, error: `Column '${names[0]}' not found in vInfo.`, vms: [] };
+    if (col[k] && col[k] !== names[0]) issues.push(`Used '${col[k]}' for '${names[0]}'.`);
+  }
+  if (!col.prov && !col.inuse) issues.push("No provisioned or in-use storage columns: storage will be 0.");
+  const mbFactor = (c) => (c && /MB$/.test(c) ? 1e6 / 1048576 : 1); // MB → MiB
+  // Per-VM disk capacity (vDisk) and guest-consumed space (vPartition), joined on vCenter + VM name
+  const sumBy = (rows, valNames) => {
+    const m = new Map(); if (!rows || !rows.length) return null;
+    const hh = Object.keys(rows[0]); const vc = findCol(hh, valNames); const sc = findCol(hh, COLS.server);
+    if (!vc) return null;
+    const f = /MB$/.test(vc) ? 1e6 / 1048576 : 1;
+    for (const r of rows) { if (!r.VM) continue; const k = (sc ? String(r[sc] ?? "") : fileName) + "|" + r.VM; m.set(k, (m.get(k) || 0) + (Number(r[vc]) || 0) * f); }
+    return m;
+  };
+  const capMap = sumBy(vDisk, ["Capacity MiB", "Capacity MB"]);
+  const useMap = sumBy(vPartition, ["Consumed MiB", "Consumed MB"]);
+  if (!capMap) issues.push("No vDisk sheet: allocated storage falls back to vInfo 'Provisioned'.");
+  if (!useMap) issues.push("No vPartition sheet: guest-used storage falls back to vInfo 'In Use'.");
+  const vms = [];
+  for (const r of vInfo) {
+    const name = r[col.name];
+    if (name === null || name === undefined || name === "") continue;
+    const server = col.server ? String(r[col.server] ?? "") : fileName;
+    vms.push({
+      name: String(name), server, cluster: col.cluster ? String(r[col.cluster] ?? "") : "",
+      key: (col.uuid && r[col.uuid]) ? "u:" + String(r[col.uuid]).toLowerCase() : "n:" + server + "|" + name,
+      on: col.power ? String(r[col.power]).toLowerCase() === "poweredon" : true,
+      template: col.template ? truthy(r[col.template]) : false,
+      cpus: Number(r[col.cpus]) || 0,
+      memMiB: (Number(r[col.mem]) || 0) * mbFactor(col.mem),
+      provMiB: col.prov ? (Number(r[col.prov]) || 0) * mbFactor(col.prov) : 0,
+      inuseMiB: col.inuse ? (Number(r[col.inuse]) || 0) * mbFactor(col.inuse) : 0,
+      os: col.os ? String(r[col.os] ?? "") : "",
+    });
+    const v = vms[vms.length - 1], jk = server + "|" + name;
+    v.capMiB = capMap ? (capMap.get(jk) ?? null) : null;
+    v.guestMiB = useMap ? (useMap.get(jk) ?? null) : null;
+  }
+  let est = null;
+  if (vHost && vHost.length) {
+    const hh = Object.keys(vHost[0]); const hc = {};
+    for (const [k, names] of Object.entries(HCOLS)) hc[k] = findCol(hh, names);
+    const rows = vHost.filter(r => r[hc.host]);
+    const models = {};
+    for (const r of rows) { const m = hc.model ? String(r[hc.model]) : "?"; models[m] = (models[m] || 0) + 1; }
+    est = { hosts: rows.length, cores: rows.reduce((a, r) => a + (Number(r[hc.cores]) || 0), 0),
+            ramGiB: rows.reduce((a, r) => a + (Number(r[hc.mem]) || 0), 0) / 1024, models };
+  } else issues.push("No vHost sheet: current-estate summary unavailable for this file.");
+  const vcenters = [...new Set(vms.map(v => v.server))];
+  return { fileName, vcenter: vcenters.join(", "), vms, est, issues };
+}
+
+// Build workload groups from parsed files. scope: {includeOff, templatesStorage, exclude (regex string)}, groupBy: "file"|"cluster"
+function buildGroups(files, scope, groupBy) {
+  let re = null, reErr = null;
+  if (scope.exclude) { try { re = new RegExp(scope.exclude, "i"); } catch (e) { reErr = "Exclude pattern isn't a valid regular expression."; } }
+  const seen = new Set(); let dups = 0, excluded = 0, offExcluded = 0, templates = 0;
+  const groups = new Map();
+  for (const f of files) {
+    if (!f.include || f.error) continue;
+    for (const v of f.vms) {
+      if (seen.has(v.key)) { dups++; continue; }
+      seen.add(v.key);
+      if (re && re.test(v.name)) { excluded++; continue; }
+      const gk = groupBy === "cluster" ? `${v.server} / ${v.cluster || "(no cluster)"}` : (f.label || f.vcenter || f.fileName);
+      if (!groups.has(gk)) groups.set(gk, { key: gk, vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, dsTiB: 0, templTiB: 0, templates: 0, off: 0,
+        _gUsed: 0, _gCap: 0, _noGuestCap: 0, _noGuestDs: 0, noGuest: 0 });
+      const g = groups.get(gk);
+      if (v.template) {
+        templates++;
+        if (scope.templatesStorage) { g.templTiB += v.inuseMiB / 1048576; g.templates++; }
+        continue;
+      }
+      if (!v.on && !scope.includeOff) { offExcluded++; continue; }
+      if (!v.on) g.off++;
+      g.vms++; g.vcpu += v.cpus; g.vramGiB += v.memMiB / 1024;
+      const cap = v.capMiB ?? v.provMiB;
+      g.allocTiB += cap / 1048576; g.dsTiB += v.inuseMiB / 1048576;
+      if (v.guestMiB !== null && v.guestMiB !== undefined && v.capMiB) { g._gUsed += v.guestMiB; g._gCap += v.capMiB; }
+      else { g.noGuest++; g._noGuestCap += cap; g._noGuestDs += v.inuseMiB; }
+    }
+  }
+  for (const g of groups.values()) {
+    // Guest used; VMs without partition data are estimated at the group's used/allocated ratio (capped by datastore in-use)
+    const ratio = g._gCap > 0 ? g._gUsed / g._gCap : null;
+    const est = ratio === null ? g._noGuestDs : Math.min(g._noGuestCap * ratio, g._noGuestDs || Infinity);
+    g.usedTiB = (g._gUsed + est) / 1048576;
+    for (const k of Object.keys(g)) if (k.startsWith("_")) delete g[k];
+  }
+  return { groups: [...groups.values()], dups, excluded, offExcluded, templates, reErr };
+}
+if (typeof module !== "undefined") module.exports = { parseRVTools, buildGroups };
+
+</script>
+<script>
+"use strict";
+const S = { ...DEFAULTS, customer: "", region: "", notes: "" };
+let groups = [];          // {id, name, source:'manual'|'rvtools', include, values:{}, parsed:{}, over:Set}
+let files = [];           // parsed RVTools files
+let gid = 1;
+const scope = { includeOff: true, templatesStorage: true, exclude: "^vCLS", groupBy: "file" };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const nf = (n, d = 0) => (n === null || n === undefined || !isFinite(n)) ? "–" : Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (x, d = 0) => (x === null || x === undefined || !isFinite(x)) ? "–" : nf(x * 100, d) + "%";
+const FIELDS = [["vms", "VMs", 0], ["vcpu", "vCPU", 0], ["vramGiB", "vRAM GiB", 0], ["usedTiB", "Used TiB", 1], ["allocTiB", "Allocated TiB", 1], ["templTiB", "Templates TiB", 1]];
+
+// ---------- example to open with ----------
+groups.push({ id: gid++, name: "Example workload – edit or replace", source: "manual", include: true, example: true,
+  values: { vms: 1200, vcpu: 4800, vramGiB: 19200, usedTiB: 95, allocTiB: 180, templTiB: 0 }, parsed: null, over: new Set() });
+
+// ---------- static UI ----------
+function renderHosts() {
+  $("hosts").innerHTML = HOSTS.map(h => `
+    <label class="hostcard ${S.hostType === h.id ? "on" : ""}">
+      <input type="radio" name="host" value="${h.id}" ${S.hostType === h.id ? "checked" : ""}>
+      <b>${h.id}</b>
+      <small>${h.cores} cores · ${nf(h.ramGiB)} GiB RAM · ${h.cpu}</small>
+      <small>${h.gen}</small>
+      <small>${h.drives ? `${h.drives} × 3,750 GB NVMe (${nf(DRIVE_TIB, 2)} TiB each) · ${nf(h.drives * DRIVE_TIB, 1)} TiB raw` : "No local drives: external storage only"}</small>
+      <small>Memory tiering: ${h.tiering ? "yes" : "no"}</small>
+    </label>`).join("");
+  document.querySelectorAll('input[name=host]').forEach(r => r.addEventListener("change", e => { S.hostType = e.target.value; renderHosts(); refreshForm(); recalc(); }));
+}
+$("profile").innerHTML = Object.keys(PROFILES).map(p => `<option>${p}</option>`).join("");
+$("wlClusters").innerHTML = `<option value="0">Auto</option>` + Array.from({ length: 8 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+
+function refreshForm() {
+  for (const el of document.querySelectorAll("[data-k]")) {
+    const k = el.dataset.k;
+    if (el.type === "checkbox") el.checked = !!S[k]; else el.value = S[k];
+  }
+  const h = hostById(S.hostType), p = PROFILES[S.profile];
+  $("extPctV").textContent = (h.drives === 0 ? 100 : S.extPct) + "%";
+  // external storage: forced for diskless
+  $("extOn").disabled = h.drives === 0; if (h.drives === 0) $("extOn").checked = true;
+  $("extPct").disabled = h.drives === 0 || !S.extOn;
+  $("extPctWrap").style.opacity = (h.drives === 0 || S.extOn) ? 1 : .5;
+  $("storhint").textContent = h.drives === 0
+    ? `${h.id} is diskless: all principal storage is external (FSx for NetApp ONTAP) and vSAN isn't used.`
+    : (S.extOn ? `${S.extPct}% of workload storage (VMs and templates) goes to FSxN as a supplemental datastore. vSAN ESA on the local drives stays the principal storage and holds the VCF management appliances and the rest.`
+               : "Principal storage is vSAN ESA on the hosts' local drives (minus any memory-tier drives).");
+  // tiering availability
+  $("tierbody").classList.toggle("hidden", !h.tiering);
+  $("tieroff").classList.toggle("hidden", h.tiering);
+  $("tieroff").textContent = `${h.id} has no local NVMe, so memory tiering isn't available.`;
+  $("tierfields").style.opacity = S.tierOn ? 1 : .5;
+  for (const id of ["tierRatio", "activePct", "tierMirror", "tierDrives"]) $(id).disabled = !S.tierOn;
+  if (h.tiering) {
+    const cfg = hostConfig(h, S, true, S.extOn);
+    $("tierinv").textContent = `This host: ${h.drives} × 3,750 GB NVMe (${nf(DRIVE_GIB)} GiB each). Up to ${cfg.maxTier} can go to the memory tier; the rest (at least 1) stay in vSAN.`;
+    const sel = $("tierDrives");
+    sel.innerHTML = `<option value="0">Auto (fewest that fit: ${cfg.tierNeed})</option>` + Array.from({ length: cfg.maxTier }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+    if (S.tierDrives > cfg.maxTier) S.tierDrives = 0;
+    sel.value = String(S.tierDrives);
+    $("tierhint").textContent = `Each host gets ${nf(cfg.tierGiB)} GiB of NVMe memory (${nf(cfg.effRamGiB)} GiB total) on ${cfg.tierDrives} drive${cfg.tierDrives === 1 ? "" : "s"}${S.tierMirror ? " (mirrored)" : ""}`
+      + `, leaving ${cfg.vsanDrives} drive${cfg.vsanDrives === 1 ? "" : "s"} (${nf(cfg.rawVsanTiB, 1)} TiB raw) for vSAN.`
+      + (cfg.tierShort ? ` The chosen drives can't hold the full ${nf(cfg.wantGiB)} GiB tier.` : "");
+  }
+  $("growthhint").textContent = S.growth > 0 ? `Sized for +${nf(S.growth)}% over today's workload (e.g. the growth expected over a 1- or 3-year term). Management isn't grown.` : "No growth applied: sized for today's workload.";
+  $("mgmtnote").innerHTML = `First instance: ${nf(p.first.vcpu)} vCPU · ${nf(p.first.ram)} GB RAM · ${nf(p.first.disk / 1000, 1)} TB disk<br>`
+    + `Each additional instance: ${nf(p.add.vcpu)} vCPU · ${nf(p.add.ram)} GB RAM · ${nf(p.add.disk / 1000, 1)} TB disk<br>`
+    + `Minimum hosts in the management (or shared) cluster: ${p.ha ? "4 (NSX Manager ×3, anti-affinity)" : (h.drives === 0 ? "2 (external principal storage)" : "3 (vSAN)")}`;
+}
+
+document.addEventListener("input", e => {
+  const el = e.target; const k = el.dataset && el.dataset.k; if (!k) return;
+  if (el.type === "checkbox") S[k] = el.checked;
+  else if (el.type === "number" || el.type === "range" || el.dataset.num) { const v = parseFloat(el.value); if (isFinite(v)) S[k] = v; else return; }
+  else S[k] = el.value;
+  refreshForm(); recalc();
+});
+$("resetpol").addEventListener("click", () => {
+  for (const k of ["cpuRatio", "memReserve", "memFill", "vmOverhead", "growth", "spares", "maxCluster", "hostsPerInstance", "vsanSlack", "compression", "protection", "storageBasis", "tierRatio", "activePct", "tierMirror", "tierDrives", "mgmtCluster", "wlClusters"]) S[k] = DEFAULTS[k];
+  refreshForm(); recalc();
+});
+
+// ---------- workload groups ----------
+function renderGroups() {
+  const t = workloadTotals(groups);
+  const head = `<thead><tr><th>Use</th><th>Group</th>${FIELDS.map(f => `<th class="n">${f[1]}</th>`).join("")}<th></th></tr></thead>`;
+  const rows = groups.map(g => `<tr data-g="${g.id}">
+    <td><input type="checkbox" class="g-inc" ${g.include ? "checked" : ""} aria-label="Include ${esc(g.name)}"></td>
+    <td>${g.source === "manual" ? `<input type="text" class="g-name" value="${esc(g.name)}" aria-label="Group name">` : `${esc(g.name)} <span class="pill">RVTools</span>`}</td>
+    ${FIELDS.map(([k, , d]) => `<td class="n"><input type="number" class="g-v ${g.over.has(k) ? "ov" : ""}" data-f="${k}" step="${d ? 0.1 : 1}" min="0" value="${+Number(g.values[k] || 0).toFixed(d)}" aria-label="${k}"></td>`).join("")}
+    <td>${g.source === "manual" ? `<button type="button" class="link g-del">Remove</button>` : (g.over.size ? `<button type="button" class="link g-reset">Reset</button>` : "")}</td></tr>`).join("");
+  const tot = `<tr class="tot"><td></td><td>Total in scope</td>${FIELDS.map(([k, , d]) => `<td class="n num">${nf(t[k], d)}</td>`).join("")}<td></td></tr>`;
+  $("groups").innerHTML = head + `<tbody>${rows}${tot}</tbody>`;
+}
+$("groups").addEventListener("change", e => {
+  const tr = e.target.closest("tr[data-g]"); if (!tr) return;
+  const g = groups.find(x => x.id === +tr.dataset.g);
+  if (e.target.classList.contains("g-inc")) g.include = e.target.checked;
+  else if (e.target.classList.contains("g-name")) g.name = e.target.value;
+  else if (e.target.classList.contains("g-v")) {
+    const k = e.target.dataset.f, v = parseFloat(e.target.value) || 0; g.values[k] = v;
+    if (g.source === "rvtools") { if (Math.abs(v - g.parsed[k]) > 1e-9) g.over.add(k); else g.over.delete(k); }
+  }
+  renderGroups(); recalc();
+});
+$("groups").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-g]"); if (!tr) return;
+  const id = +tr.dataset.g;
+  if (e.target.classList.contains("g-del")) groups = groups.filter(x => x.id !== id);
+  else if (e.target.classList.contains("g-reset")) { const g = groups.find(x => x.id === id); g.values = { ...g.parsed }; g.over.clear(); }
+  else return;
+  renderGroups(); recalc();
+});
+$("addgrp").addEventListener("click", () => {
+  groups.push({ id: gid++, name: "Manual group " + (groups.filter(g => g.source === "manual").length + 1), source: "manual", include: true,
+    values: { vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, templTiB: 0 }, parsed: null, over: new Set() });
+  renderGroups(); recalc();
+});
+
+// ---------- RVTools ----------
+const drop = $("drop"), fin = $("file");
+drop.addEventListener("click", () => fin.click());
+drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fin.click(); } });
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); handleFiles(e.dataTransfer.files); });
+fin.addEventListener("change", () => { handleFiles(fin.files); fin.value = ""; });
+
+async function handleFiles(list) {
+  if (typeof XLSX === "undefined") { $("filelist").innerHTML = `<p class="pill crit">The spreadsheet reader didn't load. Check your connection and reload the page.</p>`; return; }
+  for (const f of list) {
+    const rec = { fileName: f.name, include: true, status: "Reading…", vms: [] };
+    files.push(rec); renderFiles();
+    await new Promise(r => setTimeout(r, 30));
+    try {
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array", sheets: ["vInfo", "vHost", "vDisk", "vPartition"], dense: true });
+      const rows = (n) => wb.Sheets[n] ? XLSX.utils.sheet_to_json(wb.Sheets[n], { defval: null }) : null;
+      const p = parseRVTools(rows("vInfo"), rows("vHost"), rows("vDisk"), rows("vPartition"), f.name);
+      Object.assign(rec, p, { status: p.error ? "error" : "ok" });
+    } catch (err) { rec.status = "error"; rec.error = "Couldn't read this file as an RVTools export (" + err.message + ")."; }
+    renderFiles(); rebuildRV();
+  }
+}
+function renderFiles() {
+  if (!files.length) { $("filelist").innerHTML = ""; $("scope").classList.add("hidden"); $("estate").classList.add("hidden"); return; }
+  $("scope").classList.remove("hidden");
+  $("filelist").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Use</th><th>File</th><th>vCenter</th><th class="n">VMs</th><th>Status</th><th></th></tr></thead><tbody>${
+    files.map((f, i) => `<tr data-f="${i}"><td><input type="checkbox" class="f-inc" ${f.include ? "checked" : ""} ${f.status !== "ok" ? "disabled" : ""} aria-label="Include ${esc(f.fileName)}"></td>
+      <td title="${esc(f.fileName)}">${esc(f.fileName.length > 34 ? f.fileName.slice(0, 31) + "…" : f.fileName)}</td><td>${esc(f.vcenter || "")}</td>
+      <td class="n num">${f.vms ? nf(f.vms.length) : ""}</td>
+      <td>${f.status === "ok" ? (f.issues && f.issues.length ? `<span class="pill warn" title="${esc(f.issues.join(" "))}">read, ${f.issues.length} note${f.issues.length > 1 ? "s" : ""}</span>` : `<span class="pill good">read</span>`)
+            : f.status === "error" ? `<span class="pill crit" title="${esc(f.error)}">error</span> <span class="hint">${esc(f.error)}</span>` : `<span class="pill">${f.status}</span>`}</td>
+      <td><button type="button" class="link f-del">Remove</button></td></tr>`).join("")}</tbody></table></div>`;
+}
+$("filelist").addEventListener("change", e => { const tr = e.target.closest("tr[data-f]"); if (!tr) return; files[+tr.dataset.f].include = e.target.checked; rebuildRV(); });
+$("filelist").addEventListener("click", e => { if (!e.target.classList.contains("f-del")) return; files.splice(+e.target.closest("tr").dataset.f, 1); renderFiles(); rebuildRV(); });
+for (const [id, k, prop] of [["sc_off", "includeOff", "checked"], ["sc_tpl", "templatesStorage", "checked"], ["sc_group", "groupBy", "value"], ["sc_ex", "exclude", "value"]])
+  $(id).addEventListener(id === "sc_ex" ? "change" : "input", e => { scope[k] = e.target[prop]; rebuildRV(); });
+
+function rebuildRV() {
+  const ok = files.filter(f => f.status === "ok");
+  const b = buildGroups(ok, scope, scope.groupBy);
+  const old = new Map(groups.filter(g => g.source === "rvtools").map(g => [g.name, g]));
+  const fresh = b.groups.map(x => {
+    const parsed = { vms: x.vms, vcpu: x.vcpu, vramGiB: x.vramGiB, usedTiB: x.usedTiB, allocTiB: x.allocTiB, templTiB: x.templTiB };
+    const prev = old.get(x.key);
+    const g = { id: prev ? prev.id : gid++, name: x.key, source: "rvtools", include: prev ? prev.include : true, parsed, values: { ...parsed }, over: new Set(prev ? prev.over : []) };
+    if (prev) for (const k of g.over) g.values[k] = prev.values[k];
+    return g;
+  });
+  if (fresh.length) groups = groups.filter(g => !g.example);
+  groups = [...fresh, ...groups.filter(g => g.source === "manual")];
+  $("scopestat").textContent = b.reErr ? b.reErr
+    : `${nf(b.excluded)} VMs excluded by name · ${nf(b.dups)} duplicates removed · ${nf(b.templates)} templates (${scope.templatesStorage ? "storage only" : "not counted"})`
+      + (scope.includeOff ? "" : ` · ${nf(b.offExcluded)} powered-off VMs left out`);
+  // current estate
+  const est = ok.filter(f => f.include && f.est);
+  if (est.length) {
+    const hosts = est.reduce((a, f) => a + f.est.hosts, 0), cores = est.reduce((a, f) => a + f.est.cores, 0), ram = est.reduce((a, f) => a + f.est.ramGiB, 0);
+    const models = {}; est.forEach(f => Object.entries(f.est.models).forEach(([m, c]) => models[m] = (models[m] || 0) + c));
+    const vcpu = workloadTotals(groups.filter(g => g.source === "rvtools")).vcpu;
+    $("estate").classList.remove("hidden");
+    $("estate").innerHTML = `<div class="note"><b>Current estate (from vHost):</b> ${nf(hosts)} hosts · ${nf(cores)} cores · ${nf(ram)} GiB RAM · ${nf(vcpu / cores, 2)} vCPU per core (VMs in scope)<br>
+      ${Object.entries(models).sort((a, b) => b[1] - a[1]).map(([m, c]) => `${esc(m)} × ${c}`).join(" · ")}</div>`;
+  } else $("estate").classList.add("hidden");
+  renderGroups(); recalc();
+}
+
+// ---------- results ----------
+let last = null;
+function recalc() {
+  const t = workloadTotals(groups);
+  if (!(t.vcpu > 0 || t.vramGiB > 0)) { $("storneed").innerHTML = ""; $("results").innerHTML = `<section class="card"><h2>Results</h2><p>Add a workload group or import RVTools to see the sizing.</p></section>`; last = null; return; }
+  const r = size(S, groups); last = r;
+  const h = r.host;
+  renderStorageNeed(r);
+  const alt = (o) => size(S, groups, o).hosts;
+  const maxBar = Math.max(r.need.cpu, r.need.ram, r.need.stor || 0, 1);
+  const bar = (name, v) => `<div class="bar ${r.limiter === name ? "lim" : ""}"><span>${name}</span><span class="t"><i style="width:${v === null ? 0 : Math.min(100, v / maxBar * 100)}%"></i></span><span class="num">${v === null ? "external" : nf(v) + " hosts"}</span></div>`;
+  const comp = HOSTS.map(x => { const rr = size(S, groups, { hostId: x.id }); return { x, rr }; });
+  const best = Math.min(...comp.map(c => c.rr.hosts));
+  let grid = "";
+  if (h.tiering) {
+    const v = { a: alt({ tierOn: false, extOn: false }), b: alt({ tierOn: true, extOn: false }), c: alt({ tierOn: false, extOn: true }), d: alt({ tierOn: true, extOn: true }) };
+    const mn = Math.min(v.a, v.b, v.c, v.d); const cell = (n) => `<div class="num ${n === mn ? "best" : ""}">${nf(n)} hosts</div>`;
+    grid = `<section class="card"><header><h3>Toggle combinations for ${h.id}</h3><span class="hint">FSxN share of workload: ${S.extPct}%</span></header>
+      <div class="grid2"><div class="h"></div><div class="h">Tiering off</div><div class="h">Tiering on</div>
+      <div class="h">vSAN only</div>${cell(v.a)}${cell(v.b)}<div class="h">With FSxN</div>${cell(v.c)}${cell(v.d)}</div></section>`;
+  }
+  const limTxt = { CPU: "CPU", RAM: "RAM", Storage: "Storage", Minimum: "Minimum hosts" }[r.limiter];
+  const roleTxt = (c, i) => c.role === "mgmt" ? "Management cluster" : (c.role === "shared" ? "Workload cluster 1 (incl. management)" : `Workload cluster ${i}`);
+  const tier = r.cfg.tiering ? r.cfg.tierGiB : 0;
+  const ramCell = (n) => tier ? `${nf(n * h.ramGiB)} + ${nf(n * tier)}` : nf(n * h.ramGiB);
+  const vsCell = (v) => r.cfg.diskless ? "External" : nf(v, 1);
+  const util = (c) => `${nf(c.d.vcpu / (c.total * h.cores), 1)} vCPU/core · RAM ${pct(c.d.ram / (c.total * (h.ramGiB + tier)))}` + (r.cfg.diskless ? "" : ` · vSAN ${pct(c.vsanUsable ? c.d.vsan / c.vsanUsable : null)}`);
+  const instRows = r.instances.map((x, ii) => {
+    let wi = 0;
+    const rows = x.clusters.map(c => { if (c.role !== "mgmt") wi++; return `<tr><td style="padding-left:20px">${roleTxt(c, wi)}<br><span class="hint">${util(c)}</span></td>
+      <td class="n">${nf(c.total)} <span class="hint">(${nf(c.total - c.spares)}+${nf(c.spares)})</span></td><td class="n">${nf(c.total * h.cores)}</td><td class="n">${ramCell(c.total)}</td><td class="n">${vsCell(c.vsanUsable)}</td>
+      <td>${c.atMin ? `Minimum (${c.floor})` : c.limiter}</td><td>${c.prot}</td></tr>`; }).join("");
+    return `<tr class="tot"><td>Instance ${ii + 1}${ii === 0 ? " (fleet)" : ""} <span class="hint">· ${x.clusters.length} cluster${x.clusters.length > 1 ? "s" : ""}</span></td><td class="n">${nf(x.total)}</td><td class="n">${nf(x.total * h.cores)}</td><td class="n">${ramCell(x.total)}</td><td class="n">${vsCell(x.vsanUsableTiB)}</td><td colspan="2"></td></tr>${rows}`;
+  }).join("");
+  $("results").innerHTML = `
+  <section class="card">
+    <header><h2>Results</h2></header>
+    <div class="headline">
+      <div class="tile main"><span class="k">EVS hosts</span><span class="big">${nf(r.hosts)}</span><span class="d">${h.id}</span></div>
+      <div class="tile"><span class="k">Limited by</span><span class="big" style="font-size:22px">${limTxt}</span><span class="d">workload clusters</span></div>
+      <div class="tile"><span class="k">EVS instances</span><span class="big">${nf(r.n)}</span><span class="d">max ${S.hostsPerInstance} hosts each</span></div>
+      <div class="tile"><span class="k">Clusters</span><span class="big">${nf(r.clusters)}</span><span class="d">${nf(r.spares)} HA spare host${r.spares === 1 ? "" : "s"}</span></div>
+      <div class="tile"><span class="k">VCF core licences</span><span class="big">${nf(r.licCores)}</span><span class="d">${h.sockets} × ${h.cores / h.sockets} cores per host</span></div>
+    </div>
+    <div class="bars"><span class="hint">Hosts each resource needs across workload clusters (before HA spares)</span>${bar("CPU", r.need.cpu)}${bar("RAM", r.need.ram)}${bar("Storage", r.need.stor)}</div>
+  </section>
+
+  <section class="card">
+    <header><h3>Instances and clusters</h3><span class="hint">${esc(S.profile)} profile · management ${S.mgmtCluster === "dedicated" ? "in its own cluster" : "shared with workloads"} · workload spread evenly</span></header>
+    <div class="tablewrap"><table><thead><tr><th>Instance / cluster</th><th class="n">Hosts (needed+spare)</th><th class="n">Cores</th><th class="n">RAM GiB${tier ? " (DRAM + tier)" : ""}</th><th class="n">vSAN usable TiB</th><th>Limited by</th><th>vSAN policy</th></tr></thead><tbody>
+      ${instRows}
+      <tr class="tot"><td>Total: ${nf(r.n)} instance${r.n > 1 ? "s" : ""} · ${nf(r.clusters)} clusters</td><td class="n">${nf(r.hosts)} <span class="hint">(${nf(r.spares)} spare)</span></td><td class="n">${nf(r.cores)}</td><td class="n">${ramCell(r.hosts)}</td><td class="n">${vsCell(r.vsanUsable)}</td><td colspan="2"></td></tr></tbody></table></div>
+    <p class="hint" style="margin:0">Cores and RAM are physical, across all hosts including spares. vSAN usable is after protection, compression and the free-space reserve, on the hosts excluding spares. The line under each cluster shows its load: vCPU per core, RAM used and vSAN used. "Minimum" means the cluster's minimum host count set its size.</p>
+  </section>
+
+  <section class="card">
+    <header><h3>Capacity and utilisation</h3></header>
+    <div class="tablewrap"><table><tbody>
+      <tr><td>Demand (incl. management${S.growth ? `, +${S.growth}% growth` : ""})</td><td class="n num">${nf(r.D.vcpu)} vCPU · ${nf(r.D.ram)} GiB · ${nf(r.D.stor, 1)} TiB</td></tr>
+      <tr><td>Physical cores</td><td class="n num">${nf(r.cores)}</td></tr>
+      <tr><td>vCPU per physical core (incl. spares)</td><td class="n num">${nf(r.vcpuPerCore, 2)} : 1</td></tr>
+      <tr><td>RAM demand ÷ ${r.cfg.tiering ? "DRAM + NVMe tier" : "DRAM"}</td><td class="n num">${pct(r.D.ram / (r.hosts * r.cfg.effRamGiB))}</td></tr>
+      ${r.cfg.tiering ? `<tr><td>Active memory ÷ DRAM (keep under ~50%)</td><td class="n num">${pct(r.activePctOfDram)}</td></tr>` : ""}
+      <tr><td>vSAN usable / used</td><td class="n num">${r.vsanUsable ? `${nf(r.vsanUsable, 0)} TiB / ${nf(r.vsanDemand, 0)} TiB (${pct(r.vsanPct)})` : "not used"}</td></tr>
+      <tr><td>FSx for ONTAP capacity (before ONTAP efficiencies)</td><td class="n num">${r.fsxTiB > 0 ? nf(r.fsxTiB, 1) + " TiB" : "–"}</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="card">
+    <header><h3>VCF licensing (BYOL)</h3></header>
+    <div class="tablewrap"><table><tbody>
+      <tr><td>Hosts licensed (incl. management and spares)</td><td class="n num">${nf(r.hosts)}</td></tr>
+      <tr><td>VCF core licences (16-core minimum per CPU)</td><td class="n num"><b>${nf(r.licCores)}</b></td></tr>
+    </tbody></table></div>
+  </section>
+
+  ${grid}
+
+  <section class="card">
+    <header><h3>Same workload on each host type</h3><span class="hint">Current settings; r7i uses external storage</span></header>
+    <div class="tablewrap"><table><thead><tr><th>Host type</th><th class="n">Hosts</th><th class="n">Instances</th><th class="n">Clusters</th><th class="n">Core licences</th><th>Limited by</th><th class="n">FSxN TiB</th></tr></thead><tbody>
+      ${comp.map(({ x, rr }) => `<tr class="${x.id === S.hostType ? "sel" : ""}"><td>${x.id}${rr.hosts === best ? ' <span class="pill good">fewest</span>' : ""}</td><td class="n num">${nf(rr.hosts)}</td><td class="n num">${nf(rr.n)}</td><td class="n num">${nf(rr.clusters)}</td><td class="n num">${nf(rr.licCores)}</td><td>${rr.limiter}</td><td class="n num">${rr.fsxTiB ? nf(rr.fsxTiB, 0) : "–"}</td></tr>`).join("")}
+    </tbody></table></div>
+  </section>
+
+  <section class="card">
+    <header><h3>Checks</h3></header>
+    <ul class="warns">${r.warnings.map(w => `<li class="${w.lvl}">${esc(w.t)}</li>`).join("") || "<li>No issues found.</li>"}</ul>
+  </section>
+
+  <section class="card">
+    <div class="row"><button type="button" id="xls">Export to Excel</button><span class="hint" id="xlsmsg"></span></div>
+  </section>`;
+  $("xls").addEventListener("click", exportXlsx);
+}
+
+// ---------- storage panel (items 5 and 6) ----------
+function renderStorageNeed(r) {
+  const out = [];
+  const gtxt = r.growthFactor > 1 ? `, +${nf((r.growthFactor - 1) * 100)}% growth` : "";
+  const basis = S.storageBasis === "allocated" ? "allocated" : "guest used";
+  if (r.cfg.extPct > 0) {
+    const f = r.cfg.extPct / 100, dl = r.cfg.diskless;
+    const per = r.instances.map(x => x.fsx);
+    const uniq = [...new Set(per.map(v => v.toFixed(1)))];
+    const perTxt = uniq.length === 1 ? `${r.n} × ${nf(per[0], 1)} TiB` : `1 × ${nf(per[0], 1)} TiB, ${r.n - 1} × ${nf(per[1], 1)} TiB`;
+    out.push(`<div class="mgmt"><b>External storage needed (FSx for NetApp ONTAP)${dl ? "" : `: ${r.cfg.extPct}% of workload`}</b>
+      <table><tbody>
+      <tr><td>Workload (${basis}${gtxt})</td><td class="n">${nf(r.storWork * f, 1)} TiB</td></tr>
+      <tr><td>Templates</td><td class="n">${nf(r.storTempl * f, 1)} TiB</td></tr>
+      ${dl ? `<tr><td>VCF management (${r.n} instance${r.n > 1 ? "s" : ""})</td><td class="n">${nf(r.storMgmt, 1)} TiB</td></tr>` : ""}
+      <tr class="tot"><td>Total</td><td class="n">${nf(r.fsxTiB, 1)} TiB</td></tr>
+      <tr><td>Per instance</td><td class="n">${perTxt}</td></tr>
+      ${dl ? "" : `<tr><td>On vSAN (rest of workload + VCF management ${nf(r.storMgmt, 1)} TiB)</td><td class="n">${nf(r.vsanDemand, 1)} TiB</td></tr>`}
+      </tbody></table><span class="hint">Logical capacity before ONTAP deduplication and compression; throughput and IOPS aren't sized.</span></div>`);
+  }
+  const hd = r.head;
+  if (hd) {
+    if (!hd.limiting) out.push(`<div class="mgmt"><b>vSAN (internal storage): not limiting</b>
+      <table><tbody><tr><td>Hosts set by CPU/RAM (before spares)</td><td class="n">${nf(hd.crHosts)}</td></tr>
+      <tr><td>vSAN on those hosts holds</td><td class="n">${nf(hd.capCR, 1)} TiB</td></tr>
+      <tr><td>Storage on vSAN (incl. ${nf(hd.mgmtOnVsan, 1)} TiB management)</td><td class="n">${nf(hd.vsanNeed, 1)} TiB</td></tr>
+      <tr class="tot"><td>Headroom before storage sets the host count</td><td class="n">${nf(hd.headroom, 1)} TiB (${pct(hd.capCR ? hd.headroom / hd.capCR : 0)})</td></tr></tbody></table></div>`);
+    else {
+      const be = breakEven(S, groups);
+      out.push(`<div class="mgmt"><b>vSAN (internal storage): limiting</b>
+      <table><tbody><tr><td>Hosts set by CPU/RAM (before spares)</td><td class="n">${nf(hd.crHosts)} (storage needs ${nf(hd.storHosts)})</td></tr>
+      <tr><td>vSAN on ${nf(hd.crHosts)} hosts holds</td><td class="n">${nf(hd.capCR, 1)} TiB</td></tr>
+      <tr><td>Storage on vSAN (incl. ${nf(hd.mgmtOnVsan, 1)} TiB management)</td><td class="n">${nf(hd.vsanNeed, 1)} TiB</td></tr>
+      ${be && be.pct !== null ? `<tr class="tot"><td>Move to FSxN so storage stops setting the count</td><td class="n">${be.pct}% of workload (${nf(be.tib, 1)} TiB)</td></tr>
+      <tr><td>Hosts after the move</td><td class="n">${nf(be.from)} → ${nf(be.hosts)}</td></tr>` : ""}</tbody></table>
+      ${be && be.pct !== null ? `<div class="row" style="margin-top:6px"><button type="button" id="applyext" data-p="${be.pct}">Set FSxN share to ${be.pct}%</button></div>` : `<span class="hint">Even with all workload on FSxN, storage still sets the count (management on vSAN).</span>`}</div>`);
+    }
+  }
+  $("storneed").innerHTML = out.join("");
+  const b = $("applyext");
+  if (b) b.addEventListener("click", () => { S.extOn = true; S.extPct = +b.dataset.p; refreshForm(); recalc(); });
+}
+
+// ---------- export ----------
+let downloads = null;
+(async () => { try { if (window.claude && window.claude.use) downloads = await window.claude.use("downloads"); } catch (e) { downloads = null; } })();
+async function exportXlsx() {
+  const r = last; if (!r) return;
+  const msg = $("xlsmsg");
+  if (typeof XLSX === "undefined") { msg.textContent = "The spreadsheet library didn't load."; return; }
+  const wb = XLSX.utils.book_new();
+  const today = new Date().toISOString().slice(0, 10);
+  const sum = [["Amazon EVS sizing", ""], ["Customer", S.customer], ["Region", S.region], ["Date", today], ["Notes", S.notes], [],
+    ["Host type", r.host.id], ["VCF profile", S.profile], ["EVS hosts", r.hosts], ["EVS instances", r.n], ["Limited by", r.limiter],
+    ["Clusters", r.clusters], ["HA spare hosts", r.spares], ["Physical cores", r.cores], ["VCF core licences", r.licCores],
+    ["vCPU per core (incl. spares)", +r.vcpuPerCore.toFixed(2)], ["vSAN used %", r.vsanPct === null ? "n/a" : +(r.vsanPct * 100).toFixed(1)], ["FSxN TiB", +r.fsxTiB.toFixed(1)], [],
+    ["Demand vCPU", Math.round(r.D.vcpu)], ["Demand RAM GiB", Math.round(r.D.ram)], ["Demand storage TiB", +r.D.stor.toFixed(1)], [], ["Checks"], ...r.warnings.map(w => [w.lvl, w.t])];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), "Summary");
+  const crow = [];
+  r.instances.forEach((x, ii) => { let wi = 0; x.clusters.forEach(c => { if (c.role !== "mgmt") wi++;
+    const tg = r.cfg.tiering ? r.cfg.tierGiB : 0;
+    crow.push([ii + 1, c.role === "mgmt" ? "Management" : (c.role === "shared" ? "Workload 1 (incl. management)" : "Workload " + wi), c.total, c.spares, c.total * r.host.cores, c.total * r.host.ramGiB, Math.round(c.total * tg),
+      r.cfg.diskless ? "External" : +c.vsanUsable.toFixed(1), Math.round(c.d.vcpu), Math.round(c.d.ram), +c.d.vsan.toFixed(1),
+      +(c.d.vcpu / (c.total * r.host.cores)).toFixed(2), +(c.d.ram / (c.total * (r.host.ramGiB + tg)) * 100).toFixed(1), c.vsanUsable ? +(c.d.vsan / c.vsanUsable * 100).toFixed(1) : "",
+      c.atMin ? "Minimum (" + c.floor + ")" : c.limiter, c.prot]); }); });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Instance", "Cluster", "Hosts", "of which spare", "Cores", "DRAM GiB", "Memory tier GiB", "vSAN usable TiB", "Demand vCPU", "Demand RAM GiB", "Demand vSAN TiB", "vCPU per core", "RAM used %", "vSAN used %", "Limited by", "vSAN policy"], ...crow]), "Instances & clusters");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Group", "Source", "Included", "VMs", "vCPU", "vRAM GiB", "Used TiB", "Allocated TiB", "Templates TiB", "Overridden fields"],
+    ...groups.map(g => [g.name, g.source, g.include ? "yes" : "no", ...FIELDS.map(([k, , d]) => +Number(g.values[k] || 0).toFixed(d)), [...g.over].join(", ")])]), "Workload");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Host type", "Hosts", "Instances", "Clusters", "Core licences", "Limited by", "FSxN TiB"],
+    ...HOSTS.map(x => { const rr = size(S, groups, { hostId: x.id }); return [x.id, rr.hosts, rr.n, rr.clusters, rr.licCores, rr.limiter, +rr.fsxTiB.toFixed(1)]; })]), "Host comparison");
+  const inp = Object.entries(S).filter(([k]) => !["customer", "region", "notes"].includes(k)).map(([k, v]) => [k, v]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Setting", "Value"], ...inp, [], ["RVTools scope", ""], ["Include powered-off", scope.includeOff], ["Templates storage only", scope.templatesStorage], ["Exclude pattern", scope.exclude], ["Group by", scope.groupBy],
+    [], ["Files", ""], ...files.map(f => [f.fileName, f.status + (f.vms ? ` (${f.vms.length} VMs)` : "")])]), "Inputs");
+  const data = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const name = `EVS_sizing_${(S.customer || "customer").replace(/[^\w-]+/g, "_")}_${today}.xlsx`;
+  if (!downloads) {
+    const url = URL.createObjectURL(new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000); msg.textContent = "Downloaded."; return;
+  }
+  try { await downloads.save({ filename: name, data: new Blob([data]) }); msg.textContent = "Saved."; }
+  catch (e) { msg.textContent = e && e.code === "declined" ? "Export cancelled." : "Couldn't save the file here."; }
+}
+
+// ---------- settings copy / load ----------
+function settingsJSON() {
+  return JSON.stringify({ v: 1, settings: S, scope, groups: groups.map(g => ({ name: g.name, source: g.source, include: g.include, values: g.values })) }, null, 1);
+}
+$("copyset").addEventListener("click", async () => {
+  const txt = settingsJSON();
+  try { await navigator.clipboard.writeText(txt); $("setmsg").textContent = "Settings copied to the clipboard."; }
+  catch (e) { openDlg("Copy settings", txt, false); }
+});
+$("loadset").addEventListener("click", () => openDlg("Load settings", "", true));
+function openDlg(title, text, canApply) {
+  $("dlgtitle").textContent = title; $("dlgtext").value = text; $("dlgok").classList.toggle("hidden", !canApply);
+  $("dlgmsg").textContent = canApply ? "Paste settings copied from this calculator. RVTools groups load as manual totals." : "Select all and copy.";
+  $("dlg").showModal();
+}
+$("dlgclose").addEventListener("click", () => $("dlg").close());
+$("dlgok").addEventListener("click", () => {
+  try {
+    const o = JSON.parse($("dlgtext").value);
+    Object.assign(S, DEFAULTS, o.settings || {});
+    groups = (o.groups || []).map(g => ({ id: gid++, name: g.name, source: "manual", include: g.include !== false, values: { ...g.values }, parsed: null, over: new Set() }));
+    files = []; renderFiles(); renderHosts(); refreshForm(); renderGroups(); recalc(); $("dlg").close(); $("setmsg").textContent = "Settings loaded.";
+  } catch (e) { $("dlgmsg").textContent = "That text isn't valid settings. Copy it again from the calculator."; }
+});
+
+// ---------- start ----------
+renderHosts(); refreshForm(); renderGroups(); recalc();
+</script>
+<footer>
+    <p>&copy; 2026 <strong>vCloudOne</strong> &mdash; EVS Sizing Calculator &mdash; Architected for Enterprise</p>
+    <div class="footer-links">
+        <a href="https://x.com/dchung615" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            @dchung615
+        </a>
+        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            gitvcloudone
+        </a>
+        <a href="/">vCloudOne Home</a>
+    </div>
+</footer>
+<script>
+(function () {
+    var navToggle = document.getElementById('nav-toggle');
+    var navLinks  = document.getElementById('nav-links');
+    if (navToggle && navLinks) {
+        navToggle.addEventListener('click', function () {
+            var open = navLinks.classList.toggle('is-open');
+            navToggle.classList.toggle('is-open', open);
+            navToggle.setAttribute('aria-expanded', open);
+            navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+        });
+        navLinks.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', function () {
+                navLinks.classList.remove('is-open');
+                navToggle.classList.remove('is-open');
+                navToggle.setAttribute('aria-expanded', 'false');
+                navToggle.setAttribute('aria-label', 'Open menu');
+            });
+        });
+    }
+})();
+</script>
+</body>
+</html>
