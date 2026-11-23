@@ -42,6 +42,9 @@ header.top p { margin: 0; color: var(--muted); font-size: 13px; }
 .results { position: sticky; top: 72px; max-height: calc(100vh - 84px); overflow: auto; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 14px; }
 label.f { display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); }
+/* form fields: label text on top, control pinned to the bottom of the row at one height */
+.grid > label.f { grid-template-rows: 1fr auto; align-items: end; }
+.grid > label.f > input[type=number], .grid > label.f > input[type=text], .grid > label.f > select { height: 34px; align-self: end; }
 label.f span.u { color: var(--muted); }
 input[type=number], input[type=text], select, textarea {
   font: 14px var(--mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; width: 100%; }
@@ -266,6 +269,7 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
         </button>
         <div class="nav-links" id="nav-links">
             <a href="/evs/">EVS Overview</a>
+            <a href="/vmc-sizing/">VMC Sizing</a>
             <a href="/#guide">Prereq Guide</a>
             <a href="/#terraform">Terraform</a>
             <a href="/#validator">Validator</a>
@@ -313,8 +317,11 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
         <label class="f" style="min-width:150px">Group by
           <select id="sc_group"><option value="file">vCenter (file)</option><option value="cluster">vSphere cluster</option></select></label>
       </div>
-      <label class="f">Exclude VMs whose name matches (regular expression)
-        <input type="text" id="sc_ex" value="^vCLS" placeholder="e.g. ^vCLS|^Z-VRA"></label>
+      <label class="toggle"><input type="checkbox" id="sc_vcls" checked> Exclude vCLS agent VMs</label>
+      <label class="f">Exclude VMs whose name matches
+        <input type="text" id="sc_pat" autocomplete="off" spellcheck="false"></label>
+      <span class="hint" style="margin-top:-6px">Comma-separated, * = any characters, not case-sensitive. Examples: test-* · *-old · *temp* · APP01</span>
+      <div class="statusline" id="exclstat"></div>
       <div class="statusline" id="scopestat"></div>
     </div>
     <div class="tablewrap"><table id="groups"></table></div>
@@ -357,13 +364,14 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
     <header><h2>Storage</h2></header>
     <div class="grid">
       <label class="f">Size storage on
-        <select id="storageBasis" data-k="storageBasis"><option value="used">Guest used (vPartition)</option><option value="allocated">Allocated (vDisk capacity)</option></select></label>
+        <select id="storageBasis" data-k="storageBasis"><option value="used">Guest used</option><option value="allocated">Allocated</option></select></label>
       <label class="f">vSAN protection
         <select id="protection" data-k="protection">
           <option value="auto">Auto: RAID-6 at 6+ hosts, RAID-5 2+1 below</option><option value="raid5">FTT=1 RAID-5 (ESA adaptive)</option><option value="raid6">FTT=2 RAID-6 (6+ hosts)</option><option value="raid1">FTT=1 RAID-1</option></select></label>
       <label class="f">vSAN compression ratio<input type="number" id="compression" data-k="compression" step="0.05" min="1" max="3"></label>
       <label class="f">vSAN free-space reserve (%)<input type="number" id="vsanSlack" data-k="vsanSlack" step="1" min="0" max="50"></label>
     </div>
+    <p class="hint" style="margin:0">Guest used = space used inside the VMs (RVTools vPartition); allocated = provisioned disk size (vDisk).</p>
     <div class="row">
       <label class="toggle"><input type="checkbox" id="extOn" data-k="extOn"> External storage (FSx for NetApp ONTAP)</label>
       <label class="f" style="min-width:220px" id="extPctWrap">Share of workload storage on FSxN: <b class="num" id="extPctV"></b>
@@ -555,11 +563,12 @@ function sizeInstance(Wi, m, cfg, s, prof) {
     }
     return cl;
   };
-  let k = s.wlClusters > 0 ? s.wlClusters : 1, clusters = build(k);
-  if (!(s.wlClusters > 0)) while (clusters.some(c => c.total > s.maxCluster) && k < 64) clusters = build(++k);
+  let k = s.wlClusters > 0 ? s.wlClusters : 1, clusters = build(k), raisedK = false;
+  const over = (cl) => cl.some(c => c.role !== "mgmt" && c.total > s.maxCluster);
+  while (over(clusters) && k < 64) { clusters = build(++k); if (s.wlClusters > 0) raisedK = true; }
   const total = clusters.reduce((a, c) => a + c.total, 0);
   const work = Wi.stor;
-  return { clusters, k, total, work, fsx: cfg.diskless ? Wi.stor + m.stor : Wi.stor * ext, mgmt: m, Wi,
+  return { clusters, k, raisedK, total, work, fsx: cfg.diskless ? Wi.stor + m.stor : Wi.stor * ext, mgmt: m, Wi,
     vsanDemand: clusters.reduce((a, c) => a + c.d.vsan, 0), capCR: clusters.reduce((a, c) => a + c.capCR, 0),
     vsanUsableTiB: clusters.reduce((a, c) => a + c.vsanUsable, 0) };
 }
@@ -576,12 +585,23 @@ function size(s, groups, opts = {}) {
   const storWork = (s.storageBasis === "allocated" ? w.allocTiB : w.usedTiB) * g;
   const W = { vcpu: w.vcpu * g, ram: w.vramGiB * (1 + s.vmOverhead / 100) * g, stor: storWork + w.templTiB };
   const mg = (p) => ({ vcpu: p.vcpu, ram: p.ram, stor: p.disk * 1e9 / TIB });
+  // a cluster can't be smaller than its minimum (profile, protection, spares), so the max can't be either
+  const m1 = mg(prof.first), profFloor = Math.max(prof.ha ? 4 : (cfg.diskless ? 2 : 3), storageMin(cfg, s));
+  const mgmtMin = sizeCluster({ vcpu: m1.vcpu, ram: m1.ram, vsan: cfg.diskless ? 0 : m1.stor }, cfg, s, profFloor).total;   // a cluster holding only management
+  const minCl = Math.max(profFloor, storageMin(cfg, s), 1 + s.spares, mgmtMin);
+  const userMax = s.maxCluster;
+  s = { ...s, maxCluster: Math.max(s.maxCluster, minCl) };
+  const build = (n) => Array.from({ length: n }, (_, i) => sizeInstance({ vcpu: W.vcpu / n, ram: W.ram / n, stor: W.stor / n }, mg(i === 0 ? prof.first : prof.add), cfg, s, prof));
+  const clustersOK = (x) => x.clusters.every(c => c.role === "mgmt" || c.total <= s.maxCluster);   // a management cluster can't be split
+  // Smallest an instance can be (management + minimum workload cluster): if that's over the limit, more instances can't help
+  const tiny = (p) => sizeInstance({ vcpu: W.vcpu * 1e-6, ram: W.ram * 1e-6, stor: W.stor * 1e-6 }, mg(p), cfg, s, prof).total;
+  const overflow = Math.max(tiny(prof.first), tiny(prof.add)) > s.hostsPerInstance;
   let inst = [], n = 1;
   for (; n <= 64; n++) {
-    inst = [];
-    for (let i = 0; i < n; i++) inst.push(sizeInstance({ vcpu: W.vcpu / n, ram: W.ram / n, stor: W.stor / n }, mg(i === 0 ? prof.first : prof.add), cfg, s, prof));
-    if (inst.every(x => x.total <= s.hostsPerInstance && x.clusters.every(c => c.total <= s.maxCluster))) break;
+    inst = build(n);
+    if (overflow ? inst.every(clustersOK) : inst.every(x => x.total <= s.hostsPerInstance && clustersOK(x))) break;
   }
+  const tooMany = n > 64;
   const all = inst.flatMap(x => x.clusters);
   const hosts = inst.reduce((a, x) => a + x.total, 0);
   const cores = hosts * h.cores;
@@ -611,6 +631,8 @@ function size(s, groups, opts = {}) {
     fsxTiB: inst.reduce((a, x) => a + x.fsx, 0), activePctOfDram: cfg.tiering ? activeGiB / (hosts * h.ramGiB) : null,
     growthFactor: g, storWork, storTempl: w.templTiB, storMgmt, head, limiter,
     feasible: all.every(c => c.storOK) && inst.every(x => x.total <= s.hostsPerInstance),
+    overflow, tooMany, maxRaised: s.maxCluster > userMax ? { from: userMax, to: s.maxCluster } : null, raisedK: inst.some(x => x.raisedK),
+    minInstance: Math.max(tiny(prof.first), tiny(prof.add)), mgmtOver: inst.some(x => x.clusters.some(c => c.role === "mgmt" && c.total > s.maxCluster)),
   };
   res.warnings = warnings(res, s);
   return res;
@@ -618,6 +640,11 @@ function size(s, groups, opts = {}) {
 
 function warnings(r, s) {
   const w = [];
+  if (r.tooMany) w.push({ lvl: "crit", t: "This needs more than 64 EVS instances, so the result is incomplete. Raise Max hosts per cluster or per instance, or use fewer spare hosts." });
+  if (r.overflow) w.push({ lvl: "crit", t: `Each EVS instance needs at least ${r.minInstance} hosts (management plus minimum workload clusters), more than the ${s.hostsPerInstance}-host limit per instance, so adding instances can't make it fit. Raise Max hosts per EVS instance, or use fewer spare hosts, Auto protection or a smaller profile.` });
+  if (r.maxRaised) w.push({ lvl: "warn", t: `Max hosts per cluster is ${r.maxRaised.from}, but a cluster here needs at least ${r.maxRaised.to} (profile minimum, protection, management load and spare hosts), so ${r.maxRaised.to} is used.` });
+  if (r.mgmtOver) w.push({ lvl: "warn", t: `The management cluster needs more than ${s.maxCluster} hosts (management load plus ${s.spares} spare${s.spares === 1 ? "" : "s"}); a management cluster can't be split.` });
+  if (r.raisedK) w.push({ lvl: "warn", t: `Workload clusters per instance is ${s.wlClusters}, but that would put more than ${s.maxCluster} hosts in a cluster, so more clusters were added.` });
   if (!r.feasible) w.push({ lvl: "crit", t: "vSAN can't hold the storage on this configuration (no local drives left for vSAN). Turn on external storage or reduce the memory tier." });
   if (r.cfg.diskless) w.push({ lvl: "info", t: `${r.host.id} has no local NVMe: principal storage is external (e.g. FSx for NetApp ONTAP) and memory tiering isn't available.` });
   if (r.cfg.tierShort) w.push({ lvl: "warn", t: `${r.cfg.tierDrives} tier drive(s) hold ${Math.round(r.cfg.tierGiB)} GiB per host, less than the ${Math.round(r.cfg.wantGiB)} GiB the tier ratio asks for. The tier is limited to ${Math.round(r.cfg.ratio * 100)}% of DRAM.` });
@@ -657,7 +684,7 @@ function pick(row, names) { for (const n of names) if (row[n] !== undefined && r
 function findCol(headers, names) { for (const n of names) if (headers.includes(n)) return n; return null; }
 function truthy(v) { return v === true || String(v).toLowerCase() === "true"; }
 
-function parseRVTools(vInfo, vHost, vDisk, vPartition, fileName) {
+function parseRVTools(vInfo, vHost, vDisk, vPartition, fileName, vCPU, vMemory) {
   const issues = [];
   if (!vInfo || !vInfo.length) return { fileName, error: "No vInfo sheet found. Export from RVTools with 'Export all to Excel'.", vms: [] };
   const headers = Object.keys(vInfo[0]);
@@ -680,6 +707,10 @@ function parseRVTools(vInfo, vHost, vDisk, vPartition, fileName) {
   };
   const capMap = sumBy(vDisk, ["Capacity MiB", "Capacity MB"]);
   const useMap = sumBy(vPartition, ["Consumed MiB", "Consumed MB"]);
+  // Point-in-time utilization (reference only): VM CPU usage (MHz) from vCPU, active/consumed memory (MiB) from vMemory
+  const cpuMap = sumBy(vCPU, ["Overall"]);
+  const actMap = sumBy(vMemory, ["Active"]);
+  const conMap = sumBy(vMemory, ["Consumed"]);
   if (!capMap) issues.push("No vDisk sheet: allocated storage falls back to vInfo 'Provisioned'.");
   if (!useMap) issues.push("No vPartition sheet: guest-used storage falls back to vInfo 'In Use'.");
   const vms = [];
@@ -701,6 +732,9 @@ function parseRVTools(vInfo, vHost, vDisk, vPartition, fileName) {
     const v = vms[vms.length - 1], jk = server + "|" + name;
     v.capMiB = capMap ? (capMap.get(jk) ?? null) : null;
     v.guestMiB = useMap ? (useMap.get(jk) ?? null) : null;
+    v.cpuMHz = cpuMap ? (cpuMap.get(jk) ?? null) : null;
+    v.actMiB = actMap ? (actMap.get(jk) ?? null) : null;
+    v.conMiB = conMap ? (conMap.get(jk) ?? null) : null;
   }
   let est = null;
   if (vHost && vHost.length) {
@@ -711,26 +745,48 @@ function parseRVTools(vInfo, vHost, vDisk, vPartition, fileName) {
     for (const r of rows) { const m = hc.model ? String(r[hc.model]) : "?"; models[m] = (models[m] || 0) + 1; }
     est = { hosts: rows.length, cores: rows.reduce((a, r) => a + (Number(r[hc.cores]) || 0), 0),
             ramGiB: rows.reduce((a, r) => a + (Number(r[hc.mem]) || 0), 0) / 1024, models };
+    const sp = findCol(hh, ["Speed"]), cu = findCol(hh, ["CPU usage %"]), mu = findCol(hh, ["Memory usage %"]);
+    const wsum = (col) => { let a = 0, c = 0; for (const r of rows) { const x = Number(r[col]), k = Number(r[hc.cores]) || 1; if (isFinite(x) && r[col] !== null) { a += x * k; c += k; } } return c ? a / c : null; };
+    if (sp) est.speedMHz = wsum(sp);
+    if (cu) est.cpuPct = wsum(cu);
+    if (mu) est.memPct = wsum(mu);
   } else issues.push("No vHost sheet: current-estate summary unavailable for this file.");
+  const speed = est && est.speedMHz ? est.speedMHz : null;
+  for (const v of vms) v.mhz = speed;
   const vcenters = [...new Set(vms.map(v => v.server))];
   return { fileName, vcenter: vcenters.join(", "), vms, est, issues };
 }
 
-// Build workload groups from parsed files. scope: {includeOff, templatesStorage, exclude (regex string)}, groupBy: "file"|"cluster"
+// Exclusion rules: the vCLS checkbox plus comma-separated name patterns (* = any characters, case-insensitive)
+function excludeRules(scope) {
+  const rules = [];
+  if (scope.exVcls) rules.push({ label: "vCLS", re: /^vCLS/i, count: 0, samples: [] });
+  const esc = (t) => t.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+  for (const raw of String(scope.patterns || "").split(",")) {
+    const t = raw.trim(); if (!t) continue;
+    if (rules.some(r => r.label.toLowerCase() === t.toLowerCase())) continue;
+    rules.push({ label: t, re: new RegExp("^" + t.split("*").map(esc).join(".*") + "$", "i"), count: 0, samples: [] });
+  }
+  return rules;
+}
+
+// Build workload groups from parsed files. scope: {includeOff, templatesStorage, exVcls, patterns}, groupBy: "file"|"cluster"
 function buildGroups(files, scope, groupBy) {
-  let re = null, reErr = null;
-  if (scope.exclude) { try { re = new RegExp(scope.exclude, "i"); } catch (e) { reErr = "Exclude pattern isn't a valid regular expression."; } }
-  const seen = new Set(); let dups = 0, excluded = 0, offExcluded = 0, templates = 0;
+  const rules = excludeRules(scope), reErr = null;
+  const seen = new Set(); let dups = 0, excluded = 0, offExcluded = 0, templates = 0, considered = 0;
   const groups = new Map();
   for (const f of files) {
     if (!f.include || f.error) continue;
     for (const v of f.vms) {
       if (seen.has(v.key)) { dups++; continue; }
       seen.add(v.key);
-      if (re && re.test(v.name)) { excluded++; continue; }
+      considered++;
+      const rule = rules.find(r => r.re.test(v.name));
+      if (rule) { excluded++; rule.count++; if (rule.samples.length < 5) rule.samples.push(v.name); continue; }
       const gk = groupBy === "cluster" ? `${v.server} / ${v.cluster || "(no cluster)"}` : (f.label || f.vcenter || f.fileName);
       if (!groups.has(gk)) groups.set(gk, { key: gk, vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, dsTiB: 0, templTiB: 0, templates: 0, off: 0,
-        _gUsed: 0, _gCap: 0, _noGuestCap: 0, _noGuestDs: 0, noGuest: 0 });
+        _gUsed: 0, _gCap: 0, _noGuestCap: 0, _noGuestDs: 0, noGuest: 0,
+        _cpuMHz: 0, _cpuCapMHz: 0, _act: 0, _con: 0, _memSnap: 0, maxVcpu: 0, maxRamGiB: 0, big: [] });
       const g = groups.get(gk);
       if (v.template) {
         templates++;
@@ -740,6 +796,10 @@ function buildGroups(files, scope, groupBy) {
       if (!v.on && !scope.includeOff) { offExcluded++; continue; }
       if (!v.on) g.off++;
       g.vms++; g.vcpu += v.cpus; g.vramGiB += v.memMiB / 1024;
+      g.maxVcpu = Math.max(g.maxVcpu, v.cpus); g.maxRamGiB = Math.max(g.maxRamGiB, v.memMiB / 1024);
+      if (v.cpus >= 24 || v.memMiB >= 256 * 1024) g.big.push({ name: v.name, cpus: v.cpus, memGiB: v.memMiB / 1024 });
+      if (v.on && v.cpuMHz !== null && v.cpuMHz !== undefined && v.mhz) { g._cpuMHz += v.cpuMHz; g._cpuCapMHz += v.cpus * v.mhz; }
+      if (v.on && v.actMiB !== null && v.actMiB !== undefined) { g._act += v.actMiB; g._con += v.conMiB || 0; g._memSnap += v.memMiB; }
       const cap = v.capMiB ?? v.provMiB;
       g.allocTiB += cap / 1048576; g.dsTiB += v.inuseMiB / 1048576;
       if (v.guestMiB !== null && v.guestMiB !== undefined && v.capMiB) { g._gUsed += v.guestMiB; g._gCap += v.capMiB; }
@@ -751,11 +811,14 @@ function buildGroups(files, scope, groupBy) {
     const ratio = g._gCap > 0 ? g._gUsed / g._gCap : null;
     const est = ratio === null ? g._noGuestDs : Math.min(g._noGuestCap * ratio, g._noGuestDs || Infinity);
     g.usedTiB = (g._gUsed + est) / 1048576;
+    g.snap = { cpuPct: g._cpuCapMHz > 0 ? g._cpuMHz / g._cpuCapMHz : null, actPct: g._memSnap > 0 ? g._act / g._memSnap : null, conPct: g._memSnap > 0 ? g._con / g._memSnap : null };
+    g.big.sort((a, b) => b.memGiB - a.memGiB || b.cpus - a.cpus); if (g.big.length > 300) g.big.length = 300;
     for (const k of Object.keys(g)) if (k.startsWith("_")) delete g[k];
   }
-  return { groups: [...groups.values()], dups, excluded, offExcluded, templates, reErr };
+  return { groups: [...groups.values()], dups, excluded, offExcluded, templates, reErr, considered,
+    rules: rules.map(r => ({ label: r.label, count: r.count, samples: r.samples })) };
 }
-if (typeof module !== "undefined") module.exports = { parseRVTools, buildGroups };
+if (typeof module !== "undefined") module.exports = { parseRVTools, buildGroups, excludeRules };
 
 </script>
 <script>
@@ -764,7 +827,7 @@ const S = { ...DEFAULTS, customer: "", region: "", notes: "" };
 let groups = [];          // {id, name, source:'manual'|'rvtools', include, values:{}, parsed:{}, over:Set}
 let files = [];           // parsed RVTools files
 let gid = 1;
-const scope = { includeOff: true, templatesStorage: true, exclude: "^vCLS", groupBy: "file" };
+const scope = { includeOff: true, templatesStorage: true, exVcls: true, patterns: "", groupBy: "file" };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const nf = (n, d = 0) => (n === null || n === undefined || !isFinite(n)) ? "–" : Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -772,8 +835,6 @@ const pct = (x, d = 0) => (x === null || x === undefined || !isFinite(x)) ? "–
 const FIELDS = [["vms", "VMs", 0], ["vcpu", "vCPU", 0], ["vramGiB", "vRAM GiB", 0], ["usedTiB", "Used TiB", 1], ["allocTiB", "Allocated TiB", 1], ["templTiB", "Templates TiB", 1]];
 
 // ---------- example to open with ----------
-groups.push({ id: gid++, name: "Example workload – edit or replace", source: "manual", include: true, example: true,
-  values: { vms: 1200, vcpu: 4800, vramGiB: 19200, usedTiB: 95, allocTiB: 180, templTiB: 0 }, parsed: null, over: new Set() });
 
 // ---------- static UI ----------
 function renderHosts() {
@@ -917,8 +978,8 @@ function renderFiles() {
 }
 $("filelist").addEventListener("change", e => { const tr = e.target.closest("tr[data-f]"); if (!tr) return; files[+tr.dataset.f].include = e.target.checked; rebuildRV(); });
 $("filelist").addEventListener("click", e => { if (!e.target.classList.contains("f-del")) return; files.splice(+e.target.closest("tr").dataset.f, 1); renderFiles(); rebuildRV(); });
-for (const [id, k, prop] of [["sc_off", "includeOff", "checked"], ["sc_tpl", "templatesStorage", "checked"], ["sc_group", "groupBy", "value"], ["sc_ex", "exclude", "value"]])
-  $(id).addEventListener(id === "sc_ex" ? "change" : "input", e => { scope[k] = e.target[prop]; rebuildRV(); });
+for (const [id, k, prop] of [["sc_off", "includeOff", "checked"], ["sc_tpl", "templatesStorage", "checked"], ["sc_group", "groupBy", "value"], ["sc_vcls", "exVcls", "checked"], ["sc_pat", "patterns", "value"]])
+  $(id).addEventListener(id === "sc_pat" ? "change" : "input", e => { scope[k] = e.target[prop]; rebuildRV(); });
 
 function rebuildRV() {
   const ok = files.filter(f => f.status === "ok");
@@ -933,8 +994,14 @@ function rebuildRV() {
   });
   if (fresh.length) groups = groups.filter(g => !g.example);
   groups = [...fresh, ...groups.filter(g => g.source === "manual")];
-  $("scopestat").textContent = b.reErr ? b.reErr
-    : `${nf(b.excluded)} VMs excluded by name · ${nf(b.dups)} duplicates removed · ${nf(b.templates)} templates (${scope.templatesStorage ? "storage only" : "not counted"})`
+  const tip = (r) => r.count ? `${r.label} matched ${nf(r.count)} VM${r.count > 1 ? "s" : ""}, e.g.\n  ${r.samples.join("\n  ")}${r.count > r.samples.length ? `\n  …and ${nf(r.count - r.samples.length)} more` : ""}`
+    : `${r.label} didn't match any VM. Check the spelling, or remove it.`;
+  const big = b.rules.filter(r => b.considered > 0 && r.count / b.considered > 0.5);
+  $("exclstat").innerHTML = b.rules.length
+    ? `Excluded: ${b.rules.map(r => `<span title="${esc(tip(r))}" style="cursor:help;border-bottom:1px dotted currentColor">${esc(r.label)} ${nf(r.count)}${r.count ? "" : " ⚠"}</span>`).join(" · ")} · ${nf(b.excluded)} VMs in total`
+      + big.map(r => `<br><span class="pill warn">⚠ ${esc(r.label)} excludes ${pct(r.count / b.considered)} of the VMs. Check it's what you meant.</span>`).join("")
+    : "No VMs excluded by name.";
+  $("scopestat").textContent = `${nf(b.dups)} duplicates removed · ${nf(b.templates)} templates (${scope.templatesStorage ? "storage only" : "not counted"})`
       + (scope.includeOff ? "" : ` · ${nf(b.offExcluded)} powered-off VMs left out`);
   // current estate
   const est = ok.filter(f => f.include && f.est);
@@ -1116,7 +1183,7 @@ async function exportXlsx() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Host type", "Hosts", "Instances", "Clusters", "Core licences", "Limited by", "FSxN TiB"],
     ...HOSTS.map(x => { const rr = size(S, groups, { hostId: x.id }); return [x.id, rr.hosts, rr.n, rr.clusters, rr.licCores, rr.limiter, +rr.fsxTiB.toFixed(1)]; })]), "Host comparison");
   const inp = Object.entries(S).filter(([k]) => !["customer", "region", "notes"].includes(k)).map(([k, v]) => [k, v]);
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Setting", "Value"], ...inp, [], ["RVTools scope", ""], ["Include powered-off", scope.includeOff], ["Templates storage only", scope.templatesStorage], ["Exclude pattern", scope.exclude], ["Group by", scope.groupBy],
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Setting", "Value"], ...inp, [], ["RVTools scope", ""], ["Include powered-off", scope.includeOff], ["Templates storage only", scope.templatesStorage], ["Exclude vCLS", scope.exVcls], ["Exclude patterns", scope.patterns], ["Group by", scope.groupBy],
     [], ["Files", ""], ...files.map(f => [f.fileName, f.status + (f.vms ? ` (${f.vms.length} VMs)` : "")])]), "Inputs");
   const data = XLSX.write(wb, { bookType: "xlsx", type: "array" });
   const name = `EVS_sizing_${(S.customer || "customer").replace(/[^\w-]+/g, "_")}_${today}.xlsx`;

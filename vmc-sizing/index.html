@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VMC Sizing | vCloudOne</title>
+<meta name="description" content="VMware Cloud on AWS sizing calculator: hosts, SDDCs and clusters from RVTools exports or manual totals, single-AZ or stretched.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☁</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* Layout idea: form on the left, live results pinned on the right – an engineer's worksheet. */
+/* Layout idea: form on the left, live results pinned on the right – an engineer's worksheet. Colours follow vcloudone.com. */
+:root {
+  --bg: #f8fafc; --panel: #ffffff; --ink: #1a1a2e; --muted: #6b7280; --line: #e5e7eb;
+  --accent: #0073bb; --accent-soft: #e8f4fd; --orange: #ff9900; --orange-dk: #e68900; --orange-soft: #fff4e0;
+  --nav-bg: #161f2c; --primary: #0f1923; --white: #ffffff;
+  --good: #1f7a45; --warn: #b45309; --crit: #b42318;
+  --good-soft: #e7f6ec; --warn-soft: #fff4e0; --crit-soft: #fde8e6;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--body); }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: 22px; letter-spacing: .2px; }
+h2 { font-size: 16px; text-transform: uppercase; letter-spacing: .6px; color: var(--accent); }
+h3 { font-size: 15px; }
+.num, td.n, .big { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+header.top { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; justify-content: space-between;
+  padding: 16px 20px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+header.top p { margin: 0; color: var(--muted); font-size: 13px; }
+.wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; padding: 16px 20px 40px; max-width: 1500px; margin: 0 auto; }
+@media (max-width: 980px) { .wrap { grid-template-columns: 1fr; padding: 12px 16px 40px; } .results { position: static !important; max-height: none !important; } }
+.col { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 12px; min-width: 0; }
+.card > header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.hint { color: var(--muted); font-size: 12.5px; }
+.results { position: sticky; top: 72px; max-height: calc(100vh - 84px); overflow: auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 14px; }
+label.f { display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); }
+/* form fields: label text on top, control pinned to the bottom of the row at one height */
+.grid > label.f { grid-template-rows: 1fr auto; align-items: end; }
+.grid > label.f > input[type=number], .grid > label.f > input[type=text], .grid > label.f > select { height: 34px; align-self: end; }
+label.f span.u { color: var(--muted); }
+input[type=number], input[type=text], select, textarea {
+  font: 14px var(--mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; width: 100%; }
+input[type=text], textarea { font-family: var(--body); }
+input:focus-visible, select:focus-visible, button:focus-visible, textarea:focus-visible, .hostcard:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.toggle { display: inline-flex; gap: 8px; align-items: center; font-weight: 500; cursor: pointer; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+button { font: 500 13px var(--body); border-radius: 5px; border: 1px solid var(--accent); background: var(--accent); color: #fff; padding: 7px 12px; cursor: pointer; }
+button.ghost { background: transparent; color: var(--accent); }
+button.link { border: 0; background: none; color: var(--accent); padding: 0; text-decoration: underline; font-size: 12px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.drop { border: 2px dashed var(--line); border-radius: 8px; padding: 16px; text-align: center; color: var(--muted); cursor: pointer; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+.drop strong { color: var(--ink); }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 5px 7px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; white-space: nowrap; }
+th { font: 600 11.5px var(--body); text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+td.n, th.n { text-align: right; }
+tr.tot td { font-weight: 600; border-top: 2px solid var(--line); }
+tr.sel td { background: var(--accent-soft); }
+td input[type=number] { width: 92px; padding: 3px 6px; text-align: right; }
+td input.ov { border-color: var(--warn); background: var(--warn-soft); }
+td input[type=text] { min-width: 150px; padding: 3px 6px; }
+.hosts { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.hostcard { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; display: grid; gap: 3px; cursor: pointer; position: relative; }
+.hostcard input { position: absolute; opacity: 0; }
+.hostcard.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+.hostcard b { font-family: var(--mono); font-size: 13.5px; }
+.hostcard small { color: var(--muted); font-size: 12px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+.pill.good { background: var(--good-soft); color: var(--good); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.crit { background: var(--crit-soft); color: var(--crit); }
+.headline { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; display: grid; gap: 2px; }
+.tile .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+.tile .big { font-size: 26px; font-weight: 500; line-height: 1.1; }
+.tile.main { border-color: var(--orange); background: var(--orange-soft); }
+.tile .d { font-size: 12px; color: var(--muted); }
+.delta.down { color: var(--good); } .delta.up { color: var(--crit); }
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 92px 1fr 64px; gap: 8px; align-items: center; font-size: 12.5px; }
+.bar .t { height: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+.bar .t i { display: block; height: 100%; background: var(--accent); }
+.bar.lim .t i { background: var(--orange); }
+.warns { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.warns li { padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 4px; font-size: 13px; }
+.warns li.warn { border-color: var(--warn); background: var(--warn-soft); } .warns li.crit { border-color: var(--crit); background: var(--crit-soft); }
+.grid2 { display: grid; grid-template-columns: auto 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-size: 13px; }
+.grid2 > div { background: var(--panel); padding: 6px 9px; }
+.grid2 .h { font-weight: 600; color: var(--muted); font-size: 12px; }
+.grid2 .best { background: var(--good-soft); font-weight: 600; }
+details summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+.note { font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 8px; }
+.statusline { font-size: 12.5px; color: var(--muted); }
+dialog { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); max-width: 640px; width: 92vw; }
+dialog::backdrop { background: rgb(0 0 0 / .35); }
+.mgmt { font-family: var(--mono); font-size: 13px; background: var(--bg); border-radius: 6px; padding: 8px 10px; }
+.hidden { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ── vCloudOne site nav and footer ── */
+        /* ── NAV ── */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--nav-bg);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 1.15rem;
+            letter-spacing: -0.3px;
+        }
+        .nav-logo img { height: 36px; width: auto; }
+        .nav-logo .sep { color: rgba(255,255,255,0.3); margin: 0 2px; }
+        .nav-logo .page-name { color: var(--orange); }
+        .nav-links { display: flex; align-items: center; gap: 0.25rem; }
+        .nav-links a {
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-links a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nav-links .btn-nav {
+            background: var(--orange);
+            color: var(--primary);
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        .nav-links .btn-nav:hover { background: var(--orange-dk); color: var(--primary); }
+        .nav-social { display: flex; align-items: center; gap: 0.25rem; margin-left: 0.25rem; }
+        .nav-social a {
+            display: flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 6px;
+            color: rgba(255,255,255,0.65);
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-social a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nav-social svg { width: 18px; height: 18px; }
+
+        footer {
+            background: var(--nav-bg);
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            padding: 2.5rem 1.5rem;
+            font-size: 0.88rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        footer strong { color: rgba(255,255,255,0.8); }
+        footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
+        footer a:hover { color: white; }
+        .footer-links { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 0.75rem; }
+        .footer-links a { display: flex; align-items: center; gap: 0.35rem; }
+
+        /* ── HAMBURGER ── */
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            color: rgba(255,255,255,0.8);
+            border-radius: 6px;
+            transition: background 0.15s;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+        .nav-toggle:hover { background: rgba(255,255,255,0.08); }
+        .nav-toggle-bar {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: currentColor;
+            border-radius: 2px;
+            transition: transform 0.25s ease, opacity 0.2s ease;
+        }
+        .nav-toggle.is-open .nav-toggle-bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .nav-toggle.is-open .nav-toggle-bar:nth-child(2) { opacity: 0; transform: scaleX(0); }
+        .nav-toggle.is-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .nav-toggle { display: flex; }
+
+            .nav-links {
+                display: none;
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                background: var(--nav-bg);
+                border-top: 1px solid rgba(255,255,255,0.08);
+                border-bottom: 1px solid rgba(255,255,255,0.08);
+                padding: 0.5rem 1.5rem 1rem;
+                gap: 0;
+                z-index: 99;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            }
+            .nav-links.is-open { display: flex; }
+
+            .nav-links a {
+                padding: 0.75rem 0;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+                border-radius: 0;
+                font-size: 0.95rem;
+                width: 100%;
+            }
+            .nav-links .btn-nav {
+                margin-left: 0;
+                margin-top: 0.6rem;
+                text-align: center;
+                padding: 0.75rem 1rem;
+                border-radius: 8px;
+                border-bottom: none;
+            }
+            .nav-social {
+                flex-direction: row;
+                justify-content: flex-start;
+                margin-left: 0;
+                padding: 0.75rem 0;
+                gap: 0.5rem;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+            }
+
+        nav button.nav-toggle { background: none; border: none; color: rgba(255,255,255,0.8); padding: 8px; }
+        footer { margin-top: 24px; }
+</style>
+</head>
+<body>
+<nav>
+    <div class="nav-inner">
+        <a href="/" class="nav-logo">
+            <img src="/vcloudone_button.png" alt="vCloudOne">
+            vCloudOne<span class="sep">/</span><span class="page-name">VMC Sizing</span>
+        </a>
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+            <span class="nav-toggle-bar"></span>
+            <span class="nav-toggle-bar"></span>
+            <span class="nav-toggle-bar"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+            <a href="/evs/">EVS Overview</a>
+            <a href="/evs-sizing/">EVS Sizing</a>
+            <a href="/#guide">Prereq Guide</a>
+            <a href="/#terraform">Terraform</a>
+            <a href="/#validator">Validator</a>
+            <div class="nav-social">
+                <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="@dchung615 on X">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="GitHub">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                </a>
+            </div>
+            <a href="/" class="btn-nav">&larr; Home</a>
+        </div>
+    </div>
+</nav>
+<style>
+.addons { display: grid; gap: 10px; }
+.addon { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; display: grid; gap: 8px; }
+.addon .hint { font-size: 12px; }
+tr.gopt td { border-bottom: 1px solid var(--line); padding-top: 0; white-space: normal; }
+tr.gopt .optrow { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--muted); padding: 2px 0 6px 28px; }
+tr.gopt input[type=number] { width: 64px; padding: 2px 5px; }
+tr.gopt select { width: auto; padding: 2px 5px; font-size: 12px; }
+tr.gopt label { display: inline-flex; gap: 5px; align-items: center; }
+tr.ghead td { border-bottom: 0; }
+.snap { font-family: var(--mono); font-size: 11.5px; }
+.tile.warntile { border-color: var(--warn); }
+/* form fields: label text on top, control pinned to the bottom of the row at one height */
+.grid > label.f { grid-template-rows: 1fr auto; align-items: end; }
+.grid > label.f > input[type=number], .grid > label.f > input[type=text], .grid > label.f > select { height: 34px; align-self: end; }
+</style>
+<header class="top">
+  <h1>VMware Cloud on AWS Sizing Calculator</h1>
+  <p>Hosts, SDDCs and clusters from RVTools or manual totals · single-AZ or stretched</p>
+</header>
+
+<div class="wrap">
+<main class="col" id="form">
+
+  <section class="card">
+    <header><h2>Project</h2></header>
+    <div class="grid">
+      <label class="f">Customer <input type="text" id="p_customer" data-k="customer" placeholder="Customer name"></label>
+      <label class="f">AWS region <input type="text" id="p_region" data-k="region" placeholder="e.g. us-east-1"></label>
+    </div>
+    <label class="f">Notes <textarea id="p_notes" data-k="notes" rows="2" placeholder="Assumptions specific to this deal (carried into the export)"></textarea></label>
+  </section>
+
+  <section class="card">
+    <header><h2>Workload</h2><span class="hint">Import RVTools, enter totals by hand, or both</span></header>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add RVTools exports">
+      <strong>Drop RVTools exports here</strong> or click to choose (.xlsx / .xlsm, several files at once).<br>
+      <span class="hint">Files are read in your browser and never uploaded.</span>
+      <input type="file" id="file" accept=".xlsx,.xlsm" multiple class="hidden">
+    </div>
+    <div id="filelist"></div>
+    <div id="scope" class="hidden">
+      <div class="row">
+        <label class="toggle"><input type="checkbox" id="sc_off" checked> Include powered-off VMs</label>
+        <label class="toggle"><input type="checkbox" id="sc_tpl" checked> Count templates (storage only)</label>
+        <label class="f" style="min-width:150px">Group by
+          <select id="sc_group"><option value="file">vCenter (file)</option><option value="cluster">vSphere cluster</option></select></label>
+      </div>
+      <label class="toggle"><input type="checkbox" id="sc_vcls" checked> Exclude vCLS agent VMs</label>
+      <label class="f">Exclude VMs whose name matches
+        <input type="text" id="sc_pat" autocomplete="off" spellcheck="false"></label>
+      <span class="hint" style="margin-top:-6px">Comma-separated, * = any characters, not case-sensitive. Examples: test-* · *-old · *temp* · APP01</span>
+      <div class="statusline" id="exclstat"></div>
+      <div class="statusline" id="scopestat"></div>
+    </div>
+    <div class="tablewrap"><table id="groups"></table></div>
+    <div class="row"><button class="ghost" id="addgrp" type="button">Add manual group</button>
+      <span class="hint">Amber cells are overridden by hand. Storage basis is set under Storage. Peak CPU % / peak RAM % (from monitoring) size a group on use instead of the ratios: cores = vCPU × peak CPU % ÷ 80% (cores kept at or below 80% busy at peak); RAM = vRAM × peak RAM %.</span></div>
+    <div id="estate" class="hidden"></div>
+  </section>
+
+  <section class="card">
+    <header><h2>Host type</h2><span class="hint">All hosts in a cluster use one type</span></header>
+    <div class="hosts" id="hosts"></div>
+  </section>
+
+  <section class="card">
+    <header><h2>SDDC design</h2><button class="link" type="button" id="resetsddc">Reset to defaults</button></header>
+    <div class="grid">
+      <label class="f">Deployment<select id="deploy" data-k="deploy"><option value="single">Single AZ</option><option value="stretched">Stretched across two AZs</option></select></label>
+      <label class="f">SDDC appliance size<select id="appliance" data-k="appliance"><option value="auto">Auto (Large above 30 hosts or 3,000 VMs)</option><option value="medium">Medium</option><option value="large">Large</option></select></label>
+      <label class="f">SDDCs<select id="sddcCount" data-k="sddcCount" data-num="1"></select></label>
+      <label class="f" id="mgmtHostsWrap">Management cluster hosts<input type="number" id="mgmtHosts" data-k="mgmtHosts" step="1" min="2" max="16"></label>
+      <label class="f">Cluster-1<select id="mgmtCluster" data-k="mgmtCluster"><option value="shared">Management + workloads</option><option value="dedicated">Management only</option></select></label>
+      <label class="f">Clusters per SDDC (incl. Cluster-1)<select id="wlClusters" data-k="wlClusters" data-num="1"></select></label>
+      <label class="f">Max hosts per cluster<input type="number" id="maxCluster" data-k="maxCluster" step="1" min="2" max="16"></label>
+    </div>
+    <div class="mgmt" id="mgmtnote"></div>
+    <p class="hint" style="margin:0">Sized like VMC HA: workloads run on all hosts with no spare host, because VMC's auto-remediation replaces a failed host; stretched clusters are sized so either AZ can run everything. Clusters hold 2–16 hosts (stretched: in pairs). Clusters per SDDC: Auto fills each cluster to the max hosts in order and opens a new SDDC past VMC's 20 clusters or 300 hosts; a number spreads each SDDC's hosts evenly over that many clusters (extra hosts go to Cluster-1, Cluster-2, … in order) and opens a new SDDC once they're all full. Set SDDCs to split a large estate on purpose (e.g. one SDDC per AZ, or to spread north-south traffic across more NSX Edges); the workload is divided evenly and each SDDC carries its own management appliances.</p>
+  </section>
+
+  <section class="card">
+    <header><h2>Add-on services</h2><span class="hint">Appliances run in Cluster-1 of every SDDC</span></header>
+    <div class="addons">
+      <div class="addon">
+        <label class="toggle"><input type="checkbox" id="hcxOn" data-k="hcxOn"> HCX</label>
+        <div class="grid" data-for="hcxOn">
+          <label class="f">HCX Cloud Manager size<select id="hcxMgr" data-k="hcxMgr"><option value="default">Default (4 vCPU, 12 GB)</option><option value="mon">MON scale-up (8 vCPU, 24 GB)</option><option value="large">Large migration (16 vCPU, 48 GB)</option></select></label>
+          <label class="f">Network Extension appliances<input type="number" id="hcxNe" data-k="hcxNe" step="1" min="0" max="20"></label>
+          <label class="toggle" style="align-self:end"><input type="checkbox" id="hcxNeHa" data-k="hcxNeHa"> Network Extension HA</label>
+        </div>
+        <span class="hint">Cloud Manager + one Interconnect (8 vCPU, 6 GB) + Network Extension (8 vCPU, 3 GB each; up to 8 networks per appliance; HA doubles them).</span>
+      </div>
+      <div class="addon">
+        <label class="toggle"><input type="checkbox" id="vlrOn" data-k="vlrOn"> VMware Live Recovery (cloud side)</label>
+        <div class="grid" data-for="vlrOn">
+          <label class="f">Protected VMs<input type="number" id="vlrVms" data-k="vlrVms" step="50" min="0" max="5000"></label>
+        </div>
+        <span class="hint">SRM appliance (light below 1,000 VMs) + vSphere Replication appliance + 1 replication server per extra 400 VMs. Replicas and failover compute are workload: add them as a group.</span>
+      </div>
+      <div class="addon">
+        <label class="toggle"><input type="checkbox" id="afwOn" data-k="afwOn"> Distributed IDS/IPS (vDefend, paid add-on)</label>
+        <span class="hint">Layer 7 App ID, FQDN filtering and Identity Firewall are included with VMC and add no overhead. IDS/IPS has no appliances. It allows 2 GB of RAM per host; its CPU (up to 5 cores per host) scales with inspected traffic and uses the headroom the CPU ratio leaves, so for heavy inspection lower the CPU ratio. Subscribed per core (one per physical core in the output).</span>
+      </div>
+      <div class="addon">
+        <label class="toggle"><input type="checkbox" id="multiEdge" data-k="multiEdge"> Multi-Edge SDDC (traffic groups)</label>
+        <div class="grid" data-for="multiEdge">
+          <label class="f">Extra edge pairs<input type="number" id="edgePairs" data-k="edgePairs" step="1" min="1" max="4"></label>
+        </div>
+        <span class="hint">For more north-south throughput. Requires Large appliances; each extra Large NSX Edge is 8 vCPU, 32 GB.</span>
+      </div>
+    </div>
+    <div id="addonload"></div>
+  </section>
+
+  <section class="card">
+    <header><h2>Sizing policy</h2><button class="link" type="button" id="resetpol">Reset to defaults</button></header>
+    <div class="grid">
+      <label class="f">CPU ratio (vCPU : physical core)<input type="number" id="cpuRatio" data-k="cpuRatio" step="0.1" min="0.5"></label>
+      <label class="f">Target RAM ratio (vRAM : host RAM)<input type="number" id="ramRatio" data-k="ramRatio" step="0.05" min="1" max="2"></label>
+      <label class="f">Host memory reserve (%)<input type="number" id="memReserve" data-k="memReserve" step="1" min="0" max="50"></label>
+      <label class="f">Memory fill target (%)<input type="number" id="memFill" data-k="memFill" step="1" min="10" max="100"></label>
+      <label class="f">VM memory overhead (%)<input type="number" id="vmOverhead" data-k="vmOverhead" step="1" min="0" max="30"></label>
+      <label class="f">Growth over contract term (%)<input type="number" id="growth" data-k="growth" step="1" min="0"></label>
+    </div>
+    <p class="hint" style="margin:0" id="growthhint"></p>
+    <p class="hint" style="margin:0" id="ramhint"></p>
+  </section>
+
+  <section class="card">
+    <header><h2>Storage</h2></header>
+    <div class="grid">
+      <label class="f">Size storage on
+        <select id="storageBasis" data-k="storageBasis"><option value="used">Guest used</option><option value="allocated">Allocated</option></select></label>
+      <label class="f">Space efficiency ratio<input type="number" id="compression" data-k="compression" step="0.05" min="1" max="3"></label>
+      <label class="f">Free-space reserve (%)<input type="number" id="vsanSlack" data-k="vsanSlack" step="1" min="0" max="50"></label>
+      <label class="f">Mgmt storage per SDDC (TiB)<input type="number" id="mgmtStorTiB" data-k="mgmtStorTiB" step="0.1" min="0"></label>
+    </div>
+    <p class="hint" style="margin:0">Guest used = space used inside the VMs (RVTools vPartition); allocated = provisioned disk size (vDisk). Space efficiency ratio is vSAN compression only: VMC i4i/i7i don't dedupe. Free-space reserve keeps vSAN below 75% used (VMC slack; Elastic DRS adds hosts at 80%).</p>
+    <p class="mgmt" id="policynote" style="margin:0"></p>
+    <div class="row">
+      <label class="toggle"><input type="checkbox" id="extOn" data-k="extOn"> External NFS storage (FSx for NetApp ONTAP)</label>
+      <label class="f" style="min-width:220px" id="extPctWrap">Share of workload storage on FSxN: <b class="num" id="extPctV"></b>
+        <input type="range" id="extPct" data-k="extPct" min="0" max="100" step="5"></label>
+    </div>
+    <p class="hint" style="margin:0" id="storhint"></p>
+    <div id="storneed"></div>
+  </section>
+
+  <section class="card" id="tiercard">
+    <header><h2>Memory tiering <span class="pill warn">What-if</span></h2><span class="hint">Not yet available on VMC: what-if only</span></header>
+    <p class="mgmt" id="tierinv" style="margin:0"></p>
+    <div class="row"><label class="toggle"><input type="checkbox" id="tierOn" data-k="tierOn"> Use memory tiering (what-if)</label></div>
+    <div class="grid" id="tierfields">
+      <label class="f">Drives for memory tier<select id="tierDrives" data-k="tierDrives" data-num="1"></select></label>
+      <label class="f">Tier ratio (% of DRAM)<input type="number" id="tierRatio" data-k="tierRatio" step="25" min="25" max="400"></label>
+      <label class="f">Workload active memory (% of vRAM)<input type="number" id="activePct" data-k="activePct" step="1" min="0" max="100"></label>
+      <label class="toggle" style="align-self:end"><input type="checkbox" id="tierMirror" data-k="tierMirror"> Mirror NVMe tier</label>
+    </div>
+    <p class="hint" id="tierhint" style="margin:0"></p>
+  </section>
+
+  <section class="card">
+    <header><h2>Settings</h2></header>
+    <div class="row">
+      <button type="button" class="ghost" id="copyset">Copy settings</button>
+      <button type="button" class="ghost" id="loadset">Load settings</button>
+      <span class="hint" id="setmsg">Settings and workload totals as text, to save or send to someone.</span>
+    </div>
+  </section>
+
+  <section class="card note">
+    <h3>Sources and assumptions</h3>
+    <ul style="margin:0;padding-left:18px">
+      <li>Host types: i4i.metal (64 cores, 1,024 GiB, 8 × 3.75 TB NVMe) and i7i.metal-24xl (48 cores, 768 GiB, 6 × 3.75 TB) per Broadcom VMC docs and the i7i announcement (Apr 2026). i7ie.metal-24xl isn't offered on VMC yet: EC2 specification (48 cores, 768 GiB, 8 × 7.5 TB).</li>
+      <li>vSAN: new single-AZ SDDCs deploy on ESA (every drive is capacity); stretched clusters deploy on OSA (two drives per host for cache). i4i raw: 27.28 TiB ESA, 20.46 TiB OSA. Compression is on by default on both (no deduplication).</li>
+      <li>Limits: 2–16 hosts per cluster; 10 clusters per SDDC by default, 20 on request; 300 hosts per SDDC. Stretched clusters grow in pairs; 6+ hosts for the 99.99% SLA. Management CIDR is an output: the smallest range for each SDDC's hosts (/23 = 27 hosts, 22 stretched; /20 = 251, 246; /16 = SDDC maximum), or the next size up when within 20% of that range's limit, since it can't be changed after deployment.</li>
+      <li>Management: vCenter, NSX Managers and NSX Edges run in Cluster-1's Mgmt-ResourcePool with full reservations – Medium 34 vCPU / 116 GB, Large 68 vCPU / 240 GB (vCPU counted at the CPU ratio, RAM 1:1). Large is recommended above 30 hosts or 3,000 VMs and needs 3+ hosts in Cluster-1 (6+ stretched). Management storage defaults to the 11.12 TB management reservation in the VMC validated design (editable).</li>
+      <li>vSAN policy follows the VMC Managed Storage Policy: single-AZ RAID-1 at 2 hosts (mirrored across both hosts with a VMware-managed witness), RAID-5 2+1 (ESA) or RAID-1 (OSA) at 3–5, RAID-6 4+2 at 6+; stretched: dual site mirroring, adding local RAID-1 at 6+ hosts. Usable = raw × (1 − reserve) × compression ÷ policy factor, on all hosts in the cluster. VMC keeps 25% slack; Elastic DRS adds hosts at 80% used.</li>
+      <li>Management-only Cluster-1: a fixed host count (default 4, no extra HA host on top), raised only if the management load or the Large-appliance minimum needs more. Management vCPU is counted at the workload CPU ratio and RAM 1:1 (reservations are a GHz/GB pool, not a core per vCPU). Add-ons (per SDDC, Cluster-1): HCX Cloud Manager 4 vCPU / 12 GB / 64 GB (MON scale-up 8 / 24; large migration 16 / 48), Interconnect 8 / 6 GB, Network Extension 8 / 3 GB each (HA doubles; WAN Optimization retired Jan 2026). VMware Live Recovery: SRM 2 / 8 GB (light, under 1,000 VMs) or 4 / 12 GB, vSphere Replication 4 / 12 GB, plus one server (2 / 1 GB) per additional 400 replications. Multi-Edge: Large appliances and 2 Large edges (8 / 32 GB) per extra pair. NSX Advanced Firewall: Layer 7 App ID, FQDN filtering and Identity Firewall are included with VMC (since Feb 2024); Distributed IDS/IPS is a paid vDefend add-on, subscribed per core, with no appliances: 2 GB RAM per host is deducted; its CPU (up to 5 cores per host, in proportion to inspected traffic) isn't deducted because it uses the headroom the CPU ratio already leaves.</li>
+      <li>Utilization: peak CPU/RAM % per group replaces the ratios for that group; RVTools snapshot values (vCPU "Overall", vMemory "Active"/"Consumed") are shown for reference only. Large VMs: flagged when vCPU exceeds a host's threads (or physical cores, as a warning) or vRAM exceeds a host's usable RAM.</li>
+      <li>HA: VMC manages vSphere HA (percentage-based admission control, which applies to reservations) and auto-remediation adds a replacement host when one fails, so single-AZ clusters have no spare host: the CPU ratio and RAM are applied across all hosts. Stretched clusters are 2 × (each AZ holds the full workload). Memory tiering is a what-if using VCF 9 rules. Workload is spread evenly across SDDCs and clusters. Growth is one uplift for the contract term. Data last verified 23 Nov 2026.</li>
+    </ul>
+  </section>
+</main>
+
+<aside class="col results" id="results" aria-live="polite"></aside>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" style="display:grid;gap:10px">
+    <h3 id="dlgtitle">Settings</h3>
+    <textarea id="dlgtext" rows="12" style="font-family:var(--mono);font-size:12px"></textarea>
+    <p class="hint" id="dlgmsg" style="margin:0"></p>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="ghost" id="dlgclose">Close</button>
+      <button type="button" id="dlgok">Apply</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+// ===== VMware Cloud on AWS sizing engine (pure functions; no DOM) =====
+const TIB = 1024 ** 4, GIB = 1024 ** 3;
+
+// Host types. Drive sizes in decimal TB as published; OSA claims 2 drives per host for cache (2 disk groups).
+// coreOpts: Custom CPU Core Count options for secondary clusters (two = 2-host / stretched 2-4 host, three = 3+ host / stretched 6+).
+const HOSTS = [
+  { id: "i4i.metal", cpu: "Intel Xeon 8375C (Ice Lake)", gen: "AWS 4th-gen instance · Intel 3rd-gen Xeon", sockets: 2, cores: 64, threads: 128, ramGiB: 1024,
+    drives: 8, driveTB: 3.75, osaCache: 2, future: false, coreOpts: { two: [16, 24, 30, 36, 48], three: [8, 16, 24, 30, 36, 48] } },
+  { id: "i7i.metal-24xl", cpu: "Intel Xeon (Emerald Rapids)", gen: "AWS 7th-gen instance · Intel 5th-gen Xeon", sockets: 2, cores: 48, threads: 96, ramGiB: 768,
+    drives: 6, driveTB: 3.75, osaCache: 2, future: false, coreOpts: { two: [16, 24, 30, 36], three: [8, 16, 24, 30, 36] } },
+  { id: "i7ie.metal-24xl", cpu: "Intel Xeon (Emerald Rapids)", gen: "AWS 7th-gen instance · Intel 5th-gen Xeon", sockets: 2, cores: 48, threads: 96, ramGiB: 768,
+    drives: 8, driveTB: 7.5, osaCache: 2, future: true, coreOpts: { two: [16, 24, 30, 36], three: [8, 16, 24, 30, 36] } },
+];
+for (const h of HOSTS) { h.driveTiB = h.driveTB * 1e12 / TIB; h.driveGiB = h.driveTB * 1e12 / GIB; }
+
+// SDDC management appliances (vCenter, NSX Managers, NSX Edges) in Cluster-1's Mgmt-ResourcePool. Fully reserved.
+const APPLIANCES = { medium: { vcpu: 34, ram: 116 }, large: { vcpu: 68, ram: 240 } };
+// Add-on appliances per SDDC: [vCPU, RAM GB, disk GB]
+const ADDON = {
+  hcxMgr: { default: [4, 12, 64], mon: [8, 24, 120], large: [16, 48, 300] },
+  hcxIx: [8, 6, 2], hcxNe: [8, 3, 2],
+  srmLight: [2, 8, 20], srmStd: [4, 12, 20], vr: [4, 12, 33], vrServer: [2, 1, 2],
+  edge: [8, 32, 200],
+};
+const CPU_PEAK_TARGET = 0.8;   // groups sized on peak CPU keep cores ≤ 80% busy at that peak
+const AFW_RAM_GIB = 2;   // Distributed IDS/IPS host memory per host (Broadcom KB 313654); CPU use is up to 5 cores, in proportion to inspected traffic
+
+const SDDC_MAX = 300;
+const CIDR_CAP = { single: [["/23", 27], ["/20", 251], ["/16", 300]], stretched: [["/23", 22], ["/20", 246], ["/16", 300]] };
+function cidrFor(hosts, stretched) {
+  const list = CIDR_CAP[stretched ? "stretched" : "single"];
+  const i = Math.max(0, list.findIndex(([, c]) => hosts <= c));
+  const fit = list[i], rec = (hosts > fit[1] * 0.8 && i < list.length - 1) ? list[i + 1] : fit;
+  return { fit: fit[0], fitCap: fit[1], rec: rec[0], recCap: rec[1], label: rec[0] === fit[0] ? fit[0] : `${rec[0]} (${fit[0]} fits, ${fit[1]} hosts max)` };
+}
+
+const DEFAULTS = {
+  hostType: "i7i.metal-24xl", deploy: "single", appliance: "auto",
+  cpuRatio: 3, memReserve: 8, memFill: 90, ramRatio: 1, vmOverhead: 3, growth: 0,
+  sddcCount: 0, mgmtCluster: "shared", mgmtHosts: 4, wlClusters: 0, maxCluster: 16, maxClusters: 20, mgmtStorTiB: 10.1,
+  storageBasis: "used", vsanSlack: 25, compression: 1.25, extOn: false, extPct: 100,
+  tierOn: false, tierRatio: 100, tierMirror: false, tierDrives: 0, activePct: 20,
+  hcxOn: false, hcxMgr: "default", hcxNe: 1, hcxNeHa: false,
+  vlrOn: false, vlrVms: 500,
+  afwOn: false,
+  multiEdge: false, edgePairs: 1,
+};
+
+function hostById(id) { return HOSTS.find(h => h.id === id); }
+
+function workloadTotals(groups) {
+  const t = { vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, templTiB: 0 };
+  for (const g of groups) {
+    if (!g.include) continue;
+    for (const k of Object.keys(t)) t[k] += Number(g.values[k]) || 0;
+  }
+  return t;
+}
+
+// New single-AZ SDDCs deploy on vSAN ESA; stretched SDDCs deploy on OSA.
+function archFor(s) { return s.deploy === "stretched" ? "osa" : "esa"; }
+
+function hostConfig(h, s, tierOn, arch) {
+  const capDrives = arch === "osa" ? h.drives - h.osaCache : h.drives;
+  const tiering = !!tierOn;
+  const mirror = s.tierMirror ? 2 : 1;
+  const maxTier = capDrives - 1;
+  const wantGiB = tiering ? h.ramGiB * s.tierRatio / 100 : 0;
+  const tierNeed = tiering ? Math.ceil(wantGiB / h.driveGiB) * mirror : 0;
+  const tierDrives = tiering ? Math.min(s.tierDrives > 0 ? s.tierDrives : tierNeed, maxTier) : 0;
+  const tierGiB = Math.min(wantGiB, Math.floor(tierDrives / mirror) * h.driveGiB);
+  const vsanDrives = Math.max(0, capDrives - tierDrives);
+  const afwRam = s.afwOn ? AFW_RAM_GIB : 0;
+  const memUsable = ((h.ramGiB - afwRam) * (1 - s.memReserve / 100) + tierGiB) * (s.memFill / 100);
+  return {
+    host: h, arch, capDrives, tiering, tierDrives, tierNeed, maxTier, wantGiB, tierGiB, tierShort: tiering && tierGiB < wantGiB,
+    vsanDrives, rawVsanTiB: vsanDrives * h.driveTiB, memUsable, effRamGiB: h.ramGiB + tierGiB,
+    ramRatio: tiering ? 1 : Math.max(1, s.ramRatio), afwCores: 0,   // IDS/IPS CPU scales with inspected traffic and comes out of the headroom the CPU ratio leaves
+  };
+}
+
+// VMC Managed Storage Policy for a cluster of n hosts.
+function policy(arch, stretched, n) {
+  if (stretched) return n >= 6 ? { f: 4, label: "Dual site mirroring + RAID-1 (FTT=1)" } : { f: 2, label: "Dual site mirroring, no local FTT" };
+  if (n <= 2) return { f: 2, label: "RAID-1 (FTT=1), managed witness" };
+  if (n >= 6) return { f: 1.5, label: "RAID-6 4+2 (FTT=2)" };
+  return arch === "esa" ? { f: 1.5, label: "RAID-5 2+1 (FTT=1)" } : { f: 2, label: "RAID-1 (FTT=1)" };
+}
+
+// Management load per SDDC: SDDC appliances + enabled add-ons. Returns items and totals (vCPU, GiB, TiB).
+function mgmtLoad(s, appliance) {
+  const it = [];
+  const add = (name, spec, n = 1) => { if (n > 0) it.push({ name: n > 1 ? `${name} × ${n}` : name, vcpu: spec[0] * n, ram: spec[1] * n, stor: spec[2] * n / 1024 }); };
+  const ap = APPLIANCES[appliance];
+  it.push({ name: `SDDC appliances (${appliance === "large" ? "Large" : "Medium"})`, vcpu: ap.vcpu, ram: ap.ram, stor: s.mgmtStorTiB });
+  if (s.hcxOn) {
+    add(`HCX Cloud Manager (${{ default: "default", mon: "MON scale-up", large: "large migration" }[s.hcxMgr]})`, ADDON.hcxMgr[s.hcxMgr] || ADDON.hcxMgr.default);
+    add("HCX Interconnect (IX)", ADDON.hcxIx);
+    add(`HCX Network Extension${s.hcxNeHa ? " (HA pairs)" : ""}`, ADDON.hcxNe, Math.max(0, Math.round(s.hcxNe)) * (s.hcxNeHa ? 2 : 1));
+  }
+  if (s.vlrOn) {
+    const n = Math.max(0, s.vlrVms);
+    add(`Site Recovery Manager (${n >= 1000 ? "standard" : "light"})`, n >= 1000 ? ADDON.srmStd : ADDON.srmLight);
+    add("vSphere Replication appliance", ADDON.vr);
+    add("Additional vSphere Replication servers", ADDON.vrServer, Math.max(0, Math.ceil(n / 400) - 1));
+  }
+  if (s.multiEdge) add("Extra NSX Edges (Large, traffic groups)", ADDON.edge, 2 * Math.max(0, Math.round(s.edgePairs)));
+  return { items: it, vcpu: it.reduce((a, x) => a + x.vcpu, 0), ram: it.reduce((a, x) => a + x.ram, 0), stor: it.reduce((a, x) => a + x.stor, 0) };
+}
+
+// d = { cores (physical cores needed, incl. management at 1:1), ram (GiB of host RAM), vsan TiB }
+// ctx = { cfg, stretched, perHostCores, coresOpt }
+function sizeCluster(d, ctx, s, floor) {
+  const { cfg, stretched: st } = ctx;
+  const step = st ? 2 : 1;
+  const cpuH = Math.ceil(d.cores / ctx.perHostCores - 1e-9);
+  const ramH = Math.ceil(d.ram / cfg.memUsable - 1e-9);
+  const compute = Math.max(cpuH, ramH, 1);
+  const crTotal = st ? 2 * compute : compute;              // stretched: each AZ holds everything; single AZ: no spare host (VMC auto-remediation replaces failed hosts)
+  const perHost = (n) => cfg.rawVsanTiB * (1 - s.vsanSlack / 100) * s.compression / policy(cfg.arch, st, n).f;
+  let storH = 0, storOK = true;
+  if (d.vsan > 0) {
+    if (cfg.rawVsanTiB <= 0) { storOK = false; storH = Infinity; }
+    else { let n = 2; while (n * perHost(n) < d.vsan && n < 400) n += step; storH = n; }
+  }
+  let total = Math.max(crTotal, storOK ? storH : 0, floor);
+  if (st && total % 2) total++;
+  let limiter = cpuH >= ramH ? "CPU" : "RAM";
+  if (storOK && storH > crTotal) limiter = "Storage";
+  const atMin = floor > crTotal && floor > (storOK ? storH : 0);
+  if (atMin) limiter = "Minimum";
+  return {
+    d, cpuH, ramH, compute, crTotal, storH: storOK ? storH : null, storOK, total, floor, atMin, limiter, ha: total - compute,
+    capCR: perHost(crTotal) * crTotal, vsanUsable: perHost(total) * total, prot: policy(cfg.arch, st, total).label,
+    stretched: st, coresOpt: ctx.coresOpt, hostCores: ctx.hostCores,
+  };
+}
+
+// Demand pools: groups split by AZ resilience (stretched SDDCs) and custom core count.
+function buildPools(s, groups, h, cfg) {
+  const st = s.deploy === "stretched", g = 1 + s.growth / 100;
+  const pools = new Map();
+  const get = (stretched, cores) => {
+    const key = `${stretched ? "S" : "A"}|${cores}`;
+    if (!pools.has(key)) pools.set(key, { key, stretched, coresOpt: cores, main: stretched === st && cores === 0, cores: 0, ram: 0, stor: 0, vms: 0, vcpu: 0, groups: [] });
+    return pools.get(key);
+  };
+  get(st, 0);                                              // the main pool always exists (Cluster-1)
+  for (const gr of groups) {
+    if (!gr.include) continue;
+    const v = gr.values, o = gr.opts || {};
+    const stretched = st && o.stretch !== false;
+    const cores = 0;   // custom CPU core counts aren't offered in this calculator
+    const p = get(stretched, cores);
+    const vcpu = (Number(v.vcpu) || 0) * g, vram = (Number(v.vramGiB) || 0) * (1 + s.vmOverhead / 100) * g;
+    p.cores += o.cpuPeak > 0 ? vcpu * (o.cpuPeak / 100) / CPU_PEAK_TARGET : vcpu / s.cpuRatio;
+    p.ram += o.ramPeak > 0 ? vram * (o.ramPeak / 100) : vram / cfg.ramRatio;
+    p.stor += ((s.storageBasis === "allocated" ? Number(v.allocTiB) : Number(v.usedTiB)) || 0) * g + (Number(v.templTiB) || 0);
+    p.vms += (Number(v.vms) || 0) * g; p.vcpu += vcpu; p.groups.push(gr.name);
+  }
+  const list = [...pools.values()];
+  list.sort((a, b) => (b.main - a.main) || (b.stretched - a.stretched) || (a.coresOpt - b.coresOpt));
+  return list;
+}
+
+// ----- Packing workload into clusters and SDDCs -----
+const ZERO_D = { cores: 0, vcpu: 0, ram: 0, vsan: 0 };
+const addD = (a, b) => ({ cores: a.cores + b.cores, vcpu: a.vcpu + b.vcpu, ram: a.ram + b.ram, vsan: a.vsan + b.vsan });
+const demandOf = (p, x, ext) => ({ cores: p.cores * x, vcpu: p.vcpu * x, ram: p.ram * x, vsan: p.stor * x * (1 - ext) });
+function ctxOf(p, cfg) {
+  const hc = p.coresOpt || cfg.host.cores;
+  return { cfg, stretched: p.stretched, coresOpt: p.coresOpt, hostCores: hc, perHostCores: Math.max(1, hc - cfg.afwCores) };
+}
+// compute hosts (per AZ for stretched) a demand needs, before HA and rounding
+const realHosts = (d, ctx) => Math.max(d.cores / ctx.perHostCores, d.ram / ctx.cfg.memUsable);
+function minHostsFor(p, cfg, shared, c1Min) {
+  let f = shared ? c1Min : 2;
+  if (p.coresOpt && !cfg.host.coreOpts.two.includes(p.coresOpt)) f = Math.max(f, p.stretched ? 6 : 3);
+  return f;
+}
+// Largest share (≤ xmax) of pool p that fits, together with base demand, in a cluster of at most cap hosts
+function maxShare(p, xmax, base, ctx, s, floor, cap, ext) {
+  const tot = (x) => sizeCluster(addD(base, demandOf(p, x, ext)), ctx, s, floor).total;
+  if (tot(xmax) <= cap) return xmax;
+  if (tot(0) > cap) return 0;
+  let lo = 0, hi = xmax;
+  for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (tot(mid) <= cap) lo = mid; else hi = mid; }
+  return lo;
+}
+
+// Fill one SDDC from the remaining demand. rem: [{ p, x }] (x = remaining share of pool). lim: max share per pool (or null).
+function fillSddc(rem, cfg, s, appliance, lim, allowOver) {
+  const st = s.deploy === "stretched";
+  const N = s.wlClusters > 0 ? Math.round(s.wlClusters) : 0;
+  const slots = N ? Math.max(N, s.mgmtCluster === "dedicated" ? 2 : 1) : s.maxClusters;
+  const ext = cfg.extOn ? s.extPct / 100 : 0;
+  const m = mgmtLoad(s, appliance);
+  const mD = { cores: m.vcpu / s.cpuRatio, vcpu: m.vcpu, ram: m.ram, vsan: m.stor };   // management vCPU at the workload CPU ratio; RAM 1:1
+  const c1Min = appliance === "large" ? (st ? 6 : 3) : 2;
+  const take = rem.map(r => ({ p: r.p, x: 0, avail: Math.max(0, Math.min(r.x, lim ? lim : r.x)) }));
+  const main = take.find(t => t.p.main);
+  const clusters = [];
+  let hosts = 0, forced = false;
+  const capLeft = () => Math.min(s.maxCluster, SDDC_MAX - hosts);
+  const push = (cl) => { clusters.push(cl); hosts += cl.total; };
+  // Cluster-1
+  const mctx = ctxOf(main.p, cfg);
+  if (s.mgmtCluster === "dedicated" || main.avail <= 1e-7) {
+    const set = s.mgmtCluster === "dedicated" ? Math.max(2, Math.round(s.mgmtHosts) || 4) : 2;
+    push({ role: "mgmt", pool: main.p.key, share: 0, setHosts: s.mgmtCluster === "dedicated" ? set : null, ...sizeCluster(mD, mctx, s, Math.max(c1Min, set)) });
+  } else {
+    const x = maxShare(main.p, main.avail, mD, mctx, s, c1Min, capLeft(), ext);
+    push({ role: "shared", pool: main.p.key, share: x, ...sizeCluster(addD(mD, demandOf(main.p, x, ext)), mctx, s, c1Min) });
+    main.avail -= x; main.x += x;
+  }
+  // Workload clusters, filled in order up to the host maximum
+  for (const t of take) {
+    const ctx = ctxOf(t.p, cfg), floor = minHostsFor(t.p, cfg, false, c1Min);
+    while (t.avail > 1e-7) {
+      if (clusters.length >= slots) {
+        if (!(allowOver && !forced && t.x === 0)) break;
+        forced = true;                       // one cluster past the set count so this group can be placed (reported)
+      }
+      const cap = capLeft();
+      if (cap < floor) break;
+      const x = maxShare(t.p, t.avail, ZERO_D, ctx, s, floor, cap, ext);
+      if (x <= 1e-9) break;
+      push({ role: "work", pool: t.p.key, share: x, ...sizeCluster(demandOf(t.p, x, ext), ctx, s, floor) });
+      t.avail -= x; t.x += x;
+    }
+  }
+  // Auto: even out the last two workload clusters of each group (e.g. 16 + 3 -> 10 + 9), never adding hosts
+  if (!N) {
+    for (const t of take) {
+      const own = clusters.filter(c => c.pool === t.p.key && c.role === "work");
+      if (own.length < 2) continue;
+      const a = own[own.length - 2], b = own[own.length - 1];
+      if (b.total >= a.total - 1) continue;
+      const ctx = ctxOf(t.p, cfg), floor = minHostsFor(t.p, cfg, false, c1Min), xs = a.share + b.share;
+      let best = null;
+      for (let i = 1; i < 40; i++) {               // try splits from even towards the current one; keep the most even that adds no hosts
+        const f = 0.5 + (i - 1) * 0.0125, x1 = xs * f, x2 = xs - x1;
+        const c1 = sizeCluster(demandOf(t.p, x1, ext), ctx, s, floor), c2 = sizeCluster(demandOf(t.p, x2, ext), ctx, s, floor);
+        if (c1.total <= s.maxCluster && c2.total <= s.maxCluster && c1.total + c2.total <= a.total + b.total) { best = [{ ...a, share: x1, ...c1 }, { ...b, share: x2, ...c2 }]; break; }
+      }
+      if (best) { clusters[clusters.indexOf(a)] = best[0]; clusters[clusters.indexOf(b)] = best[1]; hosts += best[0].total + best[1].total - a.total - b.total; }
+    }
+  }
+  // Set cluster count: spread the main pool's share in this SDDC evenly over the clusters it may use,
+  // with leftover hosts going one at a time to Cluster-1, Cluster-2, ... (never above the host maximum).
+  if (N && main.x > 1e-7) {
+    const others = clusters.filter(c => !(c.pool === main.p.key && c.role !== "mgmt")).length;
+    const k = Math.max(1, N - others);
+    const shared = clusters[0].role === "shared";
+    const mainCl = clusters.filter(c => c.pool === main.p.key && c.role !== "mgmt");
+    if (k !== mainCl.length && k >= 1) {
+      const per = st ? 2 : 1, capC = st ? Math.floor(s.maxCluster / 2) : s.maxCluster;
+      const wReal = realHosts(demandOf(main.p, main.x, ext), mctx), mReal = shared ? realHosts(mD, mctx) : 0;
+      const ctot = Math.max(k, Math.ceil(wReal + mReal - 1e-9));
+      const base = Math.floor(ctot / k), extra = ctot % k;
+      const c = Array.from({ length: k }, (_, i) => base + (i < extra ? 1 : 0));
+      const wts = c.map((ci, i) => Math.max(0, ci - (i === 0 ? mReal : 0)));
+      const sw = wts.reduce((a, b) => a + b, 0) || 1;
+      const rebuilt = c.map((ci, i) => {
+        const x = main.x * wts[i] / sw, isShared = shared && i === 0;
+        const d = addD(isShared ? mD : ZERO_D, demandOf(main.p, x, ext));
+        return { role: isShared ? "shared" : "work", pool: main.p.key, share: x, ...sizeCluster(d, mctx, s, minHostsFor(main.p, cfg, isShared, c1Min)) };
+      });
+      const newHosts = hosts - mainCl.reduce((a, cl) => a + cl.total, 0) + rebuilt.reduce((a, cl) => a + cl.total, 0);
+      if (ctot <= k * capC && rebuilt.every(cl => cl.total <= s.maxCluster) && newHosts <= SDDC_MAX) {
+        const rest = clusters.filter(cl => !(cl.pool === main.p.key && cl.role !== "mgmt"));
+        const mg = rest.filter(cl => cl.role === "mgmt");
+        clusters.length = 0;
+        clusters.push(...mg, ...rebuilt, ...rest.filter(cl => cl.role !== "mgmt"));
+        hosts = newHosts;
+      }
+    }
+  }
+  const total = clusters.reduce((a, c) => a + c.total, 0);
+  return {
+    clusters, total, appliance, mgmt: m, forced, take,
+    vms: take.reduce((a, t) => a + t.p.vms * t.x, 0),
+    fsx: take.reduce((a, t) => a + t.p.stor * t.x, 0) * ext,
+    placed: take.reduce((a, t) => a + t.x, 0),
+    vsanDemand: clusters.reduce((a, c) => a + c.d.vsan, 0), capCR: clusters.reduce((a, c) => a + c.capCR, 0),
+    vsanUsableTiB: clusters.reduce((a, c) => a + c.vsanUsable, 0),
+  };
+}
+
+// Plan all SDDCs. n = 0: as few as the limits allow; n > 0: split the workload evenly over n SDDCs.
+function planSddcs(pools, cfg, s, n) {
+  const rem = pools.map(p => ({ p, x: (p.cores > 0 || p.ram > 0 || p.stor > 0) ? 1 : 0 }));
+  const lim = n > 0 ? 1 / n + 1e-9 : null;
+  const sd = [];
+  let stuck = false;
+  while (sd.length < 64) {
+    const left = rem.some(r => r.x > 1e-6);
+    if (!left && sd.length >= Math.max(1, n)) break;
+    let ap = s.multiEdge ? "large" : (s.appliance === "auto" ? "medium" : s.appliance);
+    const fill = (a, over) => fillSddc(rem, cfg, s, a, lim, over);
+    let x = fill(ap, false);
+    if (left && x.placed <= 1e-9) x = fill(ap, true);
+    if (ap === "medium" && s.appliance === "auto" && (x.total > 30 || x.vms > 3000)) { x = fill("large", false); if (left && x.placed <= 1e-9) x = fill("large", true); }
+    for (const t of x.take) { const r = rem.find(q => q.p === t.p); r.x = Math.max(0, r.x - t.x); }
+    sd.push(x);
+    if (left && x.placed <= 1e-9) { stuck = true; break; }
+  }
+  return { sd, stuck: stuck || rem.some(r => r.x > 1e-6), tooMany: sd.length >= 64 && rem.some(r => r.x > 1e-6) };
+}
+
+function sddcCap() { return SDDC_MAX; }
+
+function size(s, groups, opts = {}) {
+  const h = hostById(opts.hostId || s.hostType);
+  const tierOn = opts.tierOn !== undefined ? opts.tierOn : s.tierOn;
+  const extOn = opts.extOn !== undefined ? opts.extOn : s.extOn;
+  const st = s.deploy === "stretched";
+  const cfg = { ...hostConfig(h, s, tierOn, archFor(s)), extOn, extPct: extOn ? s.extPct : 0 };
+  const w = workloadTotals(groups);
+  const g = 1 + s.growth / 100;
+  const pools = buildPools(s, groups, h, cfg);
+  const storWork = (s.storageBasis === "allocated" ? w.allocTiB : w.usedTiB) * g;
+  const W = { vcpu: w.vcpu * g, ram: w.vramGiB * (1 + s.vmOverhead / 100) * g, stor: storWork + w.templTiB, vms: w.vms * g };
+  const cap = sddcCap();
+  const auto = planSddcs(pools, cfg, s, 0);
+  const need = auto.sd.length;
+  const want = Math.max(0, Math.round(s.sddcCount) || 0);
+  let plan = want > need ? planSddcs(pools, cfg, s, want) : auto;
+  const hostsOf = (pl) => pl.sd.reduce((a, x) => a + x.total, 0);
+  if (!(want > need) && need > 1 && !(s.wlClusters > 0)) {         // Auto: spread over the same number of SDDCs instead of filling the first to 300
+    const bal = planSddcs(pools, cfg, s, need);
+    if (bal.sd.length === need && !bal.stuck && hostsOf(bal) <= hostsOf(auto) + need) plan = bal;
+  }
+  const sd = plan.sd, n = sd.length;
+  const f0 = auto.sd[0];
+  const splitWhy = need > 1 ? (f0.total > SDDC_MAX - s.maxCluster ? "hosts" : "clusters") : null;
+  const N = s.wlClusters > 0 ? Math.round(s.wlClusters) : 0;
+  let autoHosts = null;
+  if (N) { const a = planSddcs(pools, cfg, { ...s, wlClusters: 0 }, want > need ? want : 0); autoHosts = a.sd.reduce((x, y) => x + y.total, 0); }
+  for (const x of sd) x.cidr = cidrFor(x.total, st);
+  const all = sd.flatMap(x => x.clusters);
+  const hosts = sd.reduce((a, x) => a + x.total, 0);
+  const cores = all.reduce((a, c) => a + c.total * c.hostCores, 0);
+  const mg = sd.reduce((a, x) => ({ vcpu: a.vcpu + x.mgmt.vcpu, ram: a.ram + x.mgmt.ram, stor: a.stor + x.mgmt.stor }), { vcpu: 0, ram: 0, stor: 0 });
+  const D = { vcpu: W.vcpu + mg.vcpu, ram: W.ram + mg.ram, stor: W.stor + mg.stor };
+  const vsanDemand = sd.reduce((a, x) => a + x.vsanDemand, 0);
+  const vsanUsable = sd.reduce((a, x) => a + x.vsanUsableTiB, 0);
+  const capCR = sd.reduce((a, x) => a + x.capCR, 0);
+  const head = {
+    vsanNeed: vsanDemand, capCR, crHosts: all.reduce((a, c) => a + c.crTotal, 0), storHosts: all.reduce((a, c) => a + (c.storH || 0), 0),
+    limiting: all.some(c => c.limiter === "Storage"), headroom: capCR - vsanDemand, mgmtOnVsan: mg.stor,
+  };
+  const wl = all.filter(c => c.role !== "mgmt");
+  const ord = ["Storage", "RAM", "CPU", "Minimum"], byLim = {};
+  for (const c of (wl.length ? wl : all)) byLim[c.limiter] = (byLim[c.limiter] || 0) + c.total;   // headline: what limits the most hosts
+  const limiter = Object.keys(byLim).sort((a, b) => byLim[b] - byLim[a] || ord.indexOf(a) - ord.indexOf(b))[0] || "CPU";
+  const activeGiB = w.vramGiB * (s.activePct / 100) * g;
+  const res = {
+    host: h, cfg, workload: w, W, D, pools, sddcs: sd, n: sd.length, nNeed: need, tooMany: plan.tooMany, hosts, cores, cap, splitWhy, N, autoHosts,
+    clusters: all.length, ha: all.reduce((a, c) => a + c.ha, 0),
+    need: { cpu: wl.reduce((a, c) => a + c.cpuH, 0), ram: wl.reduce((a, c) => a + c.ramH, 0), stor: wl.reduce((a, c) => a + (c.storH || 0), 0) },
+    vcpuPerCore: D.vcpu / cores, vsanDemand, vsanUsable, vsanPct: vsanUsable > 0 ? vsanDemand / vsanUsable : null,
+    fsxTiB: sd.reduce((a, x) => a + x.fsx, 0), activePctOfDram: cfg.tiering ? activeGiB / (hosts * h.ramGiB) : null,
+    growthFactor: g, storWork, storTempl: w.templTiB, storMgmt: mg.stor, head, limiter,
+    fit: fitCheck(groups, h, s, cfg),
+    feasible: all.every(c => c.storOK && c.total <= s.maxCluster) && !plan.stuck,
+  };
+  res.warnings = warnings(res, s, groups);
+  res.limitWarn = res.sddcs.some(x => x.clusters.some(c => c.setHosts && c.total > c.setHosts)) || (res.N && res.nNeed > 1) || (s.sddcCount > 0 && res.n > s.sddcCount) || (res.N && res.sddcs.some(x => x.clusters.length > res.N));
+  return res;
+}
+
+// VMs that won't fit one host: vCPU above logical threads or vRAM above a host's usable RAM (crit); vCPU above physical cores (warn).
+function fitCheck(groups, h, s, cfg) {
+  const out = [];
+  const ramCap = (h.ramGiB - (s.afwOn ? AFW_RAM_GIB : 0)) * (1 - s.memReserve / 100) + cfg.tierGiB;
+  for (const gr of groups) {
+    if (!gr.include || !gr.meta || !gr.meta.big) continue;
+    const o = gr.opts || {};
+    const cores = (o.cores > 0 && o.cores < h.cores) ? o.cores : h.cores;
+    const threads = cores * 2;
+    for (const v of gr.meta.big) {
+      const lvl = (v.cpus > threads || v.memGiB > ramCap) ? "crit" : (v.cpus > cores ? "warn" : null);
+      if (lvl) out.push({ lvl, group: gr.name, ...v, cores, threads, ramCap });
+    }
+  }
+  return out.sort((a, b) => (a.lvl === "crit" ? 0 : 1) - (b.lvl === "crit" ? 0 : 1) || b.memGiB - a.memGiB);
+}
+
+function warnings(r, s, groups) {
+  const w = [], st = s.deploy === "stretched";
+  if (r.tooMany) w.push({ lvl: "crit", t: "This needs more than 64 SDDCs, so the result is incomplete. Raise Clusters per SDDC (or set it to Auto) or Max hosts per cluster." });
+  else if (!r.feasible) w.push({ lvl: "crit", t: "This configuration doesn't fit VMC limits or vSAN can't hold the storage. Reduce the memory tier, add external storage or raise Clusters per SDDC." });
+  if (r.sddcs.some(x => x.forced)) w.unshift({ lvl: "warn", t: `Clusters per SDDC is ${r.N}, but single-AZ groups can't share a stretched cluster, so ${r.sddcs.filter(x => x.forced).length} SDDC(s) got one extra cluster for them.` });
+  const crit = r.fit.filter(f => f.lvl === "crit"), wf = r.fit.filter(f => f.lvl === "warn");
+  if (crit.length) w.push({ lvl: "crit", t: `${crit.length} VM${crit.length > 1 ? "s" : ""} won't fit on one ${r.host.id} host (largest: ${crit[0].name}, ${crit[0].cpus} vCPU, ${Math.round(crit[0].memGiB)} GiB). See "Large VMs".` });
+  if (wf.length) w.push({ lvl: "warn", t: `${wf.length} VM${wf.length > 1 ? "s have" : " has"} more vCPU than a host's physical cores and ${wf.length > 1 ? "rely" : "relies"} on hyperthreads. See "Large VMs".` });
+  if (r.host.future) w.push({ lvl: "warn", t: `${r.host.id} isn't offered on VMC yet. Figures use the EC2 specification (${r.host.drives} × ${r.host.driveTB} TB NVMe), the same vSAN layout and the same custom core options as i7i.` });
+  if (r.cfg.tiering) w.push({ lvl: "warn", t: "Memory tiering is a what-if: it isn't available on VMC yet. The estimate assumes VCF 9 behaviour (tier drives leave vSAN, default 1:1 tier, no memory overcommit)." });
+  if (r.cfg.tierShort) w.push({ lvl: "warn", t: `${r.cfg.tierDrives} tier drive(s) hold ${Math.round(r.cfg.tierGiB)} GiB per host, less than the ${Math.round(r.cfg.wantGiB)} GiB the tier ratio asks for.` });
+  if (r.cfg.tiering && r.activePctOfDram > 0.5) w.push({ lvl: "warn", t: `Active memory is ~${Math.round(r.activePctOfDram * 100)}% of DRAM. Broadcom guidance is to keep it below ~50% with tiering on.` });
+  if (r.cfg.tiering && s.ramRatio > 1) w.push({ lvl: "info", t: "RAM ratio is ignored while memory tiering is on: tiering and memory overcommit aren't combined." });
+  if (!r.cfg.tiering && s.ramRatio > 1) w.push({ lvl: "info", t: `Target RAM ratio ${s.ramRatio}: hosts carry ${Math.round((s.ramRatio - 1) * 100)}% more vRAM than physical RAM (groups without a peak RAM %). Under memory pressure ESXi falls back on ballooning and compression.` });
+  const peaks = groups.filter(gr => gr.include && gr.opts && (gr.opts.cpuPeak > 0 || gr.opts.ramPeak > 0));
+  if (peaks.length) w.push({ lvl: "info", t: `${peaks.length} group${peaks.length > 1 ? "s are" : " is"} sized on peak utilization instead of the ratios (CPU kept at or below 80% of cores at peak; RAM at peak % of vRAM). Peak data should come from a monitoring tool over a representative period.` });
+  if (st) {
+    w.push({ lvl: "info", t: "Stretched SDDCs use vSAN OSA. Stretched clusters mirror data across two AZs, so each AZ holds the full workload (2 × hosts) and vSAN keeps two copies (four with local RAID-1 at 6+ hosts)." });
+    if (r.sddcs.some(x => x.clusters.some(c => c.stretched && c.total < 6))) w.push({ lvl: "warn", t: "Stretched clusters below 6 hosts have no local failure tolerance and get the lower SLA; 6+ hosts qualify for 99.99%. Once a stretched cluster reaches 6 hosts it can't shrink back to 2 or 4." });
+    if (r.pools.some(p => !p.stretched && p.cores + p.ram > 0)) w.push({ lvl: "info", t: "Groups without AZ resilience run on non-stretched secondary clusters in the stretched SDDC (one AZ)." });
+  }
+  if (false) w.push({ lvl: "info", t: "Custom CPU core count applies to secondary clusters only, so those groups get their own clusters; Cluster-1 always uses every core." });
+  if (r.sddcs.some(x => x.clusters.some(c => c.total === 2 && !c.stretched))) w.push({ lvl: "info", t: "2-host clusters mirror data (RAID-1) across both hosts, with a VMware-managed witness as tie-breaker. Large appliances aren't supported on them." });
+  const big = r.sddcs.filter(x => x.appliance === "large").length;
+  if (big && s.appliance === "auto" && !s.multiEdge) w.push({ lvl: "info", t: `Large SDDC appliances (68 vCPU, 240 GB reserved in Cluster-1) chosen for ${big === r.n ? "every SDDC" : big + " SDDC(s)"}: recommended above 30 hosts or 3,000 VMs.` });
+  if (s.multiEdge) w.push({ lvl: "info", t: `Multi-Edge SDDC: Large appliances are required, and each SDDC runs ${2 * s.edgePairs} extra Large NSX Edges (8 vCPU, 32 GB each) in Cluster-1.` });
+  if (s.afwOn) w.push({ lvl: "info", t: `Distributed IDS/IPS (paid vDefend add-on): ${r.cores.toLocaleString("en-US")} subscription cores, one per physical core in the output. It allows 2 GB of RAM per host. Its CPU use (up to 5 cores per host) scales with the traffic your IDS/IPS policies inspect and comes out of the headroom the CPU ratio leaves; for heavy inspection (e.g. all east-west traffic), lower the CPU ratio.` });
+  if (s.vlrOn) w.push({ lvl: "info", t: "VMware Live Recovery: only the SRM and replication appliances are counted. Add the protected VMs' replicas (storage) and their failover compute as a workload group if this SDDC is the recovery site." });
+  const mc = r.sddcs.map(x => x.clusters.find(c => c.role === "mgmt" && c.setHosts)).filter(Boolean);
+  if (mc.some(c => c.total > c.setHosts)) {
+    const c = mc.find(c => c.total > c.setHosts);
+    w.unshift({ lvl: "warn", t: c.floor > c.setHosts && c.total === c.floor
+      ? `Management cluster hosts is ${c.setHosts}, but ${st ? "stretched clusters with Large appliances need 6" : "Large appliances need 3"}, so it's ${c.total}.`
+      : `Management cluster hosts is ${c.setHosts}, but the management load (SDDC appliances and add-ons) needs ${c.total} hosts with HA, so it's ${c.total}.` });
+  }
+  w.push({ lvl: "info", t: st
+    ? "Sized like VMC: each AZ of a stretched cluster holds the full workload, and auto-remediation replaces a failed host."
+    : "Sized like VMC: workloads run on all hosts with no spare host, because auto-remediation replaces a failed host. Until the replacement joins and vSAN resyncs, CPU runs above the set ratio and RAM-tight clusters may balloon or swap." });
+  // Results that go past values the user set: warn first, with the setting, the value and why
+  const N = r.N, perSddcHosts = N ? N * s.maxCluster : null;
+  if (N && r.nNeed > 1 && !(s.sddcCount > r.nNeed)) w.unshift({ lvl: "warn", t: `Clusters per SDDC is ${N}: each SDDC holds at most ${N} × ${s.maxCluster} = ${perSddcHosts} hosts${perSddcHosts > SDDC_MAX ? ` (capped at ${SDDC_MAX})` : ""}. The workload needs ${r.hosts.toLocaleString("en-US")} hosts, so the sizing uses ${r.n} SDDCs.` });
+  if (N && r.sddcs.some(x => x.clusters.length > N)) w.unshift({ lvl: "warn", t: `Clusters per SDDC is ${N}, but a management-only Cluster-1 needs at least one workload cluster beside it, so SDDCs have ${N + 1}.` });
+  if (N && r.pools.filter(p => !p.main && p.cores + p.ram > 0).length) w.push({ lvl: "info", t: `Groups on custom cores${st ? " or single-AZ clusters" : ""} can't share a cluster with other groups; their clusters count toward the ${N} per SDDC and go where there's room.` });
+  if (N && r.autoHosts !== null && r.hosts > r.autoHosts) w.push({ lvl: "info", t: `Spreading over ${N} clusters per SDDC costs ${r.hosts - r.autoHosts} more host${r.hosts - r.autoHosts > 1 ? "s" : ""} than filling clusters to ${s.maxCluster} hosts (${r.autoHosts.toLocaleString("en-US")}), because each cluster is rounded up to whole hosts.` });
+  if (s.sddcCount > 0 && r.n > r.nNeed) w.push({ lvl: "info", t: `${r.n} SDDCs as set (the limits need ${r.nNeed}). Each extra SDDC adds its own vCenter, NSX Managers and Edges${s.hcxOn || s.vlrOn ? " and add-ons" : ""}, and its own clusters, so the host count can rise.` });
+  else if (s.sddcCount > 0 && r.n > s.sddcCount) w.unshift({ lvl: "warn", t: `SDDCs is set to ${s.sddcCount}, but the workload needs ${r.n}${N ? ` with ${N} clusters per SDDC` : ""}.` });
+  if (r.n > 1 && !N && !(s.sddcCount > 0 && r.n > r.nNeed)) {
+    const why = r.splitWhy === "clusters" ? `VMC's ${s.maxClusters}-cluster limit per SDDC` : `the ${SDDC_MAX}-host SDDC maximum`;
+    w.push({ lvl: "info", t: `The sizing uses ${r.n} SDDCs because of ${why}. Clusters fill to ${s.maxCluster} hosts before a new one opens; each SDDC has its own vCenter, NSX and management appliances${s.hcxOn || s.vlrOn ? " (and add-ons)" : ""}.` });
+  }
+  if (r.sddcs.some(x => x.cidr.rec !== x.cidr.fit)) w.push({ lvl: "info", t: "The management CIDR can't be changed after the SDDC is created. Where an SDDC is within 20% of the smallest range's host limit, the next size up is recommended for growth and Elastic DRS." });
+  const maxCl = Math.max(...r.sddcs.map(x => x.clusters.length));
+  if (maxCl > 10) w.push({ lvl: "info", t: `${maxCl} clusters per SDDC: the default limit is 10; request an increase to 20 from support.` });
+  if (r.sddcs.some(x => x.clusters.some(c => c.vsanUsable > 0 && c.d.vsan / c.vsanUsable * (1 - s.vsanSlack / 100) > 0.8)))
+    w.push({ lvl: "warn", t: "Some clusters would run above 80% of raw vSAN capacity, where Elastic DRS adds hosts automatically. Raise the free-space reserve to at least 20%." });
+  w.push({ lvl: "info", t: "Confirm the host type is offered in the target region and that capacity is available for the host count." });
+  return w;
+}
+
+function breakEven(s, groups, hostId) {
+  const base = size(s, groups, { hostId });
+  if (base.limiter !== "Storage") return null;
+  for (let p = 5; p <= 100; p += 5) {
+    const r = size({ ...s, extOn: true, extPct: p }, groups, { hostId });
+    if (!r.sddcs.some(x => x.clusters.some(c => c.limiter === "Storage")))
+      return { pct: p, tib: r.fsxTiB, hosts: r.hosts, from: base.hosts };
+  }
+  return { pct: null, from: base.hosts };
+}
+
+if (typeof module !== "undefined") module.exports = { breakEven, HOSTS, APPLIANCES, ADDON, DEFAULTS, CIDR_CAP, cidrFor, size, hostConfig, workloadTotals, policy, archFor, sddcCap, mgmtLoad };
+
+// ===== RVTools parsing (pure: takes sheet rows as arrays of objects) =====
+const COLS = {
+  name: ["VM"], power: ["Powerstate", "Power state"], template: ["Template"], cpus: ["CPUs", "# CPU"], mem: ["Memory", "Memory MiB", "Memory MB"],
+  prov: ["Provisioned MiB", "Provisioned MB"], inuse: ["In Use MiB", "In Use MB"], uuid: ["VM UUID", "SMBIOS UUID"],
+  server: ["VI SDK Server", "VI SDK Server type"], cluster: ["Cluster"], os: ["OS according to the configuration file", "OS according to the VMware Tools", "OS"],
+};
+const HCOLS = { host: ["Host"], cores: ["# Cores"], mem: ["# Memory"], model: ["CPU Model"], cluster: ["Cluster"] };
+
+function pick(row, names) { for (const n of names) if (row[n] !== undefined && row[n] !== null && row[n] !== "") return row[n]; return null; }
+function findCol(headers, names) { for (const n of names) if (headers.includes(n)) return n; return null; }
+function truthy(v) { return v === true || String(v).toLowerCase() === "true"; }
+
+function parseRVTools(vInfo, vHost, vDisk, vPartition, fileName, vCPU, vMemory) {
+  const issues = [];
+  if (!vInfo || !vInfo.length) return { fileName, error: "No vInfo sheet found. Export from RVTools with 'Export all to Excel'.", vms: [] };
+  const headers = Object.keys(vInfo[0]);
+  const col = {};
+  for (const [k, names] of Object.entries(COLS)) {
+    col[k] = findCol(headers, names);
+    if (!col[k] && ["name", "cpus", "mem"].includes(k)) return { fileName, error: `Column '${names[0]}' not found in vInfo.`, vms: [] };
+    if (col[k] && col[k] !== names[0]) issues.push(`Used '${col[k]}' for '${names[0]}'.`);
+  }
+  if (!col.prov && !col.inuse) issues.push("No provisioned or in-use storage columns: storage will be 0.");
+  const mbFactor = (c) => (c && /MB$/.test(c) ? 1e6 / 1048576 : 1); // MB → MiB
+  // Per-VM disk capacity (vDisk) and guest-consumed space (vPartition), joined on vCenter + VM name
+  const sumBy = (rows, valNames) => {
+    const m = new Map(); if (!rows || !rows.length) return null;
+    const hh = Object.keys(rows[0]); const vc = findCol(hh, valNames); const sc = findCol(hh, COLS.server);
+    if (!vc) return null;
+    const f = /MB$/.test(vc) ? 1e6 / 1048576 : 1;
+    for (const r of rows) { if (!r.VM) continue; const k = (sc ? String(r[sc] ?? "") : fileName) + "|" + r.VM; m.set(k, (m.get(k) || 0) + (Number(r[vc]) || 0) * f); }
+    return m;
+  };
+  const capMap = sumBy(vDisk, ["Capacity MiB", "Capacity MB"]);
+  const useMap = sumBy(vPartition, ["Consumed MiB", "Consumed MB"]);
+  // Point-in-time utilization (reference only): VM CPU usage (MHz) from vCPU, active/consumed memory (MiB) from vMemory
+  const cpuMap = sumBy(vCPU, ["Overall"]);
+  const actMap = sumBy(vMemory, ["Active"]);
+  const conMap = sumBy(vMemory, ["Consumed"]);
+  if (!capMap) issues.push("No vDisk sheet: allocated storage falls back to vInfo 'Provisioned'.");
+  if (!useMap) issues.push("No vPartition sheet: guest-used storage falls back to vInfo 'In Use'.");
+  const vms = [];
+  for (const r of vInfo) {
+    const name = r[col.name];
+    if (name === null || name === undefined || name === "") continue;
+    const server = col.server ? String(r[col.server] ?? "") : fileName;
+    vms.push({
+      name: String(name), server, cluster: col.cluster ? String(r[col.cluster] ?? "") : "",
+      key: (col.uuid && r[col.uuid]) ? "u:" + String(r[col.uuid]).toLowerCase() : "n:" + server + "|" + name,
+      on: col.power ? String(r[col.power]).toLowerCase() === "poweredon" : true,
+      template: col.template ? truthy(r[col.template]) : false,
+      cpus: Number(r[col.cpus]) || 0,
+      memMiB: (Number(r[col.mem]) || 0) * mbFactor(col.mem),
+      provMiB: col.prov ? (Number(r[col.prov]) || 0) * mbFactor(col.prov) : 0,
+      inuseMiB: col.inuse ? (Number(r[col.inuse]) || 0) * mbFactor(col.inuse) : 0,
+      os: col.os ? String(r[col.os] ?? "") : "",
+    });
+    const v = vms[vms.length - 1], jk = server + "|" + name;
+    v.capMiB = capMap ? (capMap.get(jk) ?? null) : null;
+    v.guestMiB = useMap ? (useMap.get(jk) ?? null) : null;
+    v.cpuMHz = cpuMap ? (cpuMap.get(jk) ?? null) : null;
+    v.actMiB = actMap ? (actMap.get(jk) ?? null) : null;
+    v.conMiB = conMap ? (conMap.get(jk) ?? null) : null;
+  }
+  let est = null;
+  if (vHost && vHost.length) {
+    const hh = Object.keys(vHost[0]); const hc = {};
+    for (const [k, names] of Object.entries(HCOLS)) hc[k] = findCol(hh, names);
+    const rows = vHost.filter(r => r[hc.host]);
+    const models = {};
+    for (const r of rows) { const m = hc.model ? String(r[hc.model]) : "?"; models[m] = (models[m] || 0) + 1; }
+    est = { hosts: rows.length, cores: rows.reduce((a, r) => a + (Number(r[hc.cores]) || 0), 0),
+            ramGiB: rows.reduce((a, r) => a + (Number(r[hc.mem]) || 0), 0) / 1024, models };
+    const sp = findCol(hh, ["Speed"]), cu = findCol(hh, ["CPU usage %"]), mu = findCol(hh, ["Memory usage %"]);
+    const wsum = (col) => { let a = 0, c = 0; for (const r of rows) { const x = Number(r[col]), k = Number(r[hc.cores]) || 1; if (isFinite(x) && r[col] !== null) { a += x * k; c += k; } } return c ? a / c : null; };
+    if (sp) est.speedMHz = wsum(sp);
+    if (cu) est.cpuPct = wsum(cu);
+    if (mu) est.memPct = wsum(mu);
+  } else issues.push("No vHost sheet: current-estate summary unavailable for this file.");
+  const speed = est && est.speedMHz ? est.speedMHz : null;
+  for (const v of vms) v.mhz = speed;
+  const vcenters = [...new Set(vms.map(v => v.server))];
+  return { fileName, vcenter: vcenters.join(", "), vms, est, issues };
+}
+
+// Exclusion rules: the vCLS checkbox plus comma-separated name patterns (* = any characters, case-insensitive)
+function excludeRules(scope) {
+  const rules = [];
+  if (scope.exVcls) rules.push({ label: "vCLS", re: /^vCLS/i, count: 0, samples: [] });
+  const esc = (t) => t.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+  for (const raw of String(scope.patterns || "").split(",")) {
+    const t = raw.trim(); if (!t) continue;
+    if (rules.some(r => r.label.toLowerCase() === t.toLowerCase())) continue;
+    rules.push({ label: t, re: new RegExp("^" + t.split("*").map(esc).join(".*") + "$", "i"), count: 0, samples: [] });
+  }
+  return rules;
+}
+
+// Build workload groups from parsed files. scope: {includeOff, templatesStorage, exVcls, patterns}, groupBy: "file"|"cluster"
+function buildGroups(files, scope, groupBy) {
+  const rules = excludeRules(scope), reErr = null;
+  const seen = new Set(); let dups = 0, excluded = 0, offExcluded = 0, templates = 0, considered = 0;
+  const groups = new Map();
+  for (const f of files) {
+    if (!f.include || f.error) continue;
+    for (const v of f.vms) {
+      if (seen.has(v.key)) { dups++; continue; }
+      seen.add(v.key);
+      considered++;
+      const rule = rules.find(r => r.re.test(v.name));
+      if (rule) { excluded++; rule.count++; if (rule.samples.length < 5) rule.samples.push(v.name); continue; }
+      const gk = groupBy === "cluster" ? `${v.server} / ${v.cluster || "(no cluster)"}` : (f.label || f.vcenter || f.fileName);
+      if (!groups.has(gk)) groups.set(gk, { key: gk, vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, dsTiB: 0, templTiB: 0, templates: 0, off: 0,
+        _gUsed: 0, _gCap: 0, _noGuestCap: 0, _noGuestDs: 0, noGuest: 0,
+        _cpuMHz: 0, _cpuCapMHz: 0, _act: 0, _con: 0, _memSnap: 0, maxVcpu: 0, maxRamGiB: 0, big: [] });
+      const g = groups.get(gk);
+      if (v.template) {
+        templates++;
+        if (scope.templatesStorage) { g.templTiB += v.inuseMiB / 1048576; g.templates++; }
+        continue;
+      }
+      if (!v.on && !scope.includeOff) { offExcluded++; continue; }
+      if (!v.on) g.off++;
+      g.vms++; g.vcpu += v.cpus; g.vramGiB += v.memMiB / 1024;
+      g.maxVcpu = Math.max(g.maxVcpu, v.cpus); g.maxRamGiB = Math.max(g.maxRamGiB, v.memMiB / 1024);
+      if (v.cpus >= 24 || v.memMiB >= 256 * 1024) g.big.push({ name: v.name, cpus: v.cpus, memGiB: v.memMiB / 1024 });
+      if (v.on && v.cpuMHz !== null && v.cpuMHz !== undefined && v.mhz) { g._cpuMHz += v.cpuMHz; g._cpuCapMHz += v.cpus * v.mhz; }
+      if (v.on && v.actMiB !== null && v.actMiB !== undefined) { g._act += v.actMiB; g._con += v.conMiB || 0; g._memSnap += v.memMiB; }
+      const cap = v.capMiB ?? v.provMiB;
+      g.allocTiB += cap / 1048576; g.dsTiB += v.inuseMiB / 1048576;
+      if (v.guestMiB !== null && v.guestMiB !== undefined && v.capMiB) { g._gUsed += v.guestMiB; g._gCap += v.capMiB; }
+      else { g.noGuest++; g._noGuestCap += cap; g._noGuestDs += v.inuseMiB; }
+    }
+  }
+  for (const g of groups.values()) {
+    // Guest used; VMs without partition data are estimated at the group's used/allocated ratio (capped by datastore in-use)
+    const ratio = g._gCap > 0 ? g._gUsed / g._gCap : null;
+    const est = ratio === null ? g._noGuestDs : Math.min(g._noGuestCap * ratio, g._noGuestDs || Infinity);
+    g.usedTiB = (g._gUsed + est) / 1048576;
+    g.snap = { cpuPct: g._cpuCapMHz > 0 ? g._cpuMHz / g._cpuCapMHz : null, actPct: g._memSnap > 0 ? g._act / g._memSnap : null, conPct: g._memSnap > 0 ? g._con / g._memSnap : null };
+    g.big.sort((a, b) => b.memGiB - a.memGiB || b.cpus - a.cpus); if (g.big.length > 300) g.big.length = 300;
+    for (const k of Object.keys(g)) if (k.startsWith("_")) delete g[k];
+  }
+  return { groups: [...groups.values()], dups, excluded, offExcluded, templates, reErr, considered,
+    rules: rules.map(r => ({ label: r.label, count: r.count, samples: r.samples })) };
+}
+if (typeof module !== "undefined") module.exports = { parseRVTools, buildGroups, excludeRules };
+
+</script>
+<script>
+"use strict";
+const S = { ...DEFAULTS, customer: "", region: "", notes: "" };
+let groups = [];
+let files = [];
+let gid = 1;
+const scope = { includeOff: true, templatesStorage: true, exVcls: true, patterns: "", groupBy: "file" };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const nf = (n, d = 0) => (n === null || n === undefined || !isFinite(n)) ? "–" : Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (x, d = 0) => (x === null || x === undefined || !isFinite(x)) ? "–" : nf(x * 100, d) + "%";
+const newOpts = () => ({ cpuPeak: 0, ramPeak: 0, cores: 0, stretch: true });
+const FIELDS = [["vms", "VMs", 0], ["vcpu", "vCPU", 0], ["vramGiB", "vRAM GiB", 0], ["usedTiB", "Used TiB", 1], ["allocTiB", "Allocated TiB", 1], ["templTiB", "Templates TiB", 1]];
+
+
+// ---------- static UI ----------
+function renderHosts() {
+  $("hosts").innerHTML = HOSTS.map(h => `
+    <label class="hostcard ${S.hostType === h.id ? "on" : ""}">
+      <input type="radio" name="host" value="${h.id}" ${S.hostType === h.id ? "checked" : ""}>
+      <b>${h.id}${h.future ? ' <span class="pill warn">Coming</span>' : ""}</b>
+      <small>${h.cores} cores · ${nf(h.ramGiB)} GiB RAM · ${h.cpu}</small>
+      <small>${h.gen}</small>
+      <small>${h.drives} × ${h.driveTB} TB NVMe (${nf(h.driveTiB, 2)} TiB each)</small>
+    </label>`).join("");
+  document.querySelectorAll('input[name=host]').forEach(r => r.addEventListener("change", e => { S.hostType = e.target.value; renderHosts(); refreshForm(); renderGroups(); recalc(); }));
+}
+$("sddcCount").innerHTML = `<option value="0">Auto (fewest that fit)</option>` + Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+$("wlClusters").innerHTML = `<option value="0">Auto (fill each to max hosts)</option>` + Array.from({ length: 20 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+
+function refreshForm() {
+  for (const el of document.querySelectorAll("[data-k]")) {
+    const k = el.dataset.k;
+    if (el.type === "checkbox") el.checked = !!S[k]; else el.value = S[k];
+  }
+  const h = hostById(S.hostType), st = S.deploy === "stretched", arch = archFor(S);
+  $("extPctV").textContent = S.extPct + "%";
+  $("extPct").disabled = !S.extOn;
+  $("extPctWrap").style.opacity = S.extOn ? 1 : .5;
+  $("storhint").textContent = S.extOn
+    ? `${S.extPct}% of workload storage (VMs and templates) goes to an external NFS datastore. vSAN stays the principal storage and holds the management appliances and the rest.`
+    : `Principal storage is vSAN ${arch.toUpperCase()} on the hosts' local drives${S.tierOn ? " (minus memory-tier drives)" : ""}.`;
+  const pf = (n) => policy(arch, st, n).label;
+  $("policynote").innerHTML = st
+    ? `vSAN OSA: stretched clusters deploy on OSA (2 cache drives per host)<br>Managed policy: 2–4 hosts ${pf(2)} (2× capacity) · 6–16 hosts ${pf(6)} (4×)`
+    : `vSAN ESA: new single-AZ SDDCs deploy on ESA (every drive is capacity)<br>Managed policy: 2 hosts ${pf(2)} · 3–5 hosts ${pf(3)} · 6–16 hosts ${pf(6)}`;
+  // tiering
+  const cfg = hostConfig(h, S, true, arch);
+  $("tierfields").style.opacity = S.tierOn ? 1 : .5;
+  for (const id of ["tierRatio", "activePct", "tierMirror", "tierDrives"]) $(id).disabled = !S.tierOn;
+  $("tierinv").textContent = `This host: ${cfg.capDrives} vSAN capacity drive${cfg.capDrives === 1 ? "" : "s"} of ${h.driveTB} TB (${nf(h.driveGiB)} GiB each) under ${arch.toUpperCase()}. Up to ${cfg.maxTier} can go to the memory tier; at least 1 stays in vSAN.`;
+  const sel = $("tierDrives");
+  sel.innerHTML = `<option value="0">Auto (fewest that fit: ${cfg.tierNeed})</option>` + Array.from({ length: cfg.maxTier }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+  if (S.tierDrives > cfg.maxTier) S.tierDrives = 0;
+  sel.value = String(S.tierDrives);
+  $("tierhint").textContent = `Each host would get ${nf(cfg.tierGiB)} GiB of NVMe memory (${nf(cfg.effRamGiB)} GiB total) on ${cfg.tierDrives} drive${cfg.tierDrives === 1 ? "" : "s"}${S.tierMirror ? " (mirrored)" : ""}, leaving ${cfg.vsanDrives} drive${cfg.vsanDrives === 1 ? "" : "s"} (${nf(cfg.rawVsanTiB, 1)} TiB raw) for vSAN.`
+    + (cfg.tierShort ? ` The chosen drives can't hold the full ${nf(cfg.wantGiB)} GiB tier.` : "") + " Tiering turns memory overcommit off.";
+  const ded = S.mgmtCluster === "dedicated";
+  $("mgmtHosts").disabled = !ded; $("mgmtHostsWrap").style.opacity = ded ? 1 : .5;
+  for (const el of document.querySelectorAll("[data-for]")) {
+    const on = !!S[el.dataset.for]; el.style.opacity = on ? 1 : .5;
+    el.querySelectorAll("input,select").forEach(i => i.disabled = !on);
+  }
+  $("growthhint").textContent = S.growth > 0 ? `Sized for +${nf(S.growth)}% over today's workload (e.g. the growth expected over a 1- or 3-year term). Management isn't grown.` : "No growth applied: sized for today's workload.";
+  $("ramhint").textContent = S.ramRatio > 1 ? `RAM ratio ${S.ramRatio}: ${nf((S.ramRatio - 1) * 100)}% memory overcommit (the VMC Sizer's default is 1.25).` : "RAM ratio 1.0: no memory overcommit (1 GiB of vRAM needs 1 GiB of host RAM). The VMC Sizer's default is 1.25.";
+  const ap = (k) => `${APPLIANCES[k].vcpu} vCPU · ${APPLIANCES[k].ram} GB`;
+  const cl = CIDR_CAP[st ? "stretched" : "single"].map(([c, n]) => `${c} ${n}`).join(" · ");
+  $("mgmtnote").innerHTML = `Appliances in Cluster-1 (reserved): Medium ${ap("medium")} · Large ${ap("large")}<br>`
+    + `Cluster-1 minimum: 2 hosts (Medium) · ${st ? 6 : 3} hosts (Large) · management-only Cluster-1: ${S.mgmtHosts} hosts as set<br>`
+    + `Management CIDR is an output: hosts per range${st ? " (stretched)" : ""} ${cl}`;
+}
+
+document.addEventListener("input", e => {
+  const el = e.target; const k = el.dataset && el.dataset.k; if (!k) return;
+  if (el.type === "checkbox") S[k] = el.checked;
+  else if (el.type === "number" || el.type === "range" || el.dataset.num) { const v = parseFloat(el.value); if (isFinite(v)) S[k] = v; else return; }
+  else S[k] = el.value;
+  refreshForm(); if (k === "deploy") renderGroups(); recalc();
+});
+$("resetpol").addEventListener("click", () => {
+  for (const k of ["cpuRatio", "ramRatio", "memReserve", "memFill", "vmOverhead", "growth"]) S[k] = DEFAULTS[k];
+  refreshForm(); recalc();
+});
+$("resetsddc").addEventListener("click", () => {
+  for (const k of ["deploy", "appliance", "sddcCount", "mgmtCluster", "mgmtHosts", "wlClusters", "maxCluster"]) S[k] = DEFAULTS[k];
+  refreshForm(); recalc();
+});
+
+// ---------- workload groups ----------
+function renderGroups() {
+  const t = workloadTotals(groups);
+  const head = `<thead><tr><th>Use</th><th>Group</th>${FIELDS.map(f => `<th class="n">${f[1]}</th>`).join("")}<th></th></tr></thead>`;
+  const h = hostById(S.hostType), st = S.deploy === "stretched";
+  const pctv = (x) => x === null || x === undefined ? "–" : Math.round(x * 100) + "%";
+  const optRow = (g) => {
+    const o = g.opts || (g.opts = newOpts());
+    const sn = g.meta && g.meta.snap;
+    const coreSel = "" && `<select class="g-o" data-o="cores" aria-label="Cores per host"><option value="0">All ${h.cores}</option>${h.coreOpts.three.map(c => `<option value="${c}" ${o.cores === c ? "selected" : ""}>${c}</option>`).join("")}</select>`;
+    return `<tr class="gopt" data-g="${g.id}"><td colspan="${FIELDS.length + 3}"><div class="optrow">
+      <label title="Sized to keep cores at or below 80% busy at this peak">Peak CPU % <input type="number" class="g-o" data-o="cpuPeak" min="0" max="100" step="1" value="${o.cpuPeak || ""}" placeholder="ratio"></label>
+      <label>Peak RAM % <input type="number" class="g-o" data-o="ramPeak" min="0" max="100" step="1" value="${o.ramPeak || ""}" placeholder="ratio"></label>
+      ${st ? `<label><input type="checkbox" class="g-o" data-o="stretch" ${o.stretch !== false ? "checked" : ""}> Stretched (AZ resilience)</label>` : ""}
+      ${sn ? `<span class="snap" title="Point-in-time values from the RVTools export (powered-on VMs). Reference only.">RVTools snapshot: CPU ${pctv(sn.cpuPct)} · RAM active ${pctv(sn.actPct)}, consumed ${pctv(sn.conPct)}</span>` : ""}
+    </div></td></tr>`;
+  };
+  const rows = groups.map(g => `<tr class="ghead" data-g="${g.id}">
+    <td><input type="checkbox" class="g-inc" ${g.include ? "checked" : ""} aria-label="Include ${esc(g.name)}"></td>
+    <td>${g.source === "manual" ? `<input type="text" class="g-name" value="${esc(g.name)}" aria-label="Group name">` : `${esc(g.name)} <span class="pill">RVTools</span>`}</td>
+    ${FIELDS.map(([k, , d]) => `<td class="n"><input type="number" class="g-v ${g.over.has(k) ? "ov" : ""}" data-f="${k}" step="${d ? 0.1 : 1}" min="0" value="${+Number(g.values[k] || 0).toFixed(d)}" aria-label="${k}"></td>`).join("")}
+    <td>${g.source === "manual" ? `<button type="button" class="link g-del">Remove</button>` : (g.over.size ? `<button type="button" class="link g-reset">Reset</button>` : "")}</td></tr>${optRow(g)}`).join("");
+  const tot = `<tr class="tot"><td></td><td>Total in scope</td>${FIELDS.map(([k, , d]) => `<td class="n num">${nf(t[k], d)}</td>`).join("")}<td></td></tr>`;
+  $("groups").innerHTML = head + `<tbody>${rows}${tot}</tbody>`;
+}
+$("groups").addEventListener("change", e => {
+  const tr = e.target.closest("tr[data-g]"); if (!tr) return;
+  const g = groups.find(x => x.id === +tr.dataset.g);
+  if (e.target.classList.contains("g-o")) {
+    const k = e.target.dataset.o;
+    if (k === "stretch") g.opts.stretch = e.target.checked;
+    else { const v = parseFloat(e.target.value); g.opts[k] = isFinite(v) && v > 0 ? Math.min(k === "cores" ? 999 : 100, v) : 0; }
+  }
+  else if (e.target.classList.contains("g-inc")) g.include = e.target.checked;
+  else if (e.target.classList.contains("g-name")) g.name = e.target.value;
+  else if (e.target.classList.contains("g-v")) {
+    const k = e.target.dataset.f, v = parseFloat(e.target.value) || 0; g.values[k] = v;
+    if (g.source === "rvtools") { if (Math.abs(v - g.parsed[k]) > 1e-9) g.over.add(k); else g.over.delete(k); }
+  }
+  renderGroups(); recalc();
+});
+$("groups").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-g]"); if (!tr) return;
+  const id = +tr.dataset.g;
+  if (e.target.classList.contains("g-del")) groups = groups.filter(x => x.id !== id);
+  else if (e.target.classList.contains("g-reset")) { const g = groups.find(x => x.id === id); g.values = { ...g.parsed }; g.over.clear(); }
+  else return;
+  renderGroups(); recalc();
+});
+$("addgrp").addEventListener("click", () => {
+  groups.push({ id: gid++, name: "Manual group " + (groups.filter(g => g.source === "manual").length + 1), source: "manual", include: true,
+    values: { vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, templTiB: 0 }, parsed: null, over: new Set(), opts: newOpts(), meta: null });
+  renderGroups(); recalc();
+});
+
+// ---------- RVTools ----------
+const drop = $("drop"), fin = $("file");
+drop.addEventListener("click", () => fin.click());
+drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fin.click(); } });
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); handleFiles(e.dataTransfer.files); });
+fin.addEventListener("change", () => { handleFiles(fin.files); fin.value = ""; });
+
+async function handleFiles(list) {
+  list = Array.from(list || []);
+  if (typeof XLSX === "undefined") { $("filelist").innerHTML = `<p class="pill crit">The spreadsheet reader didn't load. Check your connection and reload the page.</p>`; return; }
+  for (const f of list) {
+    const rec = { fileName: f.name, include: true, status: "Reading…", vms: [] };
+    files.push(rec); renderFiles();
+    await new Promise(r => setTimeout(r, 30));
+    try {
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array", sheets: ["vInfo", "vHost", "vDisk", "vPartition", "vCPU", "vMemory"], dense: true });
+      const rows = (n) => wb.Sheets[n] ? XLSX.utils.sheet_to_json(wb.Sheets[n], { defval: null }) : null;
+      const p = parseRVTools(rows("vInfo"), rows("vHost"), rows("vDisk"), rows("vPartition"), f.name, rows("vCPU"), rows("vMemory"));
+      Object.assign(rec, p, { status: p.error ? "error" : "ok" });
+    } catch (err) { rec.status = "error"; rec.error = "Couldn't read this file as an RVTools export (" + err.message + ")."; }
+    renderFiles(); rebuildRV();
+  }
+}
+function renderFiles() {
+  if (!files.length) { $("filelist").innerHTML = ""; $("scope").classList.add("hidden"); $("estate").classList.add("hidden"); return; }
+  $("scope").classList.remove("hidden");
+  $("filelist").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Use</th><th>File</th><th>vCenter</th><th class="n">VMs</th><th>Status</th><th></th></tr></thead><tbody>${
+    files.map((f, i) => `<tr data-f="${i}"><td><input type="checkbox" class="f-inc" ${f.include ? "checked" : ""} ${f.status !== "ok" ? "disabled" : ""} aria-label="Include ${esc(f.fileName)}"></td>
+      <td title="${esc(f.fileName)}">${esc(f.fileName.length > 34 ? f.fileName.slice(0, 31) + "…" : f.fileName)}</td><td>${esc(f.vcenter || "")}</td>
+      <td class="n num">${f.vms ? nf(f.vms.length) : ""}</td>
+      <td>${f.status === "ok" ? (f.issues && f.issues.length ? `<span class="pill warn" title="${esc(f.issues.join(" "))}">read, ${f.issues.length} note${f.issues.length > 1 ? "s" : ""}</span>` : `<span class="pill good">read</span>`)
+            : f.status === "error" ? `<span class="pill crit" title="${esc(f.error)}">error</span> <span class="hint">${esc(f.error)}</span>` : `<span class="pill">${f.status}</span>`}</td>
+      <td><button type="button" class="link f-del">Remove</button></td></tr>`).join("")}</tbody></table></div>`;
+}
+$("filelist").addEventListener("change", e => { const tr = e.target.closest("tr[data-f]"); if (!tr) return; files[+tr.dataset.f].include = e.target.checked; rebuildRV(); });
+$("filelist").addEventListener("click", e => { if (!e.target.classList.contains("f-del")) return; files.splice(+e.target.closest("tr").dataset.f, 1); renderFiles(); rebuildRV(); });
+for (const [id, k, prop] of [["sc_off", "includeOff", "checked"], ["sc_tpl", "templatesStorage", "checked"], ["sc_group", "groupBy", "value"], ["sc_vcls", "exVcls", "checked"], ["sc_pat", "patterns", "value"]])
+  $(id).addEventListener(id === "sc_pat" ? "change" : "input", e => { scope[k] = e.target[prop]; rebuildRV(); });
+
+function rebuildRV() {
+  const ok = files.filter(f => f.status === "ok");
+  const b = buildGroups(ok, scope, scope.groupBy);
+  const old = new Map(groups.filter(g => g.source === "rvtools").map(g => [g.name, g]));
+  const fresh = b.groups.map(x => {
+    const parsed = { vms: x.vms, vcpu: x.vcpu, vramGiB: x.vramGiB, usedTiB: x.usedTiB, allocTiB: x.allocTiB, templTiB: x.templTiB };
+    const prev = old.get(x.key);
+    const g = { id: prev ? prev.id : gid++, name: x.key, source: "rvtools", include: prev ? prev.include : true, parsed, values: { ...parsed }, over: new Set(prev ? prev.over : []),
+      opts: prev ? prev.opts : newOpts(), meta: { big: x.big, snap: x.snap } };
+    if (prev) for (const k of g.over) g.values[k] = prev.values[k];
+    return g;
+  });
+  if (fresh.length) groups = groups.filter(g => !g.example);
+  groups = [...fresh, ...groups.filter(g => g.source === "manual")];
+  const tip = (r) => r.count ? `${r.label} matched ${nf(r.count)} VM${r.count > 1 ? "s" : ""}, e.g.\n  ${r.samples.join("\n  ")}${r.count > r.samples.length ? `\n  …and ${nf(r.count - r.samples.length)} more` : ""}`
+    : `${r.label} didn't match any VM. Check the spelling, or remove it.`;
+  const big = b.rules.filter(r => b.considered > 0 && r.count / b.considered > 0.5);
+  $("exclstat").innerHTML = b.rules.length
+    ? `Excluded: ${b.rules.map(r => `<span title="${esc(tip(r))}" style="cursor:help;border-bottom:1px dotted currentColor">${esc(r.label)} ${nf(r.count)}${r.count ? "" : " ⚠"}</span>`).join(" · ")} · ${nf(b.excluded)} VMs in total`
+      + big.map(r => `<br><span class="pill warn">⚠ ${esc(r.label)} excludes ${pct(r.count / b.considered)} of the VMs. Check it's what you meant.</span>`).join("")
+    : "No VMs excluded by name.";
+  $("scopestat").textContent = `${nf(b.dups)} duplicates removed · ${nf(b.templates)} templates (${scope.templatesStorage ? "storage only" : "not counted"})`
+      + (scope.includeOff ? "" : ` · ${nf(b.offExcluded)} powered-off VMs left out`);
+  const est = ok.filter(f => f.include && f.est);
+  if (est.length) {
+    const hosts = est.reduce((a, f) => a + f.est.hosts, 0), cores = est.reduce((a, f) => a + f.est.cores, 0), ram = est.reduce((a, f) => a + f.est.ramGiB, 0);
+    const models = {}; est.forEach(f => Object.entries(f.est.models).forEach(([m, c]) => models[m] = (models[m] || 0) + c));
+    const vcpu = workloadTotals(groups.filter(g => g.source === "rvtools")).vcpu;
+    $("estate").classList.remove("hidden");
+    $("estate").innerHTML = `<div class="note"><b>Current estate (from vHost):</b> ${nf(hosts)} hosts · ${nf(cores)} cores · ${nf(ram)} GiB RAM · ${nf(vcpu / cores, 2)} vCPU per core (VMs in scope)<br>
+      ${Object.entries(models).sort((a, b) => b[1] - a[1]).map(([m, c]) => `${esc(m)} × ${c}`).join(" · ")}</div>`;
+  } else $("estate").classList.add("hidden");
+  renderGroups(); recalc();
+}
+
+// ---------- results ----------
+let last = null;
+function recalc() {
+  const t = workloadTotals(groups);
+  if (!(t.vcpu > 0 || t.vramGiB > 0)) { $("storneed").innerHTML = ""; $("results").innerHTML = `<section class="card"><h2>Results</h2><p>Add a workload group or import RVTools to see the sizing.</p></section>`; last = null; return; }
+  const r = size(S, groups); last = r;
+  const h = r.host, st = S.deploy === "stretched";
+  renderStorageNeed(r);
+  const ml = r.sddcs[0].mgmt;
+  $("addonload").innerHTML = `<div class="mgmt"><b>Cluster-1 management load per SDDC${r.n > 1 ? " (SDDC 1)" : ""}</b><table><tbody>
+    ${ml.items.map(i => `<tr><td>${esc(i.name)}</td><td class="n">${nf(i.vcpu)} vCPU · ${nf(i.ram)} GB · ${nf(i.stor * 1024)} GB</td></tr>`).join("")}
+    <tr class="tot"><td>Total (vCPU counted at the ${S.cpuRatio} : 1 CPU ratio; RAM 1:1)</td><td class="n">${nf(ml.vcpu)} vCPU · ${nf(ml.ram)} GB · ${nf(ml.stor, 1)} TiB</td></tr></tbody></table>
+    ${S.afwOn ? `<span class="hint">Distributed IDS/IPS: −2 GB RAM per host; CPU scales with inspected traffic (within the CPU ratio's headroom) · <b>subscription cores: ${nf(r.cores)}</b> (all hosts, ${r.n} SDDC${r.n > 1 ? "s" : ""})</span>` : ""}</div>`;
+  const alt = (o) => size(S, groups, o).hosts;
+  const maxBar = Math.max(r.need.cpu, r.need.ram, r.need.stor || 0, 1);
+  const bar = (name, v) => `<div class="bar ${r.limiter === name ? "lim" : ""}"><span>${name}</span><span class="t"><i style="width:${Math.min(100, v / maxBar * 100)}%"></i></span><span class="num">${nf(v)} hosts</span></div>`;
+  const comp = HOSTS.map(x => ({ x, rr: size(S, groups, { hostId: x.id }) }));
+  const best = Math.min(...comp.map(c => c.rr.hosts));
+  const v = { a: alt({ tierOn: false, extOn: false }), b: alt({ tierOn: true, extOn: false }), c: alt({ tierOn: false, extOn: true }), d: alt({ tierOn: true, extOn: true }) };
+  const mn = Math.min(v.a, v.b, v.c, v.d); const cell = (n) => `<div class="num ${n === mn ? "best" : ""}">${nf(n)} hosts</div>`;
+  const grid = `<section class="card"><header><h3>Toggle combinations for ${h.id}</h3><span class="hint">FSxN share of workload: ${S.extPct}% · tiering is a what-if</span></header>
+    <div class="grid2"><div class="h"></div><div class="h">Tiering off</div><div class="h">Tiering on (what-if)</div>
+    <div class="h">vSAN only</div>${cell(v.a)}${cell(v.b)}<div class="h">With FSxN</div>${cell(v.c)}${cell(v.d)}</div></section>`;
+  const limTxt = { CPU: "CPU", RAM: "RAM", Storage: "Storage", Minimum: "Minimum hosts" }[r.limiter];
+  const tier = r.cfg.tiering ? r.cfg.tierGiB : 0;
+  const ramCell = (n) => tier ? `${nf(n * h.ramGiB)} + ${nf(n * tier)}` : nf(n * h.ramGiB);
+  const util = (c) => `${nf(c.d.vcpu / (c.total * c.hostCores), 1)} vCPU/core · CPU ${pct(c.d.cores / (c.total * (c.hostCores - r.cfg.afwCores)))} · RAM ${pct(c.d.ram / (c.total * r.cfg.effRamGiB))} · vSAN ${pct(c.vsanUsable ? c.d.vsan / c.vsanUsable : null)}`;
+  const hostsCell = (c) => c.setHosts ? `${nf(c.total)} <span class="hint">${c.total > c.setHosts ? `(set ${c.setHosts}, needs ${c.total})` : "(set)"}</span>` : c.stretched ? `${nf(c.total)} <span class="hint">(${nf(c.total / 2)} per AZ)</span>` : `${nf(c.total)}`;
+  const tags = (c) => (st ? (c.stretched ? "stretched" : "single AZ") : "");
+  const roleTxt = (c, i) => (c.role === "mgmt" ? "Cluster-1 (management only)" : (c.role === "shared" ? "Cluster-1 (management + workloads)" : `Cluster-${i}`)) + (tags(c) ? ` <span class="pill">${tags(c)}</span>` : "");
+  const sdRows = r.sddcs.map((x, ii) => {
+    let ci = 1;
+    const rows = x.clusters.map(c => { const lab = roleTxt(c, ci++); return `<tr><td style="padding-left:20px">${lab}<br><span class="hint">${util(c)}</span></td>
+      <td class="n">${hostsCell(c)}</td><td class="n">${nf(c.total * c.hostCores)}</td><td class="n">${ramCell(c.total)}</td><td class="n">${nf(c.vsanUsable, 1)}</td>
+      <td>${c.atMin ? `Minimum (${c.floor})` : c.limiter}</td><td>${c.prot}</td></tr>`; }).join("");
+    return `<tr class="tot"><td>SDDC ${ii + 1} <span class="hint">· ${x.clusters.length} cluster${x.clusters.length > 1 ? "s" : ""} · ${x.appliance === "large" ? "Large" : "Medium"} appliances · management CIDR ${x.cidr.label}</span></td><td class="n">${nf(x.total)}</td><td class="n">${nf(x.clusters.reduce((a, c) => a + c.total * c.hostCores, 0))}</td><td class="n">${ramCell(x.total)}</td><td class="n">${nf(x.vsanUsableTiB, 1)}</td><td colspan="2"></td></tr>${rows}`;
+  }).join("");
+  const aps = [...new Set(r.sddcs.map(x => x.appliance))].map(a => a === "large" ? "Large" : "Medium").join(" / ");
+  $("results").innerHTML = `
+  <section class="card">
+    <header><h2>Results</h2></header>
+    <div class="headline">
+      <div class="tile main"><span class="k">VMC hosts</span><span class="big">${nf(r.hosts)}</span><span class="d">${h.id}${h.future ? " (coming)" : ""}</span></div>
+      <div class="tile"><span class="k">Limited by</span><span class="big" style="font-size:22px">${limTxt}</span><span class="d">workload clusters</span></div>
+      <div class="tile${r.limitWarn ? " warntile" : ""}"><span class="k">SDDCs${r.limitWarn ? ' <span class="pill warn" title="Past a value you set: see Checks">⚠ check</span>' : ""}</span><span class="big">${nf(r.n)}${S.sddcCount > 0 && r.n > r.nNeed ? `<span class="hint" style="font-size:12px"> (min ${r.nNeed})</span>` : ""}</span><span class="d">management CIDR ${[...new Set(r.sddcs.map(x => x.cidr.rec))].join(" / ")}</span></div>
+      <div class="tile"><span class="k">Clusters</span><span class="big">${nf(r.clusters)}</span><span class="d">total · up to ${r.N || S.maxClusters} per SDDC${st ? " · stretched" : ""}</span></div>
+      <div class="tile"><span class="k">Appliances</span><span class="big" style="font-size:22px">${aps}</span><span class="d">${st ? "stretched" : "single AZ"} · vSAN ${r.cfg.arch.toUpperCase()}</span></div>
+    </div>
+    <div class="bars"><span class="hint">Hosts each resource needs across workload clusters (${st ? "per AZ" : "all hosts run workloads"})</span>${bar("CPU", r.need.cpu)}${bar("RAM", r.need.ram)}${bar("Storage", r.need.stor)}</div>
+  </section>
+
+  <section class="card">
+    <header><h3>SDDCs and clusters</h3><span class="hint">Cluster-1 ${S.mgmtCluster === "dedicated" ? "runs management only" : "runs management and workloads"} · ${r.N ? `${r.N} clusters per SDDC, hosts spread evenly` : "clusters filled in order, last two evened out"}</span></header>
+    <div class="tablewrap"><table><thead><tr><th>SDDC / cluster</th><th class="n">Hosts</th><th class="n">Cores</th><th class="n">RAM GiB${tier ? " (DRAM + tier)" : ""}</th><th class="n">vSAN usable TiB</th><th>Limited by</th><th>vSAN policy</th></tr></thead><tbody>
+      ${sdRows}
+      <tr class="tot"><td>Total: ${nf(r.n)} SDDC${r.n > 1 ? "s" : ""} · ${nf(r.clusters)} clusters</td><td class="n">${nf(r.hosts)}</td><td class="n">${nf(r.cores)}</td><td class="n">${ramCell(r.hosts)}</td><td class="n">${nf(r.vsanUsable, 1)}</td><td colspan="2"></td></tr></tbody></table></div>
+    <p class="hint" style="margin:0">Cores and RAM are physical, across all hosts. vSAN usable is after the managed policy, compression and the free-space reserve, on all hosts in the cluster. The line under each cluster shows its load: vCPU per core, RAM used and vSAN used. ${st ? "Stretched clusters hold the full workload in each AZ." : "There's no spare host: workloads run on every host."} "Minimum" means the cluster's minimum host count set its size.</p>
+  </section>
+
+  <section class="card">
+    <header><h3>Capacity and utilisation</h3></header>
+    <div class="tablewrap"><table><tbody>
+      <tr><td>Demand (incl. management${S.growth ? `, +${S.growth}% growth` : ""})</td><td class="n num">${nf(r.D.vcpu)} vCPU · ${nf(r.D.ram)} GiB · ${nf(r.D.stor, 1)} TiB</td></tr>
+      <tr><td>Physical cores</td><td class="n num">${nf(r.cores)}</td></tr>
+      ${S.afwOn ? `<tr><td>Distributed IDS/IPS subscription cores</td><td class="n num"><b>${nf(r.cores)}</b></td></tr>` : ""}
+      <tr><td>vCPU per physical core (all hosts)</td><td class="n num">${nf(r.vcpuPerCore, 2)} : 1</td></tr>
+      <tr><td>RAM demand ÷ physical RAM${r.cfg.tiering ? " (DRAM + NVMe tier)" : ""}</td><td class="n num">${pct(r.D.ram / (r.hosts * r.cfg.effRamGiB))}</td></tr>
+      ${r.cfg.tiering ? `<tr><td>Active memory ÷ DRAM (keep under ~50%)</td><td class="n num">${pct(r.activePctOfDram)}</td></tr>` : ""}
+      <tr><td>vSAN usable / used</td><td class="n num">${nf(r.vsanUsable, 0)} TiB / ${nf(r.vsanDemand, 0)} TiB (${pct(r.vsanPct)})</td></tr>
+      <tr><td>External NFS capacity (before ONTAP efficiencies)</td><td class="n num">${r.fsxTiB > 0 ? nf(r.fsxTiB, 1) + " TiB" : "–"}</td></tr>
+    </tbody></table></div>
+  </section>
+
+  ${r.fit.length ? `<section class="card">
+    <header><h3>Large VMs</h3><span class="hint">VMs that don't fit, or need hyperthreads, on one ${h.id} host</span></header>
+    <div class="tablewrap"><table><thead><tr><th>VM</th><th>Group</th><th class="n">vCPU</th><th class="n">vRAM GiB</th><th>Issue</th></tr></thead><tbody>
+      ${r.fit.slice(0, 25).map(f => `<tr><td>${esc(f.name)}</td><td>${esc(f.group)}</td><td class="n num">${nf(f.cpus)}</td><td class="n num">${nf(f.memGiB)}</td><td><span class="pill ${f.lvl}">${f.cpus > f.threads ? `over ${f.threads} threads` : f.memGiB > f.ramCap ? `over ${nf(f.ramCap)} GiB usable` : `over ${f.cores} cores`}</span></td></tr>`).join("")}
+    </tbody></table></div>
+    ${r.fit.length > 25 ? `<p class="hint" style="margin:0">${r.fit.length - 25} more in the Excel export.</p>` : ""}
+  </section>` : ""}
+
+  ${grid}
+
+  <section class="card">
+    <header><h3>Same workload on each host type</h3><span class="hint">Current settings</span></header>
+    <div class="tablewrap"><table><thead><tr><th>Host type</th><th class="n">Hosts</th><th class="n">SDDCs</th><th class="n">Clusters</th><th class="n">Cores</th><th>Limited by</th><th class="n">vSAN used</th></tr></thead><tbody>
+      ${comp.map(({ x, rr }) => `<tr class="${x.id === S.hostType ? "sel" : ""}"><td>${x.id}${x.future ? ' <span class="pill warn">Coming</span>' : ""}${rr.hosts === best ? ' <span class="pill good">fewest</span>' : ""}</td><td class="n num">${nf(rr.hosts)}</td><td class="n num">${nf(rr.n)}</td><td class="n num">${nf(rr.clusters)}</td><td class="n num">${nf(rr.cores)}</td><td>${rr.limiter}</td><td class="n num">${pct(rr.vsanPct)}</td></tr>`).join("")}
+    </tbody></table></div>
+  </section>
+
+  <section class="card">
+    <header><h3>Checks</h3></header>
+    <ul class="warns">${r.warnings.map(w => `<li class="${w.lvl}">${esc(w.t)}</li>`).join("") || "<li>No issues found.</li>"}</ul>
+  </section>
+
+  <section class="card">
+    <div class="row"><button type="button" id="xls">Export to Excel</button><span class="hint" id="xlsmsg"></span></div>
+  </section>`;
+  $("xls").addEventListener("click", exportXlsx);
+}
+
+// ---------- storage panel ----------
+function renderStorageNeed(r) {
+  const out = [];
+  const gtxt = r.growthFactor > 1 ? `, +${nf((r.growthFactor - 1) * 100)}% growth` : "";
+  const basis = S.storageBasis === "allocated" ? "allocated" : "guest used";
+  if (r.cfg.extPct > 0) {
+    const f = r.cfg.extPct / 100;
+    const per = r.sddcs.map(x => x.fsx);
+    out.push(`<div class="mgmt"><b>External storage needed (FSx for NetApp ONTAP): ${r.cfg.extPct}% of workload</b>
+      <table><tbody>
+      <tr><td>Workload (${basis}${gtxt})</td><td class="n">${nf(r.storWork * f, 1)} TiB</td></tr>
+      <tr><td>Templates</td><td class="n">${nf(r.storTempl * f, 1)} TiB</td></tr>
+      <tr class="tot"><td>Total</td><td class="n">${nf(r.fsxTiB, 1)} TiB</td></tr>
+      <tr><td>Per SDDC</td><td class="n">${r.n} × ${nf(per[0], 1)} TiB</td></tr>
+      <tr><td>On vSAN (rest of workload + management ${nf(r.storMgmt, 1)} TiB)</td><td class="n">${nf(r.vsanDemand, 1)} TiB</td></tr>
+      </tbody></table><span class="hint">Logical capacity before ONTAP deduplication and compression; throughput and IOPS aren't sized.</span></div>`);
+  }
+  const hd = r.head;
+  if (!hd.limiting) out.push(`<div class="mgmt"><b>vSAN: not limiting</b>
+    <table><tbody><tr><td>Hosts set by CPU/RAM${S.deploy === "stretched" ? " (both AZs)" : ""}</td><td class="n">${nf(hd.crHosts)}</td></tr>
+    <tr><td>vSAN on those hosts holds</td><td class="n">${nf(hd.capCR, 1)} TiB</td></tr>
+    <tr><td>Storage on vSAN (incl. ${nf(hd.mgmtOnVsan, 1)} TiB management)</td><td class="n">${nf(hd.vsanNeed, 1)} TiB</td></tr>
+    <tr class="tot"><td>Headroom before storage sets the host count</td><td class="n">${nf(hd.headroom, 1)} TiB (${pct(hd.capCR ? hd.headroom / hd.capCR : 0)})</td></tr></tbody></table></div>`);
+  else {
+    const be = breakEven(S, groups);
+    out.push(`<div class="mgmt"><b>vSAN: limiting</b>
+    <table><tbody><tr><td>Hosts set by CPU/RAM${S.deploy === "stretched" ? " (both AZs)" : ""}</td><td class="n">${nf(hd.crHosts)} (storage needs ${nf(hd.storHosts)})</td></tr>
+    <tr><td>vSAN on ${nf(hd.crHosts)} hosts holds</td><td class="n">${nf(hd.capCR, 1)} TiB</td></tr>
+    <tr><td>Storage on vSAN (incl. ${nf(hd.mgmtOnVsan, 1)} TiB management)</td><td class="n">${nf(hd.vsanNeed, 1)} TiB</td></tr>
+    ${be && be.pct !== null ? `<tr class="tot"><td>Move to FSxN so storage stops setting the count</td><td class="n">${be.pct}% of workload (${nf(be.tib, 1)} TiB)</td></tr>
+    <tr><td>Hosts after the move</td><td class="n">${nf(be.from)} → ${nf(be.hosts)}</td></tr>` : ""}</tbody></table>
+    ${be && be.pct !== null ? `<div class="row" style="margin-top:6px"><button type="button" id="applyext" data-p="${be.pct}">Set FSxN share to ${be.pct}%</button></div>` : `<span class="hint">Even with all workload on FSxN, storage still sets the count (management stays on vSAN).</span>`}</div>`);
+  }
+  $("storneed").innerHTML = out.join("");
+  const b = $("applyext");
+  if (b) b.addEventListener("click", () => { S.extOn = true; S.extPct = +b.dataset.p; refreshForm(); recalc(); });
+}
+
+// ---------- export ----------
+let downloads = null;
+(async () => { try { if (window.claude && window.claude.use) downloads = await window.claude.use("downloads"); } catch (e) { downloads = null; } })();
+async function exportXlsx() {
+  const r = last; if (!r) return;
+  const msg = $("xlsmsg");
+  if (typeof XLSX === "undefined") { msg.textContent = "The spreadsheet library didn't load."; return; }
+  const wb = XLSX.utils.book_new();
+  const today = new Date().toISOString().slice(0, 10);
+  const st = S.deploy === "stretched";
+  const sum = [["VMware Cloud on AWS sizing", ""], ["Customer", S.customer], ["Region", S.region], ["Date", today], ["Notes", S.notes], [],
+    ["Host type", r.host.id + (r.host.future ? " (not yet offered on VMC)" : "")], ["Deployment", st ? "Stretched (2 AZs)" : "Single AZ"], ["vSAN architecture", r.cfg.arch.toUpperCase()],
+    ["VMC hosts", r.hosts], ["SDDCs", r.n], ["SDDCs needed by limits", r.nNeed], ["Management CIDR per SDDC", r.sddcs.map(x => x.cidr.label).join("; ")], ["Clusters", r.clusters], ["Limited by", r.limiter], ["SDDC appliances", r.sddcs.map(x => x.appliance).join(", ")],
+    ["Physical cores", r.cores], ["Distributed IDS/IPS subscription cores", S.afwOn ? r.cores : "off"], ["vCPU per core (all hosts)", +r.vcpuPerCore.toFixed(2)], ["vSAN used %", r.vsanPct === null ? "n/a" : +(r.vsanPct * 100).toFixed(1)], ["External NFS TiB", +r.fsxTiB.toFixed(1)],
+    ["Memory tiering (what-if)", r.cfg.tiering ? "on" : "off"], [],
+    ["Demand vCPU", Math.round(r.D.vcpu)], ["Demand RAM GiB", Math.round(r.D.ram)], ["Demand storage TiB", +r.D.stor.toFixed(1)], [], ["Checks"], ...r.warnings.map(w => [w.lvl, w.t])];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), "Summary");
+  const crow = [];
+  const tg = r.cfg.tiering ? r.cfg.tierGiB : 0;
+  r.sddcs.forEach((x, ii) => { x.clusters.forEach((c, ci) => {
+    crow.push([ii + 1, ci === 0 ? x.cidr.label : "", (c.stretched ? "stretched" : "single AZ"), `Cluster-${ci + 1}` + (c.role === "mgmt" ? " (management only)" : c.role === "shared" ? " (management + workloads)" : ""), x.appliance, c.total, st ? c.total / 2 : "",
+      c.total * c.hostCores, c.total * r.host.ramGiB, Math.round(c.total * tg), +c.vsanUsable.toFixed(1), Math.round(c.d.vcpu), Math.round(c.d.ram), +c.d.vsan.toFixed(1),
+      +(c.d.vcpu / (c.total * c.hostCores)).toFixed(2), +(c.d.ram / (c.total * (r.host.ramGiB + tg)) * 100).toFixed(1), c.vsanUsable ? +(c.d.vsan / c.vsanUsable * 100).toFixed(1) : "",
+      c.atMin ? "Minimum (" + c.floor + ")" : c.limiter, c.prot]); }); });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["SDDC", "Management CIDR", "Cluster type", "Cluster", "Appliances", "Hosts", "Hosts per AZ (stretched)", "Cores", "DRAM GiB", "Memory tier GiB", "vSAN usable TiB", "Demand vCPU", "Demand RAM GiB", "Demand vSAN TiB", "vCPU per core", "RAM used %", "vSAN used %", "Limited by", "vSAN policy"], ...crow]), "SDDCs & clusters");
+  const pc = (x) => x === null || x === undefined ? "" : +(x * 100).toFixed(1);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Group", "Source", "Included", "VMs", "vCPU", "vRAM GiB", "Used TiB", "Allocated TiB", "Templates TiB", "Overridden fields",
+    "Peak CPU %", "Peak RAM %", "Needs AZ resilience", "Snapshot CPU %", "Snapshot RAM active %", "Snapshot RAM consumed %"],
+    ...groups.map(g => { const o = g.opts || {}, sn = (g.meta && g.meta.snap) || {};
+      return [g.name, g.source, g.include ? "yes" : "no", ...FIELDS.map(([k, , d]) => +Number(g.values[k] || 0).toFixed(d)), [...g.over].join(", "),
+        o.cpuPeak || "", o.ramPeak || "", st ? (o.stretch !== false ? "yes" : "no") : "", pc(sn.cpuPct), pc(sn.actPct), pc(sn.conPct)]; })]), "Workload");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["SDDC", "Component", "vCPU", "RAM GB", "Disk GB"],
+    ...r.sddcs.flatMap((x, ii) => x.mgmt.items.map(i => [ii + 1, i.name, i.vcpu, i.ram, Math.round(i.stor * 1024)])),
+    [], ["Distributed IDS/IPS overhead per host", S.afwOn ? "2 GB RAM; CPU up to 5 cores with inspected traffic, within the CPU ratio's headroom" : "off"], ["Distributed IDS/IPS subscription cores", S.afwOn ? r.cores : "off"]]), "Management load");
+  if (r.fit.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["VM", "Group", "vCPU", "vRAM GiB", "Level", "Host cores", "Host threads", "Usable RAM GiB"],
+    ...r.fit.map(f => [f.name, f.group, f.cpus, +f.memGiB.toFixed(1), f.lvl, f.cores, f.threads, Math.round(f.ramCap)])]), "Large VMs");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Host type", "Hosts", "SDDCs", "Clusters", "Cores", "Limited by", "vSAN used %"],
+    ...HOSTS.map(x => { const rr = size(S, groups, { hostId: x.id }); return [x.id + (x.future ? " (coming)" : ""), rr.hosts, rr.n, rr.clusters, rr.cores, rr.limiter, rr.vsanPct === null ? "" : +(rr.vsanPct * 100).toFixed(1)]; })]), "Host comparison");
+  const inp = Object.entries(S).filter(([k]) => !["customer", "region", "notes"].includes(k)).map(([k, v]) => [k, v]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Setting", "Value"], ...inp, [], ["RVTools scope", ""], ["Include powered-off", scope.includeOff], ["Templates storage only", scope.templatesStorage], ["Exclude vCLS", scope.exVcls], ["Exclude patterns", scope.patterns], ["Group by", scope.groupBy],
+    [], ["Files", ""], ...files.map(f => [f.fileName, f.status + (f.vms ? ` (${f.vms.length} VMs)` : "")])]), "Inputs");
+  const data = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const name = `VMC_sizing_${(S.customer || "customer").replace(/[^\w-]+/g, "_")}_${today}.xlsx`;
+  if (!downloads) {
+    const url = URL.createObjectURL(new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000); msg.textContent = "Downloaded."; return;
+  }
+  try { await downloads.save({ filename: name, data: new Blob([data]) }); msg.textContent = "Saved."; }
+  catch (e) { msg.textContent = e && e.code === "declined" ? "Export cancelled." : "Couldn't save the file here."; }
+}
+
+// ---------- settings copy / load ----------
+function settingsJSON() {
+  return JSON.stringify({ v: 2, tool: "vmc", settings: S, scope, groups: groups.map(g => ({ name: g.name, source: g.source, include: g.include, values: g.values, opts: g.opts, meta: g.meta })) }, null, 1);
+}
+$("copyset").addEventListener("click", async () => {
+  const txt = settingsJSON();
+  try { await navigator.clipboard.writeText(txt); $("setmsg").textContent = "Settings copied to the clipboard."; }
+  catch (e) { openDlg("Copy settings", txt, false); }
+});
+$("loadset").addEventListener("click", () => openDlg("Load settings", "", true));
+function openDlg(title, text, canApply) {
+  $("dlgtitle").textContent = title; $("dlgtext").value = text; $("dlgok").classList.toggle("hidden", !canApply);
+  $("dlgmsg").textContent = canApply ? "Paste settings copied from this calculator. RVTools groups load as manual totals." : "Select all and copy.";
+  $("dlg").showModal();
+}
+$("dlgclose").addEventListener("click", () => $("dlg").close());
+$("dlgok").addEventListener("click", () => {
+  try {
+    const o = JSON.parse($("dlgtext").value);
+    const keep = Object.fromEntries(Object.entries(o.settings || {}).filter(([k]) => k in DEFAULTS || ["customer", "region", "notes"].includes(k)));
+    Object.assign(S, DEFAULTS, keep);
+    if (!hostById(S.hostType)) S.hostType = DEFAULTS.hostType;
+    groups = (o.groups || []).map(g => ({ id: gid++, name: g.name, source: "manual", include: g.include !== false, values: { ...g.values }, parsed: null, over: new Set(), opts: { ...newOpts(), ...(g.opts || {}) }, meta: g.meta || null }));
+    files = []; renderFiles(); renderHosts(); refreshForm(); renderGroups(); recalc(); $("dlg").close(); $("setmsg").textContent = "Settings loaded.";
+  } catch (e) { $("dlgmsg").textContent = "That text isn't valid settings. Copy it again from the calculator."; }
+});
+
+// ---------- start ----------
+renderHosts(); refreshForm(); renderGroups(); recalc();
+</script>
+<footer>
+    <p>&copy; 2026 <strong>vCloudOne</strong> &mdash; VMC Sizing Calculator &mdash; Architected for Enterprise</p>
+    <div class="footer-links">
+        <a href="https://x.com/dchung615" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            @dchung615
+        </a>
+        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            gitvcloudone
+        </a>
+        <a href="/">vCloudOne Home</a>
+    </div>
+</footer>
+<script>
+(function () {
+    var navToggle = document.getElementById('nav-toggle');
+    var navLinks  = document.getElementById('nav-links');
+    if (navToggle && navLinks) {
+        navToggle.addEventListener('click', function () {
+            var open = navLinks.classList.toggle('is-open');
+            navToggle.classList.toggle('is-open', open);
+            navToggle.setAttribute('aria-expanded', open);
+            navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+        });
+        navLinks.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', function () {
+                navLinks.classList.remove('is-open');
+                navToggle.classList.remove('is-open');
+                navToggle.setAttribute('aria-expanded', 'false');
+                navToggle.setAttribute('aria-label', 'Open menu');
+            });
+        });
+    }
+})();
+</script>
+</body>
+</html>
