@@ -888,6 +888,7 @@ drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("
 fin.addEventListener("change", () => { handleFiles(fin.files); fin.value = ""; });
 
 async function handleFiles(list) {
+  list = Array.from(list || []);   // copy now: the browser empties the picker/drop list once we clear it or the event ends
   if (typeof XLSX === "undefined") { $("filelist").innerHTML = `<p class="pill crit">The spreadsheet reader didn't load. Check your connection and reload the page.</p>`; return; }
   for (const f of list) {
     const rec = { fileName: f.name, include: true, status: "Reading…", vms: [] };
