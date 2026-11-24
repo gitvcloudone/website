@@ -254,6 +254,11 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
         nav button.nav-toggle { background: none; border: none; color: rgba(255,255,255,0.8); padding: 8px; }
         footer { margin-top: 24px; }
 </style>
+<style>
+/* cards never grow past their column: wide tables scroll inside them */
+.card { grid-template-columns: minmax(0, 1fr); }
+.mgmt { overflow-x: auto; }
+</style>
 </head>
 <body>
 <nav>
@@ -270,7 +275,7 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
         <div class="nav-links" id="nav-links">
             <a href="/evs/">EVS Overview</a>
             <a href="/evs-sizing/">EVS Sizing</a>
-            <a href="/vmc-sizing/">VMC Sizing</a>
+            <a href="/vcf-sizing/">VCF Sizing</a>
             <a href="/#guide">Prereq Guide</a>
             <a href="/#terraform">Terraform</a>
             <a href="/#validator">Validator</a>
