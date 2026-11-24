@@ -254,6 +254,11 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
         nav button.nav-toggle { background: none; border: none; color: rgba(255,255,255,0.8); padding: 8px; }
         footer { margin-top: 24px; }
 </style>
+<style>
+/* cards never grow past their column: wide tables scroll inside them */
+.card { grid-template-columns: minmax(0, 1fr); }
+.mgmt { overflow-x: auto; }
+</style>
 </head>
 <body>
 <nav>

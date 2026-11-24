@@ -270,6 +270,7 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
         <div class="nav-links" id="nav-links">
             <a href="/evs/">EVS Overview</a>
             <a href="/evs-sizing/">EVS Sizing</a>
+            <a href="/vmc-sizing/">VMC Sizing</a>
             <a href="/#guide">Prereq Guide</a>
             <a href="/#terraform">Terraform</a>
             <a href="/#validator">Validator</a>
@@ -286,6 +287,9 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
     </div>
 </nav>
 <style>
+/* cards never grow past their column: wide tables scroll inside them */
+.card { grid-template-columns: minmax(0, 1fr); }
+.mgmt { overflow-x: auto; }
 .addons { display: grid; gap: 10px; }
 .addon { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; display: grid; gap: 8px; }
 .addon .hint { font-size: 12px; }
