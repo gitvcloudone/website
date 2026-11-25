@@ -590,6 +590,12 @@ def build_og(posts):
         return lines
 
     def make(path, kicker, title, sub):
+        stamp = hashlib.sha1(f"{kicker}|{title}|{sub}".encode()).hexdigest()[:10]
+        mark = path + ".txt"
+        if os.path.exists(path) and os.path.exists(mark) and open(mark).read().strip() == stamp:
+            return
+        with open(mark, "w") as f:
+            f.write(stamp + "\n")
         im = Image.new("RGB", (1200, 630), "#111a26")
         d = ImageDraw.Draw(im)
         for x in range(0, 1200, 44):
