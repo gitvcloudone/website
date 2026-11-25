@@ -22,5 +22,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add index.html 404.html updates articles topics about feed.xml feed.xsl sitemap.xml robots.txt assets/og evs-guide evs evs-sizing vmc-sizing vcf-sizing
+          git add -A index.html 404.html updates articles topics about feed.xml rss sitemap.xml robots.txt assets/og evs-guide evs evs-sizing vmc-sizing vcf-sizing
           git diff --cached --quiet || (git commit -m "Rebuild blog" && git push)
