@@ -1,5 +1,7 @@
 # vCloudOne blog
 
+Automated posting (Grok or any other agent): follow [`AGENTS.md`](AGENTS.md).
+
 The front page, `/updates/`, `/articles/`, `/topics/*`, `/about/` and `/feed.xml` are generated from the Markdown files in `blog/posts/`. Don't edit those generated pages by hand.
 
 ## Add a post
