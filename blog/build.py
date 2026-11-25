@@ -391,11 +391,15 @@ def build_home(posts):
     rest = [p for p in posts if p is not featured][:STREAM_ON_HOME]
     col = (hero(featured) if featured else "")
     col += f'<div class="sec-h"><h2>Latest</h2><a href="/updates/">All updates &rarr;</a></div>{stream(rest)}'
-    top = band('<p class="eyebrow">vCloudOne &middot; by David Chung</p>'
-               '<h1>Notes on <em>cloud</em>, VMware and AI</h1>'
-               '<p class="lede">Articles when there&rsquo;s something worth explaining, and short updates on Amazon EVS, VMware Cloud on AWS and VCF as they ship.</p>'
+    LI = '<a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" aria-label="LinkedIn">LinkedIn</a>'
+    top = band('<div class="who"><div class="avatar">DC</div><div><h1>David Chung</h1>'
+               '<p>Solutions architect for VMware on AWS. Amazon EVS, VMware Cloud on AWS, VCF and AI.</p>'
+               f'<p class="who-links">{LI}<span>·</span><a href="https://x.com/dchung615" target="_blank" rel="noopener">X</a>'
+               '<span>·</span><a href="/rss/">RSS</a><span>·</span><a href="/about/">About</a></p></div></div>'
                + topic_tabs(posts), "home")
-    main = top + f'<main class="wrap main lift"><div class="col">{col}</div>{SIDEBAR}</main>'
+    first = SIDEBAR.index('<div class="box">')
+    side = SIDEBAR[:first] + SIDEBAR[SIDEBAR.index('<div class="box">', first + 1):]
+    main = top + f'<main class="wrap main"><div class="col">{col}</div>{side}</main>'
     write("index.html", page(posts, "/", "vCloudOne | Notes on cloud, VMware and AI",
                              "David Chung on Amazon EVS, VMware Cloud on AWS, VCF, cloud and AI: articles, product updates and sizing tools.", main))
 

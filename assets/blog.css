@@ -196,7 +196,7 @@ a.topic:hover { text-decoration: underline; }
   .hero .art-pic { padding: 22px; }
 }
 @media (max-width: 640px) {
-  .wrap { padding: 0 16px; }
+  .wrap { padding-left: 16px; padding-right: 16px; }
   .band { padding: 40px 0 32px; } .band.home { padding-bottom: 96px; }
   .band p.lede { font-size: 16.5px; }
   .main.lift { margin-top: -64px; }
@@ -220,3 +220,17 @@ a.topic:hover { text-decoration: underline; }
 .post code, .prose code { overflow-wrap: anywhere; word-break: break-word; }
 .post code { font-size: .88em; background: var(--soft); padding: 2px 6px; border-radius: 5px; }
 .post p, .post li, .prose p, .prose li { overflow-wrap: break-word; }
+
+/* ── Front page header: name and one line, like a personal blog ── */
+.band.home { padding: 40px 0 30px; }
+.band.home::after { opacity: .6; }
+.who { display: flex; gap: 20px; align-items: center; }
+.who .avatar { width: 68px; height: 68px; font-size: 24px; box-shadow: 0 0 0 3px #111a26, 0 0 0 4px var(--orange); }
+.who h1 { font-size: clamp(30px, 4vw, 40px); margin: 0 0 4px; }
+.who p { margin: 0; color: rgba(255,255,255,.72); font-size: 16.5px; line-height: 1.5; }
+.who .who-links { margin-top: 8px; font-size: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+.who .who-links a { color: rgba(255,255,255,.85); text-decoration: none; }
+.who .who-links a:hover { color: var(--orange); }
+.who .who-links span { color: rgba(255,255,255,.3); }
+.band.home .tabs { margin-top: 22px; }
+@media (max-width: 640px) { .who { gap: 14px; align-items: flex-start; } .who .avatar { width: 52px; height: 52px; font-size: 19px; } .band.home { padding: 28px 0 22px; } }
