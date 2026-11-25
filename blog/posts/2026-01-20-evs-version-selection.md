@@ -7,6 +7,10 @@ topics: hyperscalers, vmware
 sources:
   - AWS What's New: Amazon EVS now supports VCF and VMware ESX software version selection | https://aws.amazon.com/about-aws/whats-new/2026/01/amazon-evs-vcf-vmware-esx-software-version/
 ---
-When you create an EVS environment or add hosts, you can now pick a supported VCF and ESX version combination, from the console or the CreateEnvironment API.
+Amazon EVS now lets you pick a supported combination of VCF and ESX versions instead of always getting whatever EVS deploys by default. This launch also added VCF 5.2.2 for new environments.
 
-This helps most during a migration, when you want EVS on the same version you run on-prem. It also means hosts you add later can stay on the same build as the ones you already have, instead of whatever is newest.
+It works through three APIs. GetVersions lists the combinations EVS supports. CreateEnvironment takes the VCF version when you build a new environment. CreateEnvironmentHost takes the ESX version when you add hosts to an existing one.
+
+Why it matters: a migration goes more smoothly when the target runs the same version as the source. HCX, vMotion compatibility and your runbooks all behave more predictably when on-prem and EVS match. It also matters on day two. When you add hosts months after the first build, you want them on the same ESX build as the rest of the cluster, not a newer one that leaves the cluster running mixed builds until you upgrade it.
+
+If you automate EVS builds, call GetVersions first and pin the version in your templates rather than relying on the default.

@@ -28,6 +28,8 @@ To build locally instead: `python3 blog/build.py` (Python 3, no packages needed)
 ## Writing
 
 - Every post should leave the reader knowing what changed, why it matters and who it's for. Work that into the writing; don't label it.
+- Explain, don't list. The first time a feature or term comes up, say what it is and how it works, then what it changes for the reader. Use real numbers and examples, and link the docs you checked them against.
+- Numbered lists (`1. `) work as well as bullets.
 - Updates are usually two or three short paragraphs. A `##` heading is fine if one gets long.
 - Articles use any `##` and `###` headings.
 - Markdown supported: paragraphs, `- ` bullets, `**bold**`, `*italic*`, `` `code` ``, `[links](https://...)`.

@@ -14,7 +14,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vcf-9-1-2</guid>
     <pubDate>Tue, 24 Nov 2026 12:00:00 +0000</pubDate>
     <category>VMware</category><category>AI</category>
-    <description>Broadcom shipped VCF 9.1.2 today. Most of it is aimed at getting AI and Kubernetes platforms up faster: An AI infrastructure quickstart: one vCenter plugin configures the cluster, turns on Supervisor and builds a VKS cluster. A VKS quickstart that gives you a working Supervisor and VKS cluster…</description>
+    <description>Broadcom shipped VCF 9.1.2 today. Most of it is about getting AI and Kubernetes platforms running faster, plus two features moving from tech preview to GA. Quickstarts. Some background: Supervisor is the Kubernetes control plane built into vSphere, and VKS (vSphere Kubernetes Service) uses it to…</description>
   </item>
   <item>
     <title>New on vCloudOne: sizing calculators</title>
@@ -22,7 +22,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#sizing-calculators</guid>
     <pubDate>Tue, 24 Nov 2026 12:00:00 +0000</pubDate>
     <category>VMware</category><category>Cloud</category>
-    <description>I&#x27;ve added three sizers to the site, one each for Amazon EVS, VMware Cloud on AWS and on-prem VCF. Drop in RVTools exports or type in workload totals and you get hosts, clusters and management overhead, with checks and an Excel export. EVS Sizing: hosts and clusters for Amazon EVS. VMC Sizing…</description>
+    <description>I&#x27;ve added three sizing calculators to the site, one each for Amazon EVS, VMware Cloud on AWS and on-prem VCF. All three take the same input: RVTools exports, or workload totals typed in by hand. From there they work out how many hosts you need for CPU, memory and storage, add the management…</description>
   </item>
   <item>
     <title>Amazon EVS, one year in</title>
@@ -38,7 +38,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-1-26v5</guid>
     <pubDate>Mon, 23 Nov 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>New SDDCs and upgrades now get SDDC 1.26v5. It&#x27;s a security patch build with no new features, so mostly a note for whoever tracks SDDC versions across the estate.</description>
+    <description>SDDC 1.26v5 is now the default build for new VMware Cloud on AWS SDDCs and upgrades. It&#x27;s a security patch release with no new features. If you track SDDC versions for compliance, note it; otherwise it&#x27;ll arrive with your normal upgrade schedule.</description>
   </item>
   <item>
     <title>You can now raise the Elastic DRS storage warning</title>
@@ -46,7 +46,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-edrs-storage-threshold</guid>
     <pubDate>Fri, 20 Nov 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>The Elastic DRS storage warning on VMware Cloud on AWS used to be fixed at 65%. You can now move it up to 75% through the Autoscaler API. On storage-heavy SDDCs, that 65% warning can go off during normal operation. Now you can set it closer to the point where you&#x27;d actually act. Because it&#x27;s an API…</description>
+    <description>You can now raise the Elastic DRS storage warning on VMware Cloud on AWS from 65% up to 75%. What Elastic DRS does. Elastic DRS watches each cluster&#x27;s CPU, memory and storage and adds or removes hosts based on policy. Storage is the one with a hard edge: vSAN needs free space for rebuilds and…</description>
   </item>
   <item>
     <title>Amazon EVS gets r7i hosts, external principal storage and an Agent Skill</title>
@@ -54,7 +54,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-r7i-external-storage-agent-skill</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category><category>AI</category>
-    <description>Amazon EVS now supports r7i.metal-24xl and r7i.metal-48xl for VCF 9.x. These are memory-optimized hosts with no local NVMe, so AWS also added support for external principal storage. In practice that means Amazon FSx for NetApp ONTAP instead of vSAN. The EVS Deployment Orchestrator can create the…</description>
+    <description>Amazon EVS now supports r7i.metal-24xl and r7i.metal-48xl hosts for VCF 9.x, external principal storage on Amazon FSx for NetApp ONTAP, and an Agent Skill for AI assistants. r7i hosts. These are memory-optimized hosts on 4th Gen Intel Xeon (Sapphire Rapids): r7i.metal-24xl: 48 cores, 768 GiB…</description>
   </item>
   <item>
     <title>vSphere Express, Live Recovery and DR built into VCF</title>
@@ -62,7 +62,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vcf-portfolio-update</guid>
     <pubDate>Wed, 04 Nov 2026 12:00:00 +0000</pubDate>
     <category>VMware</category>
-    <description>Broadcom announced a few changes to the VCF portfolio: vSphere Express, a new entry edition on vSphere 9 for up to 128 cores. It includes vMotion, HA, distributed switching and TPM security. Two new Advanced Services: VMware Live Recovery for disaster and cyber recovery, and VMware Compliance and…</description>
+    <description>Broadcom announced three changes to the VCF portfolio in early November. vSphere Express. A new entry edition built on vSphere 9, for customers with up to 128 cores across all their environments. It includes vMotion, High Availability (VMs restart on another host if one fails), the Distributed…</description>
   </item>
   <item>
     <title>Amazon EVS adds Osaka, Taipei, Spain and Tel Aviv</title>
@@ -70,7 +70,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-regions-sep</guid>
     <pubDate>Thu, 10 Sep 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>Amazon EVS added four more Regions: Asia Pacific (Osaka), Asia Pacific (Taipei), Europe (Spain) and Israel (Tel Aviv). Add December&#x27;s seven and July&#x27;s three, and that&#x27;s fourteen new Regions in a year. More Regions help with data residency, and with DR designs that need a second Region close by.</description>
+    <description>Amazon EVS added four more Regions: Asia Pacific (Osaka), Asia Pacific (Taipei), Europe (Spain) and Israel (Tel Aviv). Count December&#x27;s seven and July&#x27;s three, and that&#x27;s fourteen new Regions in under a year. EVS environments live in a single Availability Zone, so resilience against a Regional…</description>
   </item>
   <item>
     <title>VCF 9.1.1 lands the week of VMware Explore</title>
@@ -78,7 +78,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vcf-9-1-1</guid>
     <pubDate>Thu, 03 Sep 2026 12:00:00 +0000</pubDate>
     <category>VMware</category><category>AI</category>
-    <description>VCF 9.1.1 came out the same week as VMware Explore in Las Vegas, and most of what&#x27;s new is AI: Multi-Tenant Model Sharing lets several business units use one model deployment while keeping their data separate. AI Assistant for VCF is a chat assistant inside VCF Operations, and you choose the model…</description>
+    <description>VCF 9.1.1 shipped the same week as VMware Explore in Las Vegas. Most of what&#x27;s new is aimed at private AI and platform teams. Multi-tenant model sharing. In VCF Private AI Services, one AI model deployment can now be shared by several tenants or business units. Each gets controlled access to the…</description>
   </item>
   <item>
     <title>i7i.metal-48xl and the EVS Deployment Orchestrator</title>
@@ -86,7 +86,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-i7i-48xl-edo</guid>
     <pubDate>Thu, 27 Aug 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>Two things landed around Amazon EVS&#x27;s first birthday. The i7i.metal-48xl is a bigger host on 5th Gen Intel Xeon, so you can run more VMs on fewer hosts. AWS says i7i gives up to 23% better compute and more than 10% better price performance than i4i. AWS also released the EVS Deployment Orchestrator…</description>
+    <description>Two launches landed around Amazon EVS&#x27;s first birthday: a bigger i7i host, and a tool that deploys a full VCF 9 environment from one CloudFormation stack. i7i.metal-48xl. It&#x27;s double the 24xl: 96 physical cores on 5th Gen Intel Xeon, 1,536 GiB of memory, twelve 3.75 TB NVMe drives and 100 Gbps of…</description>
   </item>
   <item>
     <title>Three good reads: NSX Federation, DR and memory tiering on EVS</title>
@@ -94,7 +94,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-design-deep-dives</guid>
     <pubDate>Fri, 21 Aug 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>AWS put out three design posts for Amazon EVS in one week: Aug 18: NSX Federation on EVS. One Global Manager spans on-prem and EVS sites, with shared segments and firewall policy. Aug 19: A walk-through of DR options for VMware workloads on EVS, from nothing pre-deployed to a full standby cluster…</description>
+    <description>In one week in August, AWS published three design posts for Amazon EVS. Together they cover the questions that come up once a migration is done. NSX Federation (Aug 18). Federation joins several NSX deployments under one Global Manager. You define segments, gateways and distributed firewall rules…</description>
   </item>
   <item>
     <title>SDDC 1.26v4 is the new default build</title>
@@ -102,7 +102,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-1-26v4</guid>
     <pubDate>Mon, 03 Aug 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>New SDDCs and upgrades now get SDDC 1.26v4. It&#x27;s another security patch build, with nothing new to configure.</description>
+    <description>SDDC 1.26v4 is now the default build for new VMware Cloud on AWS SDDCs and upgrades. It&#x27;s a security patch release with no new features and nothing to configure. Existing SDDCs pick it up through the normal upgrade schedule.</description>
   </item>
   <item>
     <title>Amazon EVS arrives in Seoul, Zurich and Stockholm</title>
@@ -110,7 +110,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-regions-jul</guid>
     <pubDate>Thu, 23 Jul 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>Amazon EVS is now in Asia Pacific (Seoul), Europe (Zurich) and Europe (Stockholm), with every existing feature, VCF 9.0 and 9.1 included. Good news if you need VMware workloads to stay in Korea, Switzerland or Sweden.</description>
+    <description>Amazon EVS is now in Asia Pacific (Seoul), Europe (Zurich) and Europe (Stockholm), with every existing feature, VCF 9.0 and 9.1 included. All three matter for data residency. Korea, Switzerland and Sweden each have customers, often in financial services and the public sector, whose data has to stay…</description>
   </item>
   <item>
     <title>Amazon EVS now runs VCF 9.0 and 9.1</title>
@@ -118,7 +118,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-vcf-9</guid>
     <pubDate>Mon, 06 Jul 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>This is the big one for Amazon EVS this year. You can now run VCF 9.0 and 9.1 in every Region where EVS is available. EVS sets up the hosts and VPC networking, and you install VCF with Broadcom&#x27;s VCF Installer. VCF evaluation mode is supported too, which is handy for proofs of concept. VCF 9 brings…</description>
+    <description>This is the big one for Amazon EVS this year. You can now run VCF 9.0 and 9.1 in every Region where EVS is available. What changed in the model. With VCF 5.2, EVS deployed the whole stack for you: hosts, networking, vCenter, NSX, vSAN and SDDC Manager. With VCF 9, the work is split. EVS provisions…</description>
   </item>
   <item>
     <title>SDDC 1.26v3: fixes and Secure Boot certificate updates</title>
@@ -126,7 +126,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-1-26v3</guid>
     <pubDate>Fri, 12 Jun 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>SDDC 1.26v3 is a maintenance release with stability fixes. It also starts the platform work for Microsoft&#x27;s expiring 2011 Secure Boot certificates, which matters if you run Windows VMs with Secure Boot on VMC.</description>
+    <description>SDDC 1.26v3 is a maintenance release for VMware Cloud on AWS, with quality and stability fixes. It&#x27;s also the first release to deal with an expiring Microsoft Secure Boot certificate. Secure Boot checks that each piece of boot code is signed by a trusted key before it runs. Many of the keys VMs…</description>
   </item>
   <item>
     <title>You can now take EVS VCF issues straight to Broadcom</title>
@@ -134,7 +134,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-broadcom-support</guid>
     <pubDate>Tue, 26 May 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>Until now every Amazon EVS case went through AWS Support. If you have an active VCF subscription, you can now open VCF software cases directly with Broadcom. AWS Support still covers the whole stack, and Broadcom covers only the VCF software. For a pure VCF software problem, going straight to…</description>
+    <description>Until now every Amazon EVS support case went through AWS, whatever the problem was. Now customers with an active VCF subscription can also open VCF software cases directly with Broadcom. How the two paths split: AWS Support still covers everything: EC2 hosts, VPC networking, the EVS service and…</description>
   </item>
   <item>
     <title>Amazon EVS environments can now grow to 32 hosts</title>
@@ -142,7 +142,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-32-hosts</guid>
     <pubDate>Mon, 18 May 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>The host limit per Amazon EVS environment went from 16 to 32, through a service quota increase. You can run one big cluster or split the hosts across several. Fewer, bigger environments mean fewer sets of management appliances to run and patch. If you&#x27;ve outgrown 16 hosts, or you&#x27;re running several…</description>
+    <description>The host limit for an Amazon EVS environment went from 16 to 32. You get there by asking for a service quota increase, and it&#x27;s available in every EVS Region. An EVS environment is one VCF instance: one management domain with vCenter, NSX, SDDC Manager and VCF Operations, and the hosts and clusters…</description>
   </item>
   <item>
     <title>VCF 9.1 is here</title>
@@ -150,7 +150,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vcf-9-1</guid>
     <pubDate>Tue, 05 May 2026 12:00:00 +0000</pubDate>
     <category>VMware</category><category>AI</category>
-    <description>Broadcom announced VCF 9.1, the first feature release since 9.0. It went GA later in May with an in-place upgrade from 9.0. The parts I&#x27;d look at first: Better memory tiering. You can turn it on without a reboot, and you can mirror the tier device in software. vSAN deduplication and compression on…</description>
+    <description>Broadcom announced VCF 9.1 on May 5, the first feature release after 9.0. These are the parts I&#x27;d look at first. Memory tiering grows up. Memory tiering lets ESX use local NVMe as a second, slower tier of memory. A tiering engine watches which memory pages VMs actually use. Busy (&quot;hot&quot;) pages stay…</description>
   </item>
   <item>
     <title>Amazon EVS adds the i7i.metal-24xl</title>
@@ -158,7 +158,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-i7i-24xl</guid>
     <pubDate>Mon, 27 Apr 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>Amazon EVS now supports i7i.metal-24xl, a smaller host than i4i on a newer CPU, aimed at better cost-performance for VMware workloads. The size matters as much as the speed. VCF is subscribed per core, so fewer, faster cores per host can lower your licensing bill as well as your host count. If…</description>
+    <description>Amazon EVS now supports i7i.metal-24xl, a smaller host than the i4i.metal it launched with, on a newer CPU. How they compare: i4i.metal: 3rd Gen Intel Xeon (Ice Lake), 64 physical cores, 1,024 GiB of memory and eight 3.75 TB NVMe drives. i7i.metal-24xl: 5th Gen Xeon (Emerald Rapids), 48 physical…</description>
   </item>
   <item>
     <title>Windows Server licenses on Amazon EVS</title>
@@ -166,7 +166,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-windows-licensing</guid>
     <pubDate>Mon, 20 Apr 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>You can now get Windows Server licenses from AWS for VMs running on Amazon EVS, whether you migrate them in or build them new. You add an entitlement per VM through an EVS vCenter connector, and billing is per vCPU-hour while the VM runs. This solves a real gap. VMs without license portability…</description>
+    <description>You can now license Windows Server through AWS for VMs running on Amazon EVS, and pay per vCPU-hour while each VM runs. Why it&#x27;s needed. Running Windows Server on dedicated hosts in the cloud depends on license portability. Licenses with portability rights can be brought to EVS (BYOL), and AWS…</description>
   </item>
   <item>
     <title>Usage Report APIs for VMware Cloud on AWS</title>
@@ -174,7 +174,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-usage-report-apis</guid>
     <pubDate>Thu, 16 Apr 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>VMware Cloud on AWS has two new usage APIs: a Miscellaneous Usage Report for extra charges like Elastic IPs, Transit Gateway and data transfer, and a Microsoft SPLA Usage Report. They sit alongside the Host Usage Report API from last November. You get daily usage data you can filter, so VMC spend…</description>
+    <description>VMware Cloud on AWS now has three usage report APIs, so you can pull consumption data into your own tools instead of waiting for the invoice. They all follow the same pattern, GET /activityanalytic/{org_id}/&lt;type/{freq}/usage-report, return daily data, and accept up to 31 days per call: Host usage…</description>
   </item>
   <item>
     <title>HCX 4.11.4 for VMware Cloud on AWS</title>
@@ -182,7 +182,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-hcx-4-11-4</guid>
     <pubDate>Thu, 09 Apr 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>HCX 4.11.4 is a maintenance release. Like 4.11.3 before it, there&#x27;s no WAN optimization appliance, so if any of your service meshes still have WAN-OPT, remove it before you upgrade. Worth checking if you&#x27;re in the middle of a migration to VMC.</description>
+    <description>HCX 4.11.4 is a maintenance release for VMware Cloud on AWS. Like 4.11.3, it ships without the WAN optimization appliance. WAN-OPT used to sit in an HCX service mesh and compress and dedupe migration traffic, which mattered on slow or expensive links. On a fast Direct Connect link it added little…</description>
   </item>
   <item>
     <title>i7i.metal-24xl comes to VMware Cloud on AWS</title>
@@ -190,7 +190,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-i7i-24xl</guid>
     <pubDate>Wed, 01 Apr 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>With SDDC 1.26v2, VMware Cloud on AWS supports i7i.metal-24xl for new and existing SDDCs in select Regions. It comes with host-to-host encryption, vSAN data-at-rest encryption and Intel TME memory encryption. A few things to know before you plan on it. Existing SDDCs need to be on 1.26v2 first…</description>
+    <description>With SDDC 1.26v2, VMware Cloud on AWS supports a new host type, i7i.metal-24xl, for new SDDCs and existing ones. What the host is. It runs on 5th Gen Intel Xeon (Emerald Rapids), with 48 physical cores and hyper-threading on by default, so vSphere sees 96 logical CPUs. It has 768 GiB of DDR5…</description>
   </item>
   <item>
     <title>Amazon EVS deployment prerequisites guide</title>
@@ -198,7 +198,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-deployment-guide</guid>
     <pubDate>Wed, 25 Mar 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>I wrote up everything Amazon EVS checks before it deploys VCF 5.x, in the order you&#x27;ll need it: account and support plan, IAM, IP planning, VPC and subnets, Route 53, DHCP, VPC Route Server and BGP, capacity reservations, licensing and key pairs. It comes with a Terraform kit and a prerequisite…</description>
+    <description>I wrote up everything Amazon EVS checks before it will deploy VCF 5.x, in the order you&#x27;ll need it. EVS validates a lot before it builds anything: the account and support plan, IAM permissions, the VPC and its subnets, the service access subnet, Route 53 zones and records for every host and…</description>
   </item>
   <item>
     <title>Multiple NSX Tier-0 gateways on Amazon EVS</title>
@@ -206,7 +206,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-multiple-tier0</guid>
     <pubDate>Fri, 23 Jan 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>You can now run more than one NSX Tier-0 gateway in an EVS environment, each on its own Edge cluster. That gives you two things. You can spread north-south traffic across gateways for more throughput, and you can keep production and non-production, or different tenants, on separate routing and…</description>
+    <description>Amazon EVS now supports more than one NSX Tier-0 gateway in an environment, each on its own NSX Edge cluster. Some background first. In NSX, VMs connect to overlay segments, and segments attach to Tier-1 gateways, which handle routing between those segments. The Tier-0 gateway sits above them and…</description>
   </item>
   <item>
     <title>VCF 9.0.2 maintenance release</title>
@@ -214,7 +214,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vcf-9-0-2</guid>
     <pubDate>Tue, 20 Jan 2026 12:00:00 +0000</pubDate>
     <category>VMware</category>
-    <description>VCF 9.0.2 is a fix release, but two changes in vCenter 9.0.2 are worth knowing about. Certificates issued by the VMware Certificate Authority for vCenter and ESX now renew on their own before they expire, and Supervisor control plane backup is on by default. Expired certificates cause more outages…</description>
+    <description>VCF 9.0.2 is mostly a fix release, but two changes in vCenter 9.0.2 remove common causes of trouble. Certificates renew themselves. vCenter and ESX use TLS certificates that the built-in VMware Certificate Authority (VMCA) issues. When they expire, things break: hosts disconnect, logins fail, and…</description>
   </item>
   <item>
     <title>Pick your VCF and ESX versions on Amazon EVS</title>
@@ -222,7 +222,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-version-selection</guid>
     <pubDate>Tue, 20 Jan 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>When you create an EVS environment or add hosts, you can now pick a supported VCF and ESX version combination, from the console or the CreateEnvironment API. This helps most during a migration, when you want EVS on the same version you run on-prem. It also means hosts you add later can stay on the…</description>
+    <description>Amazon EVS now lets you pick a supported combination of VCF and ESX versions instead of always getting whatever EVS deploys by default. This launch also added VCF 5.2.2 for new environments. It works through three APIs. GetVersions lists the combinations EVS supports. CreateEnvironment takes the…</description>
   </item>
   <item>
     <title>SDDC 1.26: vSAN ESA, bring your own key and VM hardware 21</title>
@@ -230,7 +230,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-1-26</guid>
     <pubDate>Fri, 16 Jan 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>SDDC 1.26 moves VMware Cloud on AWS to vSphere 8.0 Update 3, and it brings a lot with it: vSAN ESA is GA, with RAID-5 from 3 hosts. It&#x27;s the default for new i4i deployments, for non-stretched SDDCs only. Bring your own key: VM encryption with an external KMIP key management system. VM hardware…</description>
+    <description>SDDC 1.26 moves VMware Cloud on AWS to vSphere 8.0 Update 3. It&#x27;s the biggest platform release VMC has had in a while, and it changes how you size storage. vSAN ESA. vSAN has two architectures. The Original Storage Architecture (OSA) splits each host&#x27;s drives into a cache tier and a capacity tier…</description>
   </item>
   <item>
     <title>Amazon EVS adds seven Regions</title>
@@ -238,7 +238,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-regions-dec</guid>
     <pubDate>Mon, 15 Dec 2025 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>Amazon EVS is now in seven more Regions: US West (N. California), Asia Pacific (Hyderabad), Asia Pacific (Malaysia), Canada West (Calgary), Europe (Milan), Mexico (Central) and South America (São Paulo). If you&#x27;ve been waiting for EVS closer to your users or your data, check this list.</description>
+    <description>Amazon EVS is now in seven more Regions: US West (N. California), Asia Pacific (Hyderabad), Asia Pacific (Malaysia), Canada West (Calgary), Europe (Milan), Mexico (Central) and South America (São Paulo). A quick reminder of how EVS uses a Region. An EVS environment runs on bare-metal EC2 hosts in…</description>
   </item>
   <item>
     <title>VMware Cloud on AWS: December 2025 roundup</title>
@@ -246,7 +246,7 @@
     <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-dec-2025</guid>
     <pubDate>Tue, 02 Dec 2025 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
-    <description>Broadcom&#x27;s December roundup for VMware Cloud on AWS had a few useful changes: A redesigned console at vmc.broadcom.com. Stretched clusters can now scale down to 4 hosts (2 per AZ) or 2 hosts (1 per AZ), with some limits. HCX 4.11.3 drops WAN optimization and is supported until October 11, 2027…</description>
+    <description>Broadcom&#x27;s December roundup for VMware Cloud on AWS had four changes worth knowing about. Two of them affect how you design and pay for an SDDC. Smaller stretched clusters. A stretched cluster spreads one vSAN cluster across two Availability Zones, with a witness in a third AZ that breaks ties if…</description>
   </item>
 </channel>
 </rss>

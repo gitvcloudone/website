@@ -135,13 +135,14 @@ def slugify(s):
 
 def blocks(md, h2="h2", h3="h3"):
     out, para, items = [], [], []
+    kind = ["ul"]
 
     def flush():
         if para:
             out.append("<p>" + inline(" ".join(para)) + "</p>")
             para.clear()
         if items:
-            out.append("<ul>" + "".join(f"<li>{inline(i)}</li>" for i in items) + "</ul>")
+            out.append(f"<{kind[0]}>" + "".join(f"<li>{inline(i)}</li>" for i in items) + f"</{kind[0]}>")
             items.clear()
 
     for raw in md.splitlines():
@@ -157,10 +158,13 @@ def blocks(md, h2="h2", h3="h3"):
             flush(); out.append(f"<{h3}>{inline(s[4:])}</{h3}>"); continue
         if s.startswith("## "):
             flush(); out.append(f'<{h2} id="{slugify(s[3:])}">{inline(s[3:])}</{h2}>'); continue
-        if re.match(r"[-*] ", s):
-            if para:
+        m = re.match(r"([-*]|\d+\.) +", s)
+        if m:
+            k = "ol" if m.group(1)[0].isdigit() else "ul"
+            if para or (items and kind[0] != k):
                 flush()
-            items.append(s[2:])
+            kind[0] = k
+            items.append(s[m.end():])
             continue
         if items and raw.startswith("  "):
             items[-1] += " " + s
@@ -194,7 +198,7 @@ def url_of(p):
 
 def plain(md):
     t = re.sub(r"\{\{[^}]*\}\}", " ", md)
-    t = re.sub(r"(?m)^\s*[-*] +", "", t)
+    t = re.sub(r"(?m)^\s*([-*]|\d+\.) +", "", t)
     t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)
     t = re.sub(r"[*`#>]", "", t)
     return re.sub(r"\s+", " ", t).strip()

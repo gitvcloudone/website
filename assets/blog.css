@@ -131,7 +131,7 @@ a.topic:hover { text-decoration: underline; }
 .post:hover .perma, .post .perma:focus { opacity: .7; }
 .post p, .post li { color: var(--ink2); font-size: 16px; line-height: 1.7; }
 .post p { margin: 0 0 14px; }
-.post ul { margin: 0 0 14px; padding-left: 20px; }
+.post ul, .post ol { margin: 0 0 14px; padding-left: 22px; }
 .post li { margin: 4px 0; }
 .post li::marker { color: var(--muted); }
 .post h4 { font-size: 15px; margin: 18px 0 6px; }
@@ -160,7 +160,7 @@ a.topic:hover { text-decoration: underline; }
 .prose p { margin: 0 0 22px; }
 .prose h2 { font-family: var(--serif); font-weight: 600; color: var(--ink); font-size: 30px; line-height: 1.2; letter-spacing: -0.01em; margin: 48px 0 16px; scroll-margin-top: 84px; font-variation-settings: "opsz" 48; }
 .prose h3 { color: var(--ink); font-size: 21px; margin: 34px 0 10px; }
-.prose ul { padding-left: 22px; margin: 0 0 22px; }
+.prose ul, .prose ol { padding-left: 24px; margin: 0 0 22px; }
 .prose li { margin: 8px 0; }
 .prose li::marker { color: var(--orange); }
 .prose strong { color: var(--ink); }
@@ -218,3 +218,6 @@ a.topic:hover { text-decoration: underline; }
 .feedbox button.btn { border: 0; cursor: pointer; font-family: inherit; }
 .eyebrow .sep { color: rgba(255,255,255,.35); }
 .sn-logo span { display: inline; }
+.post code, .prose code { overflow-wrap: anywhere; word-break: break-word; }
+.post code { font-size: .88em; background: var(--soft); padding: 2px 6px; border-radius: 5px; }
+.post p, .post li, .prose p, .prose li { overflow-wrap: break-word; }
