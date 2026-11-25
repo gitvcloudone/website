@@ -7,12 +7,12 @@
 <!-- /vc:theme -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VMC Sizing | vCloudOne</title>
-<meta name="description" content="Size VMware Cloud on AWS SDDCs, clusters and hosts from RVTools exports, with placement, DR, memory tiering and an Excel export.">
+<meta name="description" content="VMware Cloud on AWS sizing calculator: hosts, SDDCs and clusters from RVTools exports or manual totals, single-AZ or stretched.">
 <link rel="canonical" href="https://vcloudone.com/vmc-sizing/">
 <meta property="og:site_name" content="vCloudOne">
 <meta property="og:type" content="website">
 <meta property="og:title" content="VMC Sizing">
-<meta property="og:description" content="Size VMware Cloud on AWS SDDCs, clusters and hosts from RVTools exports, with placement, DR, memory tiering and an Excel export.">
+<meta property="og:description" content="VMware Cloud on AWS sizing calculator: hosts, SDDCs and clusters from RVTools exports or manual totals, single-AZ or stretched.">
 <meta property="og:url" content="https://vcloudone.com/vmc-sizing/">
 <meta property="og:image" content="https://vcloudone.com/assets/og/default.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -420,8 +420,9 @@ tr.flash td { background: var(--accent-soft); transition: background .6s; }
 
   <section class="card">
     <header><h2>SDDC design</h2><button class="link" type="button" id="resetsddc">Reset to defaults</button></header>
+    <div class="row"><label class="toggle"><span><input type="checkbox" id="stOn" data-k="stOn"> Use stretched clusters</span></label></div>
+    <div id="azsel"></div>
     <div class="grid">
-      <label class="f">Deployment<select id="deploy" data-k="deploy"><option value="single">Single AZ</option><option value="stretched">Stretched across two AZs</option></select></label>
       <label class="f">SDDC appliance size<select id="appliance" data-k="appliance"><option value="auto">Auto (Large above 30 hosts or 3,000 VMs)</option><option value="medium">Medium</option><option value="large">Large</option></select></label>
       <label class="f">SDDCs<select id="sddcCount" data-k="sddcCount" data-num="1"></select></label>
       <label class="f" id="mgmtHostsWrap">Management cluster hosts<input type="number" id="mgmtHosts" data-k="mgmtHosts" step="1" min="2" max="16"></label>
@@ -529,8 +530,8 @@ tr.flash td { background: var(--accent-soft); transition: background .6s; }
     <h3>Sources and assumptions</h3>
     <ul style="margin:0;padding-left:18px">
       <li>Host types: i4i.metal (64 cores, 1,024 GiB, 8 × 3.75 TB NVMe) and i7i.metal-24xl (48 cores, 768 GiB, 6 × 3.75 TB) per Broadcom VMC docs and the i7i announcement (Apr 2026). i7ie.metal-24xl isn't offered on VMC yet: EC2 specification (48 cores, 768 GiB, 8 × 7.5 TB).</li>
-      <li>vSAN: new single-AZ SDDCs deploy on ESA (every drive is capacity); stretched clusters deploy on OSA (two drives per host for cache). i4i raw: 27.28 TiB ESA, 20.46 TiB OSA. Compression is on by default on both (no deduplication).</li>
-      <li>Limits: 2–16 hosts per cluster; 10 clusters per SDDC by default, 20 on request; 300 hosts per SDDC. Stretched clusters grow in pairs; 6+ hosts for the 99.99% SLA. Management CIDR is an output: the smallest range for each SDDC's hosts (/23 = 27 hosts, 22 stretched; /20 = 251, 246; /16 = SDDC maximum), or the next size up when within 20% of that range's limit, since it can't be changed after deployment.</li>
+      <li>vSAN: single-AZ SDDCs deploy on ESA (every drive is capacity); stretched SDDCs deploy on OSA (two drives per host for cache), including their single-AZ secondary clusters. i4i raw: 27.28 TiB ESA, 20.46 TiB OSA. Compression is on by default on both (no deduplication).</li>
+      <li>Limits: 2–16 hosts per cluster; 10 clusters per SDDC by default, 20 on request; 300 hosts per SDDC. Stretched or single-AZ is chosen per SDDC when it is created; in a stretched SDDC Cluster-1 is stretched and secondary clusters can be single AZ (SDDC 1.24v5+). Stretched clusters grow in pairs; 6+ hosts for the 99.99% SLA. Management CIDR is an output: the smallest range for each SDDC's hosts (/23 = 27 hosts, 22 stretched; /20 = 251, 246; /16 = SDDC maximum), or the next size up when within 20% of that range's limit, since it can't be changed after deployment.</li>
       <li>Management: vCenter, NSX Managers and NSX Edges run in Cluster-1's Mgmt-ResourcePool with full reservations – Medium 34 vCPU / 116 GB, Large 68 vCPU / 240 GB (vCPU counted at the CPU ratio, RAM 1:1). Large is recommended above 30 hosts or 3,000 VMs and needs 3+ hosts in Cluster-1 (6+ stretched). Management storage defaults to the 11.12 TB management reservation in the VMC validated design (editable).</li>
       <li>vSAN policy follows the VMC Managed Storage Policy: single-AZ RAID-1 at 2 hosts (mirrored across both hosts with a VMware-managed witness), RAID-5 2+1 (ESA) or RAID-1 (OSA) at 3–5, RAID-6 4+2 at 6+; stretched: dual site mirroring, adding local RAID-1 at 6+ hosts. Usable = raw × (1 − reserve) × compression ÷ policy factor, on all hosts in the cluster. VMC keeps 25% slack; Elastic DRS adds hosts at 80% used.</li>
       <li>Management-only Cluster-1: a fixed host count (default 4, no extra HA host on top), raised only if the management load or the Large-appliance minimum needs more. Management vCPU is counted at the workload CPU ratio and RAM 1:1 (reservations are a GHz/GB pool, not a core per vCPU). Add-ons (per SDDC, Cluster-1): HCX Cloud Manager 4 vCPU / 12 GB / 64 GB (MON scale-up 8 / 24; large migration 16 / 48), Interconnect 8 / 6 GB, Network Extension 8 / 3 GB each (HA doubles; WAN Optimization retired Jan 2026). VMware Live Recovery: SRM 2 / 8 GB (light, under 1,000 VMs) or 4 / 12 GB, vSphere Replication 4 / 12 GB, plus one server (2 / 1 GB) per additional 400 replications. Multi-Edge: Large appliances and 2 Large edges (8 / 32 GB) per extra pair. vDefend Firewall is included with VMC (Broadcom techdocs: Layer 7 Context Profile, Identity Firewall, Distributed FQDN Filtering; Distributed IDS/IPS included). IDS/IPS has no appliances: 2 GB RAM per host is deducted (KB 313654); its CPU (up to 5 cores per host, in proportion to inspected traffic) isn't deducted because it uses the headroom the CPU ratio already leaves. vDefend Advanced Threat Prevention isn't included or sized.</li>
@@ -608,7 +609,7 @@ function cidrFor(hosts, stretched) {
 }
 
 const DEFAULTS = {
-  hostType: "i7i.metal-24xl", deploy: "single", appliance: "auto",
+  hostType: "i7i.metal-24xl", stOn: false, azSel: {}, appliance: "auto",   // azSel: { "<SDDC number>": "single" } (unlisted SDDCs are stretched when stOn)
   cpuRatio: 3, memReserve: 8, memFill: 90, ramRatio: 1, vmOverhead: 3, growth: 0,
   sddcCount: 0, mgmtCluster: "shared", mgmtHosts: 4, wlClusters: 0, maxCluster: 16, maxClusters: 20, mgmtStorTiB: 10.1,
   storageBasis: "used", vsanSlack: 25, compression: 1.25, extOn: false, extPct: 100,
@@ -630,8 +631,20 @@ function workloadTotals(groups) {
   return t;
 }
 
-// New single-AZ SDDCs deploy on vSAN ESA; stretched SDDCs deploy on OSA.
-function archFor(s) { return s.deploy === "stretched" ? "osa" : "esa"; }
+// Stretched clusters are chosen per SDDC. An SDDC is single-AZ or stretched from creation and can't be converted.
+// In a stretched SDDC Cluster-1 is stretched and secondary clusters may be single-AZ (SDDC 1.24v5+); a single-AZ SDDC has no stretched clusters.
+// Which clusters in a stretched SDDC are stretched follows the groups: those that need AZ resilience run on stretched clusters.
+function sddcStretched(s, k) { return !!s.stOn && ((s.azSel || {})[String(k)] || "stretched") !== "single"; }
+function singleNums(s) { return s.stOn ? Object.entries(s.azSel || {}).filter(([, v]) => v === "single").map(([k]) => +k) : []; }
+// Can pool p go into SDDC k? Groups that need AZ resilience only go to stretched SDDCs (unless pinned). Single-AZ groups go to
+// single-AZ SDDCs when any are set; otherwise (or relax) to single-AZ clusters in a stretched SDDC.
+function eligAt(s, p, pin, k, relax) {
+  if (pin) return pin === k;
+  if (p.dr || !s.stOn) return true;
+  return sddcStretched(s, k) ? (p.stretched || relax || !singleNums(s).length) : !p.stretched;
+}
+// New single-AZ SDDCs deploy on vSAN ESA; stretched SDDCs deploy on OSA (also for their single-AZ secondary clusters).
+function archFor(s, k = 1) { return sddcStretched(s, k) ? "osa" : "esa"; }
 
 const TIER_MAX_GIB = 4096;   // vSphere memory tiering: tier up to 400% of DRAM, at most 4 TB per host
 // Memory tiering follows the on-premises vSphere limits: one NVMe device, or exactly two mirrored (software RAID-1); the tier is one device's worth.
@@ -714,15 +727,15 @@ function sizeCluster(d, ctx, s, floor) {
 // Pool flags: own (group gets its own clusters), pin (SDDC number), dr (replica load). Memory tiering belongs to cluster positions, not pools.
 // maxPin: highest SDDC number a pin may name (0 = pins ignored, groups placed automatically; DR left out).
 function buildPools(s, groups, h, cfgs, maxPin) {
-  const st = s.deploy === "stretched", g = 1 + s.growth / 100;
+  const st = !!s.stOn, g = 1 + s.growth / 100;
   const pools = new Map(), miss = [];
   const get = (f) => {
     const key = `${f.stretched ? "S" : "A"}|${f.own || ""}|${f.pin || 0}|${f.dr ? "R" : ""}`;
     if (!pools.has(key)) pools.set(key, { key, stretched: f.stretched, own: f.own || "", pin: f.pin || 0, dr: !!f.dr, coresOpt: 0,
-      main: f.stretched === st && !f.own && !f.pin && !f.dr, cores: 0, ram: 0, ramT: 0, vram: 0, stor: 0, vms: 0, vcpu: 0, groups: [] });
+      main: !f.own && !f.pin && !f.dr, cores: 0, ram: 0, ramT: 0, vram: 0, stor: 0, vms: 0, vcpu: 0, groups: [] });
     return pools.get(key);
   };
-  get({ stretched: st });                                   // the main pool always exists (Cluster-1)
+  get({ stretched: st });                                   // the main pool always exists (Cluster-1); with stretched clusters on, single-AZ groups get a second main pool
   const pinOf = (v) => { const m = /^sddc:(\d+)$/.exec(v || ""); return m ? +m[1] : 0; };
   const ramRatio = Math.max(1, s.ramRatio);
   for (const gr of groups) {
@@ -760,16 +773,17 @@ const ZERO_D = { cores: 0, vcpu: 0, ram: 0, vram: 0, vsan: 0 };
 const addD = (a, b) => ({ cores: a.cores + b.cores, vcpu: a.vcpu + b.vcpu, ram: a.ram + b.ram, vram: a.vram + b.vram, vsan: a.vsan + b.vsan });
 // demand of share x of pool p in a cluster (tier: a memory-tiered cluster, which doesn't overcommit memory)
 const demandOf = (p, x, ext, tier) => ({ cores: p.cores * x, vcpu: p.vcpu * x, ram: (tier ? p.ramT : p.ram) * x, vram: p.vram * x, vsan: p.stor * x * (1 - ext) });
-function ctxOf(p, cfgs, tier) {
+// cfgs: the host configs for this SDDC's vSAN architecture; stS: the SDDC is stretched (a cluster is stretched when its groups need it and the SDDC is)
+function ctxOf(p, cfgs, tier, stS) {
   const cfg = tier ? cfgs.T : cfgs.B;
   const hc = p.coresOpt || cfg.host.cores;
-  return { cfg, stretched: p.stretched, coresOpt: p.coresOpt, hostCores: hc, perHostCores: Math.max(1, hc - cfg.afwCores) };
+  return { cfg, stretched: !!(p.stretched && stS), coresOpt: p.coresOpt, hostCores: hc, perHostCores: Math.max(1, hc - cfg.afwCores) };
 }
 // compute hosts (per AZ for stretched) a demand needs, before HA and rounding
 const realHosts = (d, ctx) => Math.max(d.cores / ctx.perHostCores, d.ram / ctx.cfg.memUsable);
-function minHostsFor(p, cfg, shared, c1Min) {
+function minHostsFor(p, cfg, shared, c1Min, stS) {
   let f = shared ? c1Min : 2;
-  if (p.coresOpt && !cfg.host.coreOpts.two.includes(p.coresOpt)) f = Math.max(f, p.stretched ? 6 : 3);
+  if (p.coresOpt && !cfg.host.coreOpts.two.includes(p.coresOpt)) f = Math.max(f, p.stretched && stS ? 6 : 3);
   return f;
 }
 // Largest share (≤ xmax) of pool p that fits, together with base demand, in a cluster of at most cap hosts
@@ -784,8 +798,9 @@ function maxShare(p, xmax, base, ctx, s, floor, cap, ext) {
 
 // Fill one SDDC from the remaining demand. rem: [{ p, x }] (x = remaining share of pool). lim: max share per pool (or null).
 // Memory tiering is chosen per cluster position: s.tierSel[SDDC number] lists the tiered cluster numbers.
-function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx) {
-  const st = s.deploy === "stretched";
+function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx, relax) {
+  const stS = sddcStretched(s, idx + 1), st = stS, cs = stS ? cfg.osa : cfg.esa;
+  const cx0 = (p, tier) => ctxOf(p, cs, tier, stS);
   const N = s.wlClusters > 0 ? Math.round(s.wlClusters) : 0;
   const slots = N ? Math.max(N, s.mgmtCluster === "dedicated" ? 2 : 1) : s.maxClusters;
   const ext = cfg.extOn ? s.extPct / 100 : 0;
@@ -794,23 +809,21 @@ function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx) {
   const c1Min = appliance === "large" ? (st ? 6 : 3) : 2;
   const sel = (s.tierOn && s.tierSel && s.tierSel[String(idx + 1)]) || [];
   const tierAt = (k) => sel.includes(k);                     // k: 1-based cluster number in this SDDC
-  const take = rem.map(r => ({ p: r.p, pin: r.pin, x: 0, avail: r.pin ? (r.pin === idx + 1 ? r.x : 0) : Math.max(0, Math.min(r.x, lim ? lim : r.x)) }));
+  const take = rem.map(r => ({ p: r.p, pin: r.pin, x: 0, avail: !eligAt(s, r.p, r.pin, idx + 1, relax) ? 0 : r.pin ? r.x : Math.max(0, Math.min(r.x, r.lim != null ? r.lim : (lim ? lim : r.x))) }));
   // Management + workloads: Cluster-1 carries workload whenever this SDDC has any it can run. It takes the main pool, or
   // when that has nothing here, a group pinned here, then a replica set; groups on their own clusters and single-AZ groups
   // in a stretched SDDC can't share it.
-  const main = (() => {
-    const m0 = take.find(t => t.p.main);
-    if (m0.avail > 1e-7) return m0;
-    const ok = (t) => t.avail > 1e-7 && !t.p.own && t.p.stretched === st;
-    return take.find(t => ok(t) && !t.p.dr) || take.find(ok) || m0;
-  })();
+  // In a stretched SDDC, Cluster-1 is stretched, so only groups that need AZ resilience can share it.
+  const okC1 = (t) => t.avail > 1e-7 && !t.p.own && (!stS || t.p.stretched);
+  const main = take.find(t => t.p.main && okC1(t)) || take.find(t => okC1(t) && !t.p.dr) || take.find(okC1)
+    || take.find(t => t.p.main && (!stS || t.p.stretched)) || take.find(t => t.p.main) || take[0];
   const clusters = [];
   let hosts = 0, forced = false, c1Why = null;
   const capLeft = () => Math.min(s.maxCluster, SDDC_MAX - hosts);
   const push = (cl) => { clusters.push(cl); hosts += cl.total; };
   // Cluster-1
-  const mctx = ctxOf(main.p, cfg, tierAt(1));
-  if (s.mgmtCluster === "dedicated" || main.avail <= 1e-7) {
+  const mctx = cx0(main.p, tierAt(1));
+  if (s.mgmtCluster === "dedicated" || !okC1(main)) {
     const set = s.mgmtCluster === "dedicated" ? Math.max(2, Math.round(s.mgmtHosts) || 4) : 2;
     if (s.mgmtCluster !== "dedicated") c1Why = take.some(t => t.avail > 1e-7) ? (take.some(t => t.avail > 1e-7 && t.p.own) ? "own" : "az") : "empty";
     push({ role: "mgmt", pool: main.p.key, share: 0, setHosts: s.mgmtCluster === "dedicated" ? set : null, ...sizeCluster(mD, mctx, s, Math.max(c1Min, set)) });
@@ -821,7 +834,7 @@ function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx) {
   }
   // Workload clusters, filled in order up to the host maximum. Groups pinned to this SDDC (and DR replicas) go first: they can't go anywhere else.
   for (const t of [...take.filter(q => q.pin), ...take.filter(q => !q.pin)]) {
-    const floor = minHostsFor(t.p, cfg, false, c1Min);
+    const floor = minHostsFor(t.p, cs, false, c1Min, stS);
     while (t.avail > 1e-7) {
       if (clusters.length >= slots) {
         if (!(allowOver && !forced && t.x === 0)) break;
@@ -829,7 +842,7 @@ function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx) {
       }
       const cap = capLeft();
       if (cap < floor) break;
-      const ctx = ctxOf(t.p, cfg, tierAt(clusters.length + 1));
+      const ctx = cx0(t.p, tierAt(clusters.length + 1));
       const x = maxShare(t.p, t.avail, ZERO_D, ctx, s, floor, cap, ext);
       if (x <= 1e-9) break;
       push({ role: "work", pool: t.p.key, share: x, ...sizeCluster(demandOf(t.p, x, ext, ctx.cfg.tiering), ctx, s, floor) });
@@ -843,8 +856,8 @@ function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx) {
       if (own.length < 2) continue;
       const a = own[own.length - 2], b = own[own.length - 1];
       if (b.total >= a.total - 1) continue;
-      const ca = ctxOf(t.p, cfg, tierAt(clusters.indexOf(a) + 1)), cb = ctxOf(t.p, cfg, tierAt(clusters.indexOf(b) + 1));
-      const floor = minHostsFor(t.p, cfg, false, c1Min), xs = a.share + b.share;
+      const ca = cx0(t.p, tierAt(clusters.indexOf(a) + 1)), cb = cx0(t.p, tierAt(clusters.indexOf(b) + 1));
+      const floor = minHostsFor(t.p, cs, false, c1Min, stS), xs = a.share + b.share;
       let best = null;
       for (let i = 1; i < 40; i++) {               // try splits from even towards the current one; keep the most even that adds no hosts
         const f = 0.5 + (i - 1) * 0.0125, x1 = xs * f, x2 = xs - x1;
@@ -863,8 +876,8 @@ function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx) {
     const shared = clusters[0].role === "shared";
     const mainCl = clusters.filter(c => c.pool === main.p.key && c.role !== "mgmt");
     if (k !== mainCl.length && k >= 1) {
-      const capC = st ? Math.floor(s.maxCluster / 2) : s.maxCluster;
-      const bctx = ctxOf(main.p, cfg, false);
+      const capC = main.p.stretched && stS ? Math.floor(s.maxCluster / 2) : s.maxCluster;
+      const bctx = cx0(main.p, false);
       const wReal = realHosts(demandOf(main.p, main.x, ext, false), bctx), mReal = shared ? realHosts(mD, bctx) : 0;
       const ctot = Math.max(k, Math.ceil(wReal + mReal - 1e-9));
       const base = Math.floor(ctot / k), extra = ctot % k;
@@ -873,15 +886,15 @@ function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx) {
       const sw = wts.reduce((a, b) => a + b, 0) || 1;
       const mg = clusters.filter(cl => cl.role === "mgmt");
       const rebuilt = c.map((ci, i) => {
-        const x = main.x * wts[i] / sw, isShared = shared && i === 0, cx = ctxOf(main.p, cfg, tierAt(mg.length + i + 1));
+        const x = main.x * wts[i] / sw, isShared = shared && i === 0, cx = cx0(main.p, tierAt(mg.length + i + 1));
         const d = addD(isShared ? mD : ZERO_D, demandOf(main.p, x, ext, cx.cfg.tiering));
-        return { role: isShared ? "shared" : "work", pool: main.p.key, share: x, ...sizeCluster(d, cx, s, minHostsFor(main.p, cfg, isShared, c1Min)) };
+        return { role: isShared ? "shared" : "work", pool: main.p.key, share: x, ...sizeCluster(d, cx, s, minHostsFor(main.p, cs, isShared, c1Min, stS)) };
       });
       // the other groups' clusters move to new positions: resize those whose tiering changes with the move
       const rest = clusters.filter(cl => cl.role === "work" && cl.pool !== main.p.key).map((cl, j) => {
         const pos = mg.length + rebuilt.length + j + 1, tr = tierAt(pos);
         if (tr === !!cl.tier) return cl;
-        const t = take.find(q => q.p.key === cl.pool), cx = ctxOf(t.p, cfg, tr);
+        const t = take.find(q => q.p.key === cl.pool), cx = cx0(t.p, tr);
         return { ...cl, ...sizeCluster(demandOf(t.p, cl.share, ext, tr), cx, s, cl.floor) };
       });
       const newHosts = [...mg, ...rebuilt, ...rest].reduce((a, cl) => a + cl.total, 0);
@@ -894,7 +907,8 @@ function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx) {
   }
   const total = clusters.reduce((a, c) => a + c.total, 0);
   return {
-    clusters, total, appliance, mgmt: m, forced, take, c1Why,
+    clusters, total, appliance, mgmt: m, forced, take, c1Why, stretched: stS, arch: cs.B.arch,
+    relaxed: !!relax && stS && take.some(t => t.x > 1e-6 && !t.p.stretched && !t.pin && !t.p.dr),
     vms: take.reduce((a, t) => a + t.p.vms * t.x, 0),
     fsx: take.reduce((a, t) => a + t.p.stor * t.x, 0) * ext,
     placed: take.reduce((a, t) => a + t.x, 0),
@@ -906,17 +920,22 @@ function fillSddc(rem, cfg, s, appliance, lim, allowOver, idx) {
 // Plan all SDDCs. n = 0: as few as the limits allow; n > 0: split the automatic workload evenly over n SDDCs.
 // Pinned pools (Place in / Protect to an SDDC) only go into their SDDC.
 function planSddcs(pools, cfg, s, n) {
-  const rem = pools.map(p => ({ p, pin: p.pin, x: (p.cores > 0 || p.ram > 0 || p.stor > 0) ? 1 : 0 }));
+  const rem = pools.map(p => ({ p, pin: p.pin, x: (p.cores > 0 || p.ram > 0 || p.stor > 0) ? 1 : 0, lim: null }));
   const lim = n > 0 ? 1 / n + 1e-9 : null;
+  // a set SDDC count splits each group evenly over the SDDCs it may use (stretched groups over the stretched SDDCs, and so on)
+  if (n > 0) for (const r of rem) { if (r.pin) continue; let c = 0; for (let k = 1; k <= n; k++) if (eligAt(s, r.p, 0, k, false)) c++; r.lim = c ? 1 / c + 1e-9 : 1; }
   const sd = [], spill = [];
   let stuck = false;
   while (sd.length < 64) {
     const i = sd.length;
-    const nowOK = (r) => r.x > 1e-6 && (!r.pin || r.pin === i + 1);
-    const placeable = rem.some(nowOK), later = rem.some(r => r.x > 1e-6 && r.pin > i + 1);
+    const nowOK = (r, rx) => r.x > 1e-6 && eligAt(s, r.p, r.pin, i + 1, rx);
+    let relax = false, placeable = rem.some(r => nowOK(r, false));
+    const later = rem.some(r => r.x > 1e-6 && !nowOK(r, false));
+    // nothing else fits this SDDC: single-AZ groups waiting for a single-AZ SDDC use its single-AZ clusters instead of leaving it empty
+    if (!placeable && rem.some(r => nowOK(r, true))) { relax = true; placeable = true; }
     if (!placeable && !later && sd.length >= Math.max(1, n)) break;
     let ap = s.multiEdge ? "large" : (s.appliance === "auto" ? "medium" : s.appliance);
-    const fill = (a, over) => fillSddc(rem, cfg, s, a, lim, over, i);
+    const fill = (a, over) => fillSddc(rem, cfg, s, a, lim, over, i, relax);
     let x = fill(ap, false);
     if (placeable && x.placed <= 1e-9) x = fill(ap, true);
     if (ap === "medium" && s.appliance === "auto" && (x.total > 30 || x.vms > 3000)) { x = fill("large", false); if (placeable && x.placed <= 1e-9) x = fill("large", true); }
@@ -940,13 +959,10 @@ function drVmsOf(s, groups) {
 function size(s, groups, opts = {}) {
   const h = hostById(opts.hostId || s.hostType);
   const extOn = opts.extOn !== undefined ? opts.extOn : s.extOn;
-  const st = s.deploy === "stretched";
   const drVms = Math.round(drVmsOf(s, groups));
   if (drVms > 0) s = { ...s, vlrVms: drVms };
-  const arch = archFor(s);
-  const B = { ...hostConfig(h, s, false, arch), extOn, extPct: extOn ? s.extPct : 0 };
-  const T = { ...hostConfig(h, s, true, arch), extOn, extPct: extOn ? s.extPct : 0 };
-  const cfg = { B, T, host: h, extOn, extPct: B.extPct };
+  const mk = (arch) => ({ B: { ...hostConfig(h, s, false, arch), extOn, extPct: extOn ? s.extPct : 0 }, T: { ...hostConfig(h, s, true, arch), extOn, extPct: extOn ? s.extPct : 0 }, host: h });
+  const cfg = { esa: mk("esa"), osa: mk("osa"), host: h, extOn, extPct: extOn ? s.extPct : 0 };
   const w = workloadTotals(groups);
   const g = 1 + s.growth / 100;
   // SDDCs a pin may name: the SDDCs set, or those the workload needs without pins plus one new SDDC
@@ -962,14 +978,26 @@ function size(s, groups, opts = {}) {
   const storWork = (s.storageBasis === "allocated" ? w.allocTiB : w.usedTiB) * g;
   const W = { vcpu: w.vcpu * g, ram: w.vramGiB * (1 + s.vmOverhead / 100) * g, stor: storWork + w.templTiB, vms: w.vms * g };
   const cap = sddcCap();
-  const auto = planSddcs(pools, cfg, s, 0);
-  const need = auto.sd.length;
   const want = Math.max(0, Math.round(s.sddcCount) || 0);
-  let plan = want > need ? planSddcs(pools, cfg, s, want) : auto;
   const hostsOf = (pl) => pl.sd.reduce((a, x) => a + x.total, 0);
-  if (!(want > need) && need > 1 && !(s.wlClusters > 0)) {         // Auto: spread over the same number of SDDCs instead of filling the first to 300
-    const bal = planSddcs(pools, cfg, s, need);
-    if (bal.sd.length === need && !bal.stuck && hostsOf(bal) <= hostsOf(auto) + need) plan = bal;
+  const planFor = (sx) => {
+    const auto = planSddcs(pools, cfg, sx, 0);
+    const need = auto.sd.length;
+    let plan = want > need ? planSddcs(pools, cfg, sx, want) : auto;
+    if (!(want > need) && need > 1 && !(sx.wlClusters > 0)) {         // Auto: spread over the same number of SDDCs instead of filling the first to 300
+      const bal = planSddcs(pools, cfg, sx, need);
+      if (bal.sd.length === need && !bal.stuck && hostsOf(bal) <= hostsOf(auto) + need) plan = bal;
+    }
+    return { auto, need, plan };
+  };
+  let { auto, need, plan } = planFor(s);
+  // single-AZ SDDCs set beyond the plan: plan again without them, so their groups use the SDDCs that exist (reported as azMiss)
+  const s0 = s;
+  for (let k = 0; k < 4 && s.stOn; k++) {
+    const extra = singleNums(s).filter(n => n > plan.sd.length);
+    if (!extra.length) break;
+    s = { ...s, azSel: Object.fromEntries(Object.entries(s.azSel || {}).filter(([n]) => !extra.includes(+n))) };
+    ({ auto, need, plan } = planFor(s));
   }
   const sd = plan.sd, n = sd.length;
   const f0 = auto.sd[0];
@@ -977,7 +1005,7 @@ function size(s, groups, opts = {}) {
   const N = s.wlClusters > 0 ? Math.round(s.wlClusters) : 0;
   let autoHosts = null, nNoN = null;
   if (N) { const a = planSddcs(pools, cfg, { ...s, wlClusters: 0 }, want > need ? want : 0); autoHosts = a.sd.reduce((x, y) => x + y.total, 0); nNoN = a.sd.length; }
-  for (const x of sd) x.cidr = cidrFor(x.total, st);
+  for (const x of sd) x.cidr = cidrFor(x.total, x.stretched);
   const all = sd.flatMap(x => x.clusters);
   const hosts = sd.reduce((a, x) => a + x.total, 0);
   const cores = all.reduce((a, c) => a + c.total * c.hostCores, 0);
@@ -1001,8 +1029,13 @@ function size(s, groups, opts = {}) {
   if (s.tierOn && s.tierSel) for (const [k, list] of Object.entries(s.tierSel)) for (const c of (list || [])) { const x = sd[+k - 1]; if (!x || c > x.clusters.length) tierMiss.push({ sddc: +k, cl: c }); }
   // group -> where it runs (a management-only Cluster-1 runs no groups)
   for (const [i, x] of sd.entries()) for (const c of x.clusters) { c.sddc = i + 1; const p = pools.find(q => q.key === c.pool); c.groups = p && c.share > 1e-9 ? p.groups : []; c.dr = !!(p && p.dr) && c.share > 1e-9; c.own = p && c.share > 1e-9 ? p.own : ""; c.pin = p ? p.pin : 0; }
+  const c0 = sd[0] && sd[0].stretched ? cfg.osa : cfg.esa;
+  // SDDC types picked for SDDCs this plan doesn't have; groups placed in a single-AZ SDDC that ask for AZ resilience
+  const azMiss = s0.stOn ? singleNums(s0).filter(k => k > sd.length).sort((a, b) => a - b) : [];
+  const azForced = pools.filter(p => p.stretched && p.pin && !p.dr && !sddcStretched(s, p.pin) && p.groups.length).map(p => ({ groups: p.groups, n: p.pin }));
+  const azEmpty = s.stOn ? sd.map((x, i) => !x.stretched && x.placed <= 1e-9 ? i + 1 : 0).filter(Boolean) : [];
   const res = {
-    host: h, cfg: B, cfgT: T, spill: (plan.spill || []).map(q => ({ key: q.p.key, groups: q.p.groups, from: q.from, dr: q.p.dr })), tierAny: tierCl.length > 0, tierMiss, need0, nNoN, tierHosts: tierCl.reduce((a, c) => a + c.total, 0), drVms, maxPin, pinMiss: pools.miss || [], workload: w, W, D, pools, sddcs: sd, n: sd.length, nNeed: need, tooMany: plan.tooMany, hosts, cores, cap, splitWhy, N, autoHosts,
+    host: h, cfg: c0.B, cfgT: c0.T, azMiss, azForced, azEmpty, relaxed: sd.map((x, i) => x.relaxed ? i + 1 : 0).filter(Boolean), stAny: sd.some(x => x.stretched), stMixed: sd.some(x => x.stretched) && sd.some(x => !x.stretched), spill: (plan.spill || []).map(q => ({ key: q.p.key, groups: q.p.groups, from: q.from, dr: q.p.dr })), tierAny: tierCl.length > 0, tierMiss, need0, nNoN, tierHosts: tierCl.reduce((a, c) => a + c.total, 0), drVms, maxPin, pinMiss: pools.miss || [], workload: w, W, D, pools, sddcs: sd, n: sd.length, nNeed: need, tooMany: plan.tooMany, hosts, cores, cap, splitWhy, N, autoHosts,
     clusters: all.length, ha: all.reduce((a, c) => a + c.ha, 0),
     need: { cpu: wl.reduce((a, c) => a + c.cpuH, 0), ram: wl.reduce((a, c) => a + c.ramH, 0), stor: wl.reduce((a, c) => a + (c.storH || 0), 0) },
     vcpuPerCore: D.vcpu / cores, vsanDemand, vsanUsable, vsanPct: vsanUsable > 0 ? vsanDemand / vsanUsable : null,
@@ -1018,6 +1051,7 @@ function size(s, groups, opts = {}) {
   if (s.sddcCount > 0 && res.n > s.sddcCount) why.push(`SDDCs is set to ${s.sddcCount}, but the sizing needs ${res.n}`);
   if (res.N && res.sddcs.some(x => x.clusters.length > res.N)) why.push(`An SDDC has more than the ${res.N} clusters set`);
   if (res.spill.length) why.push("A group placed in an SDDC didn't fit and continues in the next one");
+  if (res.azForced.length) why.push("A group that needs AZ resilience is placed in a single-AZ SDDC");
   res.limitWhy = why; res.limitWarn = why.length > 0;
   return res;
 }
@@ -1040,7 +1074,7 @@ function fitCheck(groups, h, s, cfg) {
 }
 
 function warnings(r, s, groups) {
-  const w = [], st = s.deploy === "stretched";
+  const w = [], st = r.stAny;
   if (r.tooMany) w.push({ lvl: "crit", t: "This needs more than 64 SDDCs, so the result is incomplete. Raise Clusters per SDDC (or set it to Auto) or Max hosts per cluster." });
   else if (!r.feasible) w.push({ lvl: "crit", t: "This configuration doesn't fit VMC limits or vSAN can't hold the storage. Reduce the memory tier, add external storage or raise Clusters per SDDC." });
   if (r.sddcs.some(x => x.forced)) w.unshift({ lvl: "warn", t: `Clusters per SDDC is ${r.N}, but single-AZ groups can't share a stretched cluster, so ${r.sddcs.filter(x => x.forced).length} SDDC(s) got one extra cluster for them.` });
@@ -1055,6 +1089,10 @@ function warnings(r, s, groups) {
   if (r.tierAny && T.tierShort) w.push({ lvl: "warn", t: `One ${r.host.driveTB} TB drive holds ${Math.round(T.tierGiB)} GiB, less than the ${Math.round(T.wantGiB)} GiB the tier ratio asks for. Memory tiering uses one device (or two mirrored), so the tier is capped at one drive.` });
   const c1m = r.sddcs.map((x, i) => x.c1Why && x.c1Why !== "empty" ? { i: i + 1, why: x.c1Why } : null).filter(Boolean);
   if (c1m.length) w.push({ lvl: "info", t: `Cluster-1 in SDDC ${c1m.map(x => x.i).join(", ")} runs management only: ${c1m[0].why === "own" ? "its groups are set to Own clusters" : "its groups are single-AZ, and Cluster-1 is stretched"}.` });
+  for (const q of r.azForced) w.unshift({ lvl: "warn", t: `${q.groups.join(", ")} ${q.groups.length > 1 ? "need" : "needs"} AZ resilience but ${q.groups.length > 1 ? "are" : "is"} placed in SDDC ${q.n}, which is single AZ, so ${q.groups.length > 1 ? "they run" : "it runs"} on single-AZ clusters. Set SDDC ${q.n} to Stretched, place the group in a stretched SDDC, or untick Stretched on the group.` });
+  if (r.azMiss.length) w.unshift({ lvl: "warn", t: `SDDC ${r.azMiss.join(", ")} ${r.azMiss.length > 1 ? "are" : "is"} set to Single AZ but ${r.azMiss.length > 1 ? "aren't" : "isn't"} in the current plan. The choice is kept and applies again when ${r.azMiss.length > 1 ? "they exist" : "it exists"}; to give single-AZ groups their own SDDC, set SDDCs to ${Math.max(...r.azMiss)} or place them there.` });
+  if (r.azEmpty.length) w.push({ lvl: "warn", t: `SDDC ${r.azEmpty.join(", ")} ${r.azEmpty.length > 1 ? "are" : "is"} single AZ, but the groups left need AZ resilience, so ${r.azEmpty.length > 1 ? "they run" : "it runs"} management only. Set ${r.azEmpty.length > 1 ? "them" : "it"} to Stretched or place single-AZ groups there.` });
+  if (r.relaxed.length) w.push({ lvl: "info", t: `Single-AZ groups run on single-AZ clusters in SDDC ${r.relaxed.join(", ")} (stretched), because the single-AZ SDDC${r.azMiss.length > 1 ? "s" : ""} set for them ${r.azMiss.length ? "aren't needed" : "are full"}. Set SDDCs or Place in to keep them in their own SDDC.` });
   if (r.tierAny && r.activePctOfDram > 0.5) w.push({ lvl: "warn", t: `Active memory in tiered clusters is ~${Math.round(r.activePctOfDram * 100)}% of DRAM. Broadcom guidance is to keep it below ~50% with tiering on.` });
   if (r.tierAny && s.ramRatio > 1) w.push({ lvl: "info", t: "RAM ratio applies to non-tiered clusters only: tiering and memory overcommit aren't combined." });
   for (const m of r.pinMiss) w.unshift({ lvl: "warn", t: m.kind === "place"
@@ -1076,9 +1114,9 @@ function warnings(r, s, groups) {
   const peaks = groups.filter(gr => gr.include && gr.opts && (gr.opts.cpuPeak > 0 || gr.opts.ramPeak > 0));
   if (peaks.length) w.push({ lvl: "info", t: `${peaks.length} group${peaks.length > 1 ? "s are" : " is"} sized on peak utilization instead of the ratios (CPU kept at or below 80% of cores at peak; RAM at peak % of vRAM). Peak data should come from a monitoring tool over a representative period.` });
   if (st) {
-    w.push({ lvl: "info", t: "Stretched SDDCs use vSAN OSA. Stretched clusters mirror data across two AZs, so each AZ holds the full workload (2 × hosts) and vSAN keeps two copies (four with local RAID-1 at 6+ hosts)." });
+    w.push({ lvl: "info", t: `Stretched SDDCs use vSAN OSA${r.stMixed ? " and single-AZ SDDCs ESA" : ""}. Stretched clusters mirror data across two AZs, so each AZ holds the full workload (2 × hosts) and vSAN keeps two copies (four with local RAID-1 at 6+ hosts).` });
     if (r.sddcs.some(x => x.clusters.some(c => c.stretched && c.total < 6))) w.push({ lvl: "warn", t: "Stretched clusters below 6 hosts have no local failure tolerance and get the lower SLA; 6+ hosts qualify for 99.99%. Once a stretched cluster reaches 6 hosts it can't shrink back to 2 or 4." });
-    if (r.pools.some(p => !p.stretched && p.cores + p.ram > 0)) w.push({ lvl: "info", t: "Groups without AZ resilience run on non-stretched secondary clusters in the stretched SDDC (one AZ)." });
+    if (r.sddcs.some(x => x.stretched && x.clusters.some(c => !c.stretched && c.share > 1e-9))) w.push({ lvl: "info", t: "Groups without AZ resilience run on non-stretched secondary clusters in a stretched SDDC (one AZ, still vSAN OSA, hosts added one at a time). These need SDDC 1.24v5 or later." });
   }
   if (false) w.push({ lvl: "info", t: "Custom CPU core count applies to secondary clusters only, so those groups get their own clusters; Cluster-1 always uses every core." });
   if (r.sddcs.some(x => x.clusters.some(c => c.total === 2 && !c.stretched))) w.push({ lvl: "info", t: "2-host clusters mirror data (RAID-1) across both hosts, with a VMware-managed witness as tie-breaker. Large appliances aren't supported on them." });
@@ -1092,11 +1130,11 @@ function warnings(r, s, groups) {
   if (mc.some(c => c.total > c.setHosts)) {
     const c = mc.find(c => c.total > c.setHosts);
     w.unshift({ lvl: "warn", t: c.floor > c.setHosts && c.total === c.floor
-      ? `Management cluster hosts is ${c.setHosts}, but ${st ? "stretched clusters with Large appliances need 6" : "Large appliances need 3"}, so it's ${c.total}.`
+      ? `Management cluster hosts is ${c.setHosts}, but ${c.stretched ? "stretched clusters with Large appliances need 6" : "Large appliances need 3"}, so it's ${c.total}.`
       : `Management cluster hosts is ${c.setHosts}, but the management load (SDDC appliances and add-ons) needs ${c.total} hosts with HA, so it's ${c.total}.` });
   }
   w.push({ lvl: "info", t: st
-    ? "Sized like VMC: each AZ of a stretched cluster holds the full workload, and auto-remediation replaces a failed host."
+    ? `Sized like VMC: each AZ of a stretched cluster holds the full workload${r.stMixed || r.sddcs.some(x => x.clusters.some(c => !c.stretched)) ? ", single-AZ clusters run workloads on all hosts with no spare," : ""} and auto-remediation replaces a failed host.`
     : "Sized like VMC: workloads run on all hosts with no spare host, because auto-remediation replaces a failed host. Until the replacement joins and vSAN resyncs, CPU runs above the set ratio and RAM-tight clusters may balloon or swap." });
   // Results that go past values the user set: warn first, with the setting, the value and why
   const N = r.N, perSddcHosts = N ? N * s.maxCluster : null;
@@ -1131,7 +1169,7 @@ function breakEven(s, groups, hostId) {
   return { pct: null, from: base.hosts };
 }
 
-if (typeof module !== "undefined") module.exports = { breakEven, demandOf, HOSTS, APPLIANCES, ADDON, DEFAULTS, CIDR_CAP, cidrFor, size, hostConfig, workloadTotals, policy, archFor, sddcCap, mgmtLoad };
+if (typeof module !== "undefined") module.exports = { sddcStretched, singleNums, eligAt, breakEven, demandOf, HOSTS, APPLIANCES, ADDON, DEFAULTS, CIDR_CAP, cidrFor, size, hostConfig, workloadTotals, policy, archFor, sddcCap, mgmtLoad };
 
 // ===== RVTools parsing (pure: takes sheet rows as arrays of objects) =====
 const COLS = {
@@ -1284,7 +1322,7 @@ if (typeof module !== "undefined") module.exports = { parseRVTools, buildGroups,
 </script>
 <script>
 "use strict";
-const S = { ...DEFAULTS, tierSel: {}, customer: "", region: "", notes: "" };
+const S = { ...DEFAULTS, tierSel: {}, azSel: {}, customer: "", region: "", notes: "" };
 let groups = [];
 let files = [];
 let gid = 1;
@@ -1320,7 +1358,7 @@ const soonHost = (h) => `<b>Not offered on VMC yet.</b> Figures use the EC2 spec
 }
 // Field tips: what the field does, why the default is what it is, and when to change it. Functions so they can show current values.
 const TIPS = {
-  deploy: () => "<b>Single AZ</b>: new SDDCs deploy on vSAN ESA. <b>Stretched</b>: hosts split evenly across two AZs on vSAN OSA, and each AZ holds the full workload, so stretched clusters need about twice the hosts. Use stretched when an AZ failure must not take workloads down; 6+ hosts per cluster qualify for the 99.99% SLA.",
+  stOn: () => "Off: every SDDC is single AZ on vSAN ESA. On: choose Stretched or Single AZ for each SDDC below (it's fixed when the SDDC is created). In a stretched SDDC, Cluster-1 is stretched, and groups ticked <b>Stretched (AZ resilience)</b> run on stretched clusters: hosts split evenly across two AZs on vSAN OSA, each AZ holding the full workload, so about twice the hosts. Other groups go to single-AZ SDDCs, or to single-AZ clusters in a stretched SDDC (SDDC 1.24v5+). 6+ hosts per stretched cluster qualify for the 99.99% SLA.",
   appliance: () => "vCenter, NSX Managers and NSX Edges, fully reserved in Cluster-1. <b>Auto</b> picks Large above 30 hosts or 3,000 VMs, the size Broadcom recommends there. Large needs 3+ hosts in Cluster-1 (6+ stretched) and is required for Multi-Edge.",
   sddcCount: () => "<b>Auto</b> uses as few SDDCs as VMC's limits allow (300 hosts, up to 20 clusters per SDDC) and spreads the workload evenly over them. Set a number to split an estate on purpose, e.g. per business unit or to spread north-south traffic over more Edges. Each SDDC adds its own management appliances.",
   mgmtHosts: () => `Host count for a management-only Cluster-1. Default 4 keeps management on its own failure domain with room for add-ons; it's raised automatically if the management load or the Large-appliance minimum needs more.`,
@@ -1377,17 +1415,18 @@ function refreshForm() {
     const k = el.dataset.k;
     if (el.type === "checkbox") el.checked = !!S[k]; else el.value = S[k];
   }
-  const h = hostById(S.hostType), st = S.deploy === "stretched", arch = archFor(S);
+  const h = hostById(S.hostType), st = !!S.stOn, arch = archFor(S);
   $("extPctV").textContent = S.extPct + "%";
   $("extPct").disabled = !S.extOn;
   $("extPctWrap").style.opacity = S.extOn ? 1 : .5;
   $("storhint").textContent = S.extOn
     ? `${S.extPct}% of workload storage (VMs and templates) goes to an external NFS datastore. vSAN stays the principal storage and holds the management appliances and the rest.`
-    : `Principal storage is vSAN ${arch.toUpperCase()} on the hosts' local drives (minus memory-tier drives on tiered clusters).`;
+    : `Principal storage is vSAN ${st ? "OSA in stretched SDDCs and ESA in single-AZ SDDCs" : arch.toUpperCase()} on the hosts' local drives (minus memory-tier drives on tiered clusters).`;
   const pf = (n) => policy(arch, st, n).label;
-  $("policynote").innerHTML = st
-    ? `vSAN OSA: stretched clusters deploy on OSA (2 cache drives per host)<br>Managed policy: 2–4 hosts ${pf(2)} (2× capacity) · 6–16 hosts ${pf(6)} (4×)`
-    : `vSAN ESA: new single-AZ SDDCs deploy on ESA (every drive is capacity)<br>Managed policy: 2 hosts ${pf(2)} · 3–5 hosts ${pf(3)} · 6–16 hosts ${pf(6)}`;
+  const pE = (n) => policy("esa", false, n).label, pO = (n) => policy("osa", false, n).label;
+  $("policynote").innerHTML = (st
+    ? `Stretched SDDCs: vSAN OSA (2 cache drives per host). Stretched clusters: 2–4 hosts ${pf(2)} (2× capacity) · 6–16 hosts ${pf(6)} (4×). Their single-AZ clusters: 2 hosts ${pO(2)} · 3–5 hosts ${pO(3)} · 6–16 hosts ${pO(6)}<br>` : "")
+    + `Single-AZ SDDCs: vSAN ESA (every drive is capacity). Managed policy: 2 hosts ${pE(2)} · 3–5 hosts ${pE(3)} · 6–16 hosts ${pE(6)}`;
   // tiering: picked per cluster in each SDDC (the picker is drawn after each sizing)
   const cfg = hostConfig(h, S, true, arch);
   $("tierinv").textContent = `This host: ${cfg.capDrives} vSAN capacity drive${cfg.capDrives === 1 ? "" : "s"} of ${h.driveTB} TB (${nf(h.driveGiB)} GiB each) under ${arch.toUpperCase()}. A tiered host gives ${cfg.tierDrives === 2 ? "2 (mirrored)" : "1"} to the memory tier and keeps ${cfg.vsanDrives} in vSAN.`;
@@ -1410,10 +1449,10 @@ function refreshForm() {
   $("growthhint").textContent = S.growth > 0 ? `Sized for +${nf(S.growth)}% over today's workload (e.g. the growth expected over a 1- or 3-year term). Management isn't grown.` : "No growth applied: sized for today's workload.";
   $("ramhint").textContent = S.ramRatio > 1 ? `RAM ratio ${S.ramRatio}: ${nf((S.ramRatio - 1) * 100)}% memory overcommit (the VMC Sizer's default is 1.25).` : "RAM ratio 1.0: no memory overcommit (1 GiB of vRAM needs 1 GiB of host RAM). The VMC Sizer's default is 1.25.";
   const ap = (k) => `${APPLIANCES[k].vcpu} vCPU · ${APPLIANCES[k].ram} GB`;
-  const cl = CIDR_CAP[st ? "stretched" : "single"].map(([c, n]) => `${c} ${n}`).join(" · ");
+  const cl = CIDR_CAP.single.map(([c, n]) => `${c} ${n}`).join(" · ") + (st ? " · stretched SDDCs: " + CIDR_CAP.stretched.map(([c, n]) => `${c} ${n}`).join(" · ") : "");
   $("mgmtnote").innerHTML = `Appliances in Cluster-1 (reserved): Medium ${ap("medium")} · Large ${ap("large")}<br>`
-    + `Cluster-1 minimum: 2 hosts (Medium) · ${st ? 6 : 3} hosts (Large) · management-only Cluster-1: ${S.mgmtHosts} hosts as set<br>`
-    + `Management CIDR is an output: hosts per range${st ? " (stretched)" : ""} ${cl}`;
+    + `Cluster-1 minimum: 2 hosts (Medium) · 3 hosts (Large)${st ? ", 6 in a stretched SDDC" : ""} · management-only Cluster-1: ${S.mgmtHosts} hosts as set<br>`
+    + `Management CIDR is an output: hosts per range ${cl}`;
 }
 
 document.addEventListener("input", e => {
@@ -1421,14 +1460,14 @@ document.addEventListener("input", e => {
   if (el.type === "checkbox") S[k] = el.checked;
   else if (el.type === "number" || el.type === "range" || el.dataset.num) { const v = parseFloat(el.value); if (isFinite(v)) S[k] = v; else return; }
   else S[k] = el.value;
-  refreshForm(); if (k === "deploy") renderGroups(); recalc();
+  refreshForm(); if (k === "stOn") renderGroups(); recalc();
 });
 $("resetpol").addEventListener("click", () => {
   for (const k of ["cpuRatio", "ramRatio", "memReserve", "memFill", "vmOverhead", "growth"]) S[k] = DEFAULTS[k];
   refreshForm(); recalc();
 });
 $("resetsddc").addEventListener("click", () => {
-  for (const k of ["deploy", "appliance", "sddcCount", "mgmtCluster", "mgmtHosts", "wlClusters", "maxCluster"]) S[k] = DEFAULTS[k];
+  for (const k of ["stOn", "azSel", "appliance", "sddcCount", "mgmtCluster", "mgmtHosts", "wlClusters", "maxCluster"]) S[k] = DEFAULTS[k];
   refreshForm(); recalc();
 });
 
@@ -1455,7 +1494,7 @@ function renderGroups() {
   renderedMax = maxSddc();
   const t = workloadTotals(groups);
   const head = `<thead><tr><th>Use</th><th>Group</th>${FIELDS.map(f => `<th class="n">${f[1]}</th>`).join("")}<th></th></tr></thead>`;
-  const h = hostById(S.hostType), st = S.deploy === "stretched";
+  const h = hostById(S.hostType), st = !!S.stOn;
   const pctv = (x) => x === null || x === undefined ? "–" : Math.round(x * 100) + "%";
   const optRow = (g) => {
     const o = g.opts || (g.opts = newOpts());
@@ -1467,7 +1506,7 @@ function renderGroups() {
       ${o.drTo ? `<label>Recovery <select class="g-o" data-o="drMode" aria-label="Recovery"><option value="storage" ${o.drMode !== "full" ? "selected" : ""}>Storage only</option><option value="full" ${o.drMode === "full" ? "selected" : ""}>Full failover</option></select></label>` : ""}
       <label>Peak CPU % <input type="number" class="g-o" data-o="cpuPeak" min="0" max="100" step="1" value="${o.cpuPeak || ""}" placeholder="ratio">${tip("Size this group on measured peak CPU instead of the CPU ratio: cores = vCPU × peak % ÷ 80%, so cores stay at or below 80% busy at peak. Use a peak from monitoring over a representative period, not the RVTools snapshot.")}</label>
       <label>Peak RAM % <input type="number" class="g-o" data-o="ramPeak" min="0" max="100" step="1" value="${o.ramPeak || ""}" placeholder="ratio">${tip("Size this group's RAM on measured peak use (vRAM × peak %) instead of the RAM ratio. Only lower it below 100% when monitoring shows active memory well below allocated.")}</label>
-      ${st ? `<label><input type="checkbox" class="g-o" data-o="stretch" ${o.stretch !== false ? "checked" : ""}> Stretched (AZ resilience)</label>` : ""}
+      ${st ? `<label><input type="checkbox" class="g-o" data-o="stretch" ${o.stretch !== false ? "checked" : ""}> Stretched (AZ resilience)${tip("Ticked: the group runs on stretched clusters in a stretched SDDC, so an AZ failure doesn't take it down. Unticked: it runs in one AZ, in a single-AZ SDDC if you've set one, otherwise on a single-AZ cluster in a stretched SDDC.")}</label>` : ""}
       ${sn ? `<span class="snap" title="Point-in-time values from the RVTools export (powered-on VMs). Reference only.">RVTools snapshot: CPU ${pctv(sn.cpuPct)} · RAM active ${pctv(sn.actPct)}, consumed ${pctv(sn.conPct)}</span>` : ""}
     </div></td></tr>`;
   };
@@ -1607,12 +1646,12 @@ function recalc() {
   const t = workloadTotals(groups);
   saveSession();
   if (!(t.vcpu > 0 || t.vramGiB > 0)) {
-    $("storneed").innerHTML = ""; $("vlrhint").textContent = ""; renderTierSel(null);
+    $("storneed").innerHTML = ""; $("vlrhint").textContent = ""; renderTierSel(null); renderAzSel(null);
     $("results").innerHTML = `<section class="card"><h2>Results</h2><p>Add a workload group or import RVTools to see the sizing.</p></section>`; last = null; closeOv(); return;
   }
   const r = size(S, groups); last = r;
   if (r.maxPin !== renderedMax) renderGroups();
-  const h = r.host, st = S.deploy === "stretched";
+  const h = r.host, st = r.stAny;
   renderStorageNeed(r);
   const ml = r.sddcs[0].mgmt;
   $("addonload").innerHTML = `<div class="mgmt"><b>Cluster-1 management load per SDDC${r.n > 1 ? " (SDDC 1)" : ""}</b><table><tbody>
@@ -1622,7 +1661,7 @@ function recalc() {
   $("vlrhint").textContent = r.drVms > 0 ? `Protected VMs come from the workload groups with Protect to set: ${nf(r.drVms)}.` : "";
   $("vlrVms").disabled = !S.vlrOn || r.drVms > 0;
   if (r.drVms > 0) $("vlrVms").value = r.drVms;
-  renderTierSel(r);
+  renderTierSel(r); renderAzSel(r);
   const maxBar = Math.max(r.need.cpu, r.need.ram, r.need.stor || 0, 1);
   const bar = (name, v) => `<div class="bar ${r.limiter === name ? "lim" : ""}"><span>${name}</span><span class="t"><i style="width:${Math.min(100, v / maxBar * 100)}%"></i></span><span class="num">${nf(v)} hosts</span></div>`;
   const comp = HOSTS.map(x => ({ x, rr: size(S, groups, { hostId: x.id }) }));
@@ -1631,14 +1670,14 @@ function recalc() {
   const ramCell = (cls) => { const d = cls.reduce((a, c) => a + c.total * h.ramGiB, 0), tg = cls.reduce((a, c) => a + c.total * (c.tier ? c.tierGiB : 0), 0); return tg ? `${nf(d)} + ${nf(tg)}` : nf(d); };
   const util = (c) => `${nf(c.d.vcpu / (c.total * c.hostCores), 1)} vCPU/core · CPU ${pct(c.d.cores / (c.total * c.hostCores))} · RAM ${pct(c.d.ram / (c.total * c.effRamGiB))} · vSAN ${pct(c.vsanUsable ? c.d.vsan / c.vsanUsable : null)}`;
   const hostsCell = (c) => c.setHosts ? `${nf(c.total)} <span class="hint">${c.total > c.setHosts ? `(set ${c.setHosts}, needs ${c.total})` : "(set)"}</span>` : c.stretched ? `${nf(c.total)} <span class="hint">(${nf(c.total / 2)} per AZ)</span>` : `${nf(c.total)}`;
-  const tags = (c) => [st ? (c.stretched ? "stretched" : "single AZ") : "", c.dr ? "DR replica" : "", c.own ? "own clusters" : ""].filter(Boolean);
+  const tags = (c) => [S.stOn ? (c.stretched ? "stretched" : "single AZ") : "", c.dr ? "DR replica" : "", c.own ? "own clusters" : ""].filter(Boolean);
   const roleTxt = (c, i) => (c.role === "mgmt" ? "Cluster-1 (management only)" : (c.role === "shared" ? "Cluster-1 (management + workloads)" : `Cluster-${i}`))
     + (c.tier ? ast(SOON_TIER) + ' <span class="pill warn">tiered</span>' : "") + tags(c).map(x => ` <span class="pill">${x}</span>`).join("");
   const sdRows = r.sddcs.map((x, ii) => {
     const rows = x.clusters.map((c, ci) => `<tr id="cl-${ii + 1}-${ci + 1}"><td style="padding-left:20px">${roleTxt(c, ci + 1)}<br><span class="hint">${util(c)}${c.groups.length ? " · " + esc(c.groups.join(", ")) : ""}</span></td>
       <td class="n">${hostsCell(c)}</td><td class="n">${nf(c.total * c.hostCores)}</td><td class="n">${ramCell([c])}</td><td class="n">${nf(c.vsanUsable, 1)}</td>
       <td>${c.atMin ? `Minimum (${c.floor})` : c.limiter}</td><td>${c.prot}</td></tr>`).join("");
-    return `<tr class="tot"><td>SDDC ${ii + 1} <span class="hint">· ${x.clusters.length} cluster${x.clusters.length > 1 ? "s" : ""} · ${x.appliance === "large" ? "Large" : "Medium"} appliances · management CIDR ${x.cidr.label}</span></td><td class="n">${nf(x.total)}</td><td class="n">${nf(x.clusters.reduce((a, c) => a + c.total * c.hostCores, 0))}</td><td class="n">${ramCell(x.clusters)}</td><td class="n">${nf(x.vsanUsableTiB, 1)}</td><td colspan="2"></td></tr>${rows}`;
+    return `<tr class="tot"><td>SDDC ${ii + 1} <span class="hint">· ${S.stOn ? (x.stretched ? "stretched · vSAN OSA · " : "single AZ · vSAN ESA · ") : ""}${x.clusters.length} cluster${x.clusters.length > 1 ? "s" : ""} · ${x.appliance === "large" ? "Large" : "Medium"} appliances · management CIDR ${x.cidr.label}</span></td><td class="n">${nf(x.total)}</td><td class="n">${nf(x.clusters.reduce((a, c) => a + c.total * c.hostCores, 0))}</td><td class="n">${ramCell(x.clusters)}</td><td class="n">${nf(x.vsanUsableTiB, 1)}</td><td colspan="2"></td></tr>${rows}`;
   }).join("");
   const allCl = r.sddcs.flatMap(x => x.clusters);
   const physRam = allCl.reduce((a, c) => a + c.total * c.effRamGiB, 0);
@@ -1651,10 +1690,10 @@ function recalc() {
       <div class="tile main"><span class="k">VMC hosts</span><span class="big">${nf(r.hosts)}</span><span class="d">${h.id}${h.future ? ast(soonHost(h)) : ""}${r.tierAny ? ` · ${nf(r.tierHosts)} tiered${ast(SOON_TIER)}` : ""}</span></div>
       <div class="tile"><span class="k">Limited by</span><span class="big" style="font-size:22px">${limTxt}</span><span class="d">workload clusters</span></div>
       <div class="tile${r.limitWarn ? " warntile" : ""}"><span class="k">SDDCs${r.limitWarn ? ` <span class="pill warn" title="${esc(r.limitWhy.join(". ") + ". See Checks.")}">⚠ check</span>` : ""}</span><span class="big">${nf(r.n)}${S.sddcCount > 0 && r.n > r.nNeed ? `<span class="hint" style="font-size:12px"> (min ${r.nNeed})</span>` : ""}</span><span class="d">management CIDR ${[...new Set(r.sddcs.map(x => x.cidr.rec))].join(" / ")}</span></div>
-      <div class="tile"><span class="k">Clusters</span><span class="big">${nf(r.clusters)}</span><span class="d">total · up to ${r.N || S.maxClusters} per SDDC${st ? " · stretched" : ""}</span></div>
-      <div class="tile"><span class="k">Appliances</span><span class="big" style="font-size:22px">${aps}</span><span class="d">${st ? "stretched" : "single AZ"} · vSAN ${r.cfg.arch.toUpperCase()}</span></div>
+      <div class="tile"><span class="k">Clusters</span><span class="big">${nf(r.clusters)}</span><span class="d">total · up to ${r.N || S.maxClusters} per SDDC${st ? ` · ${r.sddcs.reduce((a, x) => a + x.clusters.filter(c => c.stretched).length, 0)} stretched` : ""}</span></div>
+      <div class="tile"><span class="k">Appliances</span><span class="big" style="font-size:22px">${aps}</span><span class="d">${r.stMixed ? "stretched (OSA) + single AZ (ESA)" : st ? "stretched · vSAN OSA" : "single AZ · vSAN ESA"}</span></div>
     </div>
-    <div class="bars"><span class="hint">Hosts each resource needs across workload clusters (${st ? "per AZ" : "all hosts run workloads"})</span>${bar("CPU", r.need.cpu)}${bar("RAM", r.need.ram)}${bar("Storage", r.need.stor)}</div>
+    <div class="bars"><span class="hint">Hosts each resource needs across workload clusters (${st ? "per AZ on stretched clusters" : "all hosts run workloads"})</span>${bar("CPU", r.need.cpu)}${bar("RAM", r.need.ram)}${bar("Storage", r.need.stor)}</div>
     ${soon ? `<p class="hint" style="margin:0">* Not yet available on VMC: estimate only. Hover the * for what's assumed.</p>` : ""}
   </section>
 
@@ -1753,6 +1792,25 @@ $("tiersel").addEventListener("change", e => {
 });
 document.addEventListener("click", e => { if (tierOpen && e.target.isConnected && !e.target.closest("#tiersel")) { tierOpen = 0; renderTierSel(last); } });
 
+// ---------- stretched clusters: SDDC type per SDDC ----------
+function setAz(k, v) { const t = { ...(S.azSel || {}) }; if (v === "single") t[String(k)] = "single"; else delete t[String(k)]; S.azSel = t; }
+function renderAzSel(r) {
+  const el = $("azsel");
+  if (!S.stOn) { el.innerHTML = ""; return; }
+  if (!r) { el.innerHTML = `<p class="hint" style="margin:6px 0 0">Add a workload to choose each SDDC's type.</p>`; return; }
+  const keys = new Set([...r.sddcs.map((_, i) => i + 1), ...singleNums(S)]);
+  el.innerHTML = [...keys].sort((a, b) => a - b).map(k => {
+    const x = r.sddcs[k - 1], v = sddcStretched(S, k) ? "stretched" : "single";
+    const ns = x ? x.clusters.filter(c => c.stretched).length : 0, na = x ? x.clusters.length - ns : 0;
+    const info = x ? `${nf(x.total)} hosts · ${[ns ? `${ns} stretched` : "", na ? `${na} single-AZ` : ""].filter(Boolean).join(", ")} cluster${x.clusters.length > 1 ? "s" : ""}` : `<span style="color:var(--warn)">not in the current plan</span>`;
+    return `<div class="tsel"><div class="nm"><b>SDDC ${k}</b><span>${info}</span></div><div class="row" style="gap:8px;flex-wrap:nowrap">
+      <select data-az="${k}" aria-label="SDDC ${k} type"><option value="stretched" ${v === "stretched" ? "selected" : ""}>Stretched (two AZs, vSAN OSA)</option><option value="single" ${v === "single" ? "selected" : ""}>Single AZ (vSAN ESA)</option></select>
+      ${x ? "" : `<button type="button" class="link" data-azclear="${k}">Clear</button>`}</div></div>`;
+  }).join("") + `<p class="hint" style="margin:4px 0 0">Set when the SDDC is created; it can't be changed later. Groups ticked <i>Stretched (AZ resilience)</i> run on stretched clusters; the others go to single-AZ SDDCs, or to single-AZ clusters in a stretched SDDC.</p>`;
+}
+$("azsel").addEventListener("change", e => { const c = e.target.closest("[data-az]"); if (!c) return; setAz(+c.dataset.az, c.value); recalc(); });
+$("azsel").addEventListener("click", e => { const c = e.target.closest("[data-azclear]"); if (!c) return; setAz(+c.dataset.azclear, "stretched"); recalc(); });
+
 // ---------- topology diagram (SVG, colours inlined so downloads match the screen) ----------
 function diagramSvg(r, width) {
   const cs = getComputedStyle(document.documentElement), v = (n, d) => (cs.getPropertyValue(n) || d).trim() || d;
@@ -1808,7 +1866,7 @@ function diagramSvg(r, width) {
     });
     const two = 10 + 70 + info.length * 5.8 > SW - 16;
     out.push(box(SX, startY, SW, sh, { rx: 8, stroke: C.accent, sw: 1.4 }),
-      txt(SX + 10, startY + 17, `SDDC ${ii + 1}`, { bold: true, size: 13 }),
+      txt(SX + 10, startY + 17, `SDDC ${ii + 1}${S.stOn ? (sd.stretched ? " · stretched" : " · single AZ") : ""}`, { bold: true, size: 13 }),
       txt(two ? SX + 10 : SX + SW - 10, two ? startY + 31 : startY + 17, info, { anchor: two ? "" : "end", size: 10.5, fill: C.muted }),
       two ? "" : txt(SX + 10, startY + 31, cut("Cluster-1: " + app(sd), Math.floor((SW - 20) / 5.6)), { size: 9.5, fill: C.muted }), ...body);
     sdTops.push(startY + 17);
@@ -1910,14 +1968,14 @@ function renderStorageNeed(r) {
   }
   const hd = r.head;
   if (!hd.limiting) out.push(`<div class="mgmt"><b>vSAN: not limiting</b>
-    <table><tbody><tr><td>Hosts set by CPU/RAM${S.deploy === "stretched" ? " (both AZs)" : ""}</td><td class="n">${nf(hd.crHosts)}</td></tr>
+    <table><tbody><tr><td>Hosts set by CPU/RAM${r.stAny ? " (both AZs on stretched clusters)" : ""}</td><td class="n">${nf(hd.crHosts)}</td></tr>
     <tr><td>vSAN on those hosts holds</td><td class="n">${nf(hd.capCR, 1)} TiB</td></tr>
     <tr><td>Storage on vSAN (incl. ${nf(hd.mgmtOnVsan, 1)} TiB management)</td><td class="n">${nf(hd.vsanNeed, 1)} TiB</td></tr>
     <tr class="tot"><td>Headroom before storage sets the host count</td><td class="n">${nf(hd.headroom, 1)} TiB (${pct(hd.capCR ? hd.headroom / hd.capCR : 0)})</td></tr></tbody></table></div>`);
   else {
     const be = breakEven(S, groups);
     out.push(`<div class="mgmt"><b>vSAN: limiting</b>
-    <table><tbody><tr><td>Hosts set by CPU/RAM${S.deploy === "stretched" ? " (both AZs)" : ""}</td><td class="n">${nf(hd.crHosts)} (storage needs ${nf(hd.storHosts)})</td></tr>
+    <table><tbody><tr><td>Hosts set by CPU/RAM${r.stAny ? " (both AZs on stretched clusters)" : ""}</td><td class="n">${nf(hd.crHosts)} (storage needs ${nf(hd.storHosts)})</td></tr>
     <tr><td>vSAN on ${nf(hd.crHosts)} hosts holds</td><td class="n">${nf(hd.capCR, 1)} TiB</td></tr>
     <tr><td>Storage on vSAN (incl. ${nf(hd.mgmtOnVsan, 1)} TiB management)</td><td class="n">${nf(hd.vsanNeed, 1)} TiB</td></tr>
     ${be && be.pct !== null ? `<tr class="tot"><td>Move to FSxN so storage stops setting the count</td><td class="n">${be.pct}% of workload (${nf(be.tib, 1)} TiB)</td></tr>
@@ -1938,9 +1996,9 @@ async function exportXlsx() {
   if (typeof XLSX === "undefined") { msg.textContent = "The spreadsheet library didn't load."; return; }
   const wb = XLSX.utils.book_new();
   const today = new Date().toISOString().slice(0, 10);
-  const st = S.deploy === "stretched";
+  const st = r.stAny;
   const sum = [["VMware Cloud on AWS sizing", ""], ["Customer", S.customer], ["Region", S.region], ["Date", today], ["Notes", S.notes], [],
-    ["Host type", r.host.id + (r.host.future ? " (not yet offered on VMC: estimate)" : "")], ["Deployment", st ? "Stretched (2 AZs)" : "Single AZ"], ["vSAN architecture", r.cfg.arch.toUpperCase()],
+    ["Host type", r.host.id + (r.host.future ? " (not yet offered on VMC: estimate)" : "")], ["Stretched clusters", S.stOn ? "on" : "off"], ["SDDC types", r.sddcs.map((x, i) => `SDDC ${i + 1}: ${x.stretched ? "stretched (vSAN OSA)" : "single AZ (vSAN ESA)"}`).join("; ")],
     ["VMC hosts", r.hosts], ["SDDCs", r.n], ["SDDCs needed by limits", r.nNeed], ["Management CIDR per SDDC", r.sddcs.map(x => x.cidr.label).join("; ")], ["Clusters", r.clusters], ["Limited by", r.limiter], ["SDDC appliances", r.sddcs.map(x => x.appliance).join(", ")],
     ["Physical cores", r.cores], ["Distributed IDS/IPS (vDefend, included)", S.afwOn ? "on: 2 GB RAM per host" : "off"], ["vCPU per core (all hosts)", +r.vcpuPerCore.toFixed(2)], ["vSAN used %", r.vsanPct === null ? "n/a" : +(r.vsanPct * 100).toFixed(1)], ["External NFS TiB", +r.fsxTiB.toFixed(1)],
     ["Memory tiering (not yet on VMC)", r.tierAny ? `${r.tierHosts} hosts in tiered clusters (on-premises vSphere memory tiering limits)` : "off"], ["Protected VMs (VMware Live Recovery)", r.drVms || (S.vlrOn ? S.vlrVms : "off")], [],
@@ -1949,11 +2007,11 @@ async function exportXlsx() {
   const crow = [];
   r.sddcs.forEach((x, ii) => { x.clusters.forEach((c, ci) => {
     const tg = c.tier ? c.tierGiB : 0;
-    crow.push([ii + 1, ci === 0 ? x.cidr.label : "", (c.stretched ? "stretched" : "single AZ"), `Cluster-${ci + 1}` + (c.role === "mgmt" ? " (management only)" : c.role === "shared" ? " (management + workloads)" : "") + (c.dr ? " (DR replica)" : ""), x.appliance, c.total, st ? c.total / 2 : "",
+    crow.push([ii + 1, ci === 0 ? (x.stretched ? "stretched" : "single AZ") : "", ci === 0 ? x.cidr.label : "", (c.stretched ? "stretched" : "single AZ"), `Cluster-${ci + 1}` + (c.role === "mgmt" ? " (management only)" : c.role === "shared" ? " (management + workloads)" : "") + (c.dr ? " (DR replica)" : ""), x.appliance, c.total, st ? c.total / 2 : "",
       c.total * c.hostCores, c.total * r.host.ramGiB, c.tier ? "yes (not yet on VMC)" : "no", Math.round(c.total * tg), +c.vsanUsable.toFixed(1), Math.round(c.d.vcpu), Math.round(c.d.ram), +c.d.vsan.toFixed(1),
       +(c.d.vcpu / (c.total * c.hostCores)).toFixed(2), +(c.d.ram / (c.total * c.effRamGiB) * 100).toFixed(1), c.vsanUsable ? +(c.d.vsan / c.vsanUsable * 100).toFixed(1) : "",
       c.atMin ? "Minimum (" + c.floor + ")" : c.limiter, c.prot, c.groups.join(", ")]); }); });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["SDDC", "Management CIDR", "Cluster type", "Cluster", "Appliances", "Hosts", "Hosts per AZ (stretched)", "Cores", "DRAM GiB", "Memory tiering", "Memory tier GiB", "vSAN usable TiB", "Demand vCPU", "Demand RAM GiB", "Demand vSAN TiB", "vCPU per core", "RAM used %", "vSAN used %", "Limited by", "vSAN policy", "Groups"], ...crow]), "SDDCs & clusters");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["SDDC", "SDDC type", "Management CIDR", "Cluster type", "Cluster", "Appliances", "Hosts", "Hosts per AZ (stretched)", "Cores", "DRAM GiB", "Memory tiering", "Memory tier GiB", "vSAN usable TiB", "Demand vCPU", "Demand RAM GiB", "Demand vSAN TiB", "vCPU per core", "RAM used %", "vSAN used %", "Limited by", "vSAN policy", "Groups"], ...crow]), "SDDCs & clusters");
   const pc = (x) => x === null || x === undefined ? "" : +(x * 100).toFixed(1);
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Group", "Source", "Included", "VMs", "vCPU", "vRAM GiB", "Used TiB", "Allocated TiB", "Templates TiB", "Overridden fields",
     "Peak CPU %", "Peak RAM %", "Needs AZ resilience", "Place in", "Protect to", "Recovery", "Snapshot CPU %", "Snapshot RAM active %", "Snapshot RAM consumed %"],
@@ -1985,7 +2043,7 @@ async function exportXlsx() {
 
 // ---------- settings copy / load ----------
 function settingsJSON() {
-  return JSON.stringify({ v: 4, tool: "vmc", settings: S, scope, groups: groups.map(g => ({ name: g.name, source: g.source, include: g.include, values: g.values, opts: g.opts, meta: g.meta })) });
+  return JSON.stringify({ v: 5, tool: "vmc", settings: S, scope, groups: groups.map(g => ({ name: g.name, source: g.source, include: g.include, values: g.values, opts: g.opts, meta: g.meta })) });
 }
 $("copyset").addEventListener("click", async () => {
   const txt = settingsJSON();
@@ -2009,9 +2067,12 @@ function applySettings(o) {
   const old = (o.v || 0) < 4, oldTier = old && (src.tierOn || src.tierC1), oldGroups = old ? (o.groups || []).filter(g => g.opts && g.opts.tier).map(g => g.name) : [];
   if (oldTier || oldGroups.length) S.tierOn = true;
   S.tierSel = JSON.parse(JSON.stringify(src.tierSel && typeof src.tierSel === "object" ? src.tierSel : {}));
+  // before v5: one Deployment setting for every SDDC. Stretched = stretched clusters on with every SDDC stretched.
+  if ((o.v || 0) < 5 && src.deploy === "stretched") S.stOn = true;
+  S.azSel = Object.fromEntries(Object.entries(src.azSel && typeof src.azSel === "object" ? src.azSel : {}).filter(([k, v]) => +k > 0 && v === "single"));
   if (src.tierMirror) S.tierDrives = 2;
   if (S.tierDrives !== 2) S.tierDrives = 1;
-  for (const k of ["connLink", "connVpn", "connGroup", "connVpc", "connAws", "connAwsN", "tierC1"]) delete S[k];
+  for (const k of ["connLink", "connVpn", "connGroup", "connVpc", "connAws", "connAwsN", "tierC1", "deploy"]) delete S[k];
   if (o.scope) Object.assign(scope, o.scope);
   groups = (o.groups || []).map(g => ({ id: gid++, name: g.name, source: "manual", include: g.include !== false, values: { ...g.values }, parsed: null, over: new Set(),
     opts: (({ tier, ...rest }) => ({ ...newOpts(), ...rest }))(g.opts || {}), meta: g.meta || null }));
