@@ -7,12 +7,12 @@
 <!-- /vc:theme -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amazon EVS overview | vCloudOne</title>
-<meta name="description" content="What Amazon Elastic VMware Service is, how it is built, and how it compares with running VMware on-premises or on VMware Cloud on AWS.">
+<meta name="description" content="Amazon EVS explained: how VCF 5.2 and 9 run on AWS bare metal, host types, storage options, Regions, pricing and support. Updated November 2026.">
 <link rel="canonical" href="https://vcloudone.com/evs/">
 <meta property="og:site_name" content="vCloudOne">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Amazon EVS overview">
-<meta property="og:description" content="What Amazon Elastic VMware Service is, how it is built, and how it compares with running VMware on-premises or on VMware Cloud on AWS.">
+<meta property="og:description" content="Amazon EVS explained: how VCF 5.2 and 9 run on AWS bare metal, host types, storage options, Regions, pricing and support. Updated November 2026.">
 <meta property="og:url" content="https://vcloudone.com/evs/">
 <meta property="og:image" content="https://vcloudone.com/assets/og/default.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -627,7 +627,7 @@
 <section class="hero">
     <div class="hero-badge">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
-        Amazon EVS &bull; VCF 5.2.2 &bull; i4i.metal &bull; 19 Regions
+        Amazon EVS &bull; VCF 5.2 and 9.x &bull; 5 host types &bull; 26 Regions
     </div>
     <h1>Amazon <em>Elastic VMware</em> Service</h1>
     <p>VMware Cloud Foundation running natively on AWS dedicated bare-metal &mdash; the fastest path to migrate and operate VMware workloads on AWS.</p>
@@ -636,7 +636,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
             Explore EVS
         </a>
-        <a href="/" class="btn-ghost">
+        <a href="/evs-guide/" class="btn-ghost">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             Deploy Prerequisites
         </a>
@@ -646,11 +646,11 @@
 <!-- STATS BAR -->
 <div class="stats-bar">
     <div class="stats-inner">
-        <div class="stat"><span class="stat-dot"></span><strong>19+ AWS Regions</strong> globally available</div>
-        <div class="stat"><span class="stat-dot"></span><strong>128 vCPUs</strong> per i4i.metal host</div>
-        <div class="stat"><span class="stat-dot"></span><strong>1 TiB RAM</strong> per host</div>
-        <div class="stat"><span class="stat-dot"></span><strong>30 TiB NVMe</strong> per host</div>
-        <div class="stat"><span class="stat-dot"></span><strong>4 – 16 hosts</strong> per cluster</div>
+        <div class="stat"><span class="stat-dot"></span><strong>26 AWS Regions</strong> available today</div>
+        <div class="stat"><span class="stat-dot"></span><strong>VCF 9.1</strong> plus 9.0 and 5.2</div>
+        <div class="stat"><span class="stat-dot"></span><strong>5 host types</strong> i4i · i7i · r7i</div>
+        <div class="stat"><span class="stat-dot"></span><strong>Up to 32 hosts</strong> per environment</div>
+        <div class="stat"><span class="stat-dot"></span><strong>vSAN or FSx for ONTAP</strong> principal storage</div>
     </div>
 </div>
 
@@ -662,8 +662,8 @@
         <span class="tag">AWS Service</span>
         <span class="tag">VMware Cloud Foundation</span>
         <span class="tag">Bare-Metal</span>
-        <span class="tag">VCF 5.2.2</span>
-        <span style="margin-left:auto;">Jointly engineered by AWS &amp; Broadcom</span>
+        <span class="tag">VCF 9.x</span>
+        <span style="margin-left:auto;">Last updated November 24, 2026</span>
     </div>
 
     <!-- WHAT IS EVS -->
@@ -671,7 +671,9 @@
 
     <p>Amazon Elastic VMware Service (Amazon EVS) is a native AWS service that deploys and runs VMware Cloud Foundation (VCF) directly inside your own Amazon VPC on dedicated EC2 bare-metal instances. There is no shared infrastructure &mdash; you get the entire physical host, with full root access to every VMware component.</p>
 
-    <p>EVS was jointly engineered by AWS and Broadcom. AWS operates the physical infrastructure and provides L1/L2 support. Broadcom provides L3 support for VCF. You bring your own VCF subscription (BYOS) from Broadcom, and AWS bills separately for EC2 instances, Route Server endpoints, and the EVS control plane.</p>
+    <p>EVS is self-managed. AWS looks after the bare-metal hosts and their firmware, the VPC networking and the EVS service itself. You install, patch and upgrade VCF, or have an AWS Partner such as Kyndryl, DXC, Accenture, CDW or Presidio run it for you. You bring your own VCF subscription from Broadcom; AWS bills for the EC2 hosts, a pair of VPC Route Server endpoints and the EVS control plane, plus FSx for ONTAP or Windows Server licensing if you use them.</p>
+
+    <p>Support works two ways. AWS Support covers the whole stack, VCF included, so you can always start there. If you have an active VCF subscription, you can also open VCF software cases directly with Broadcom.</p>
 
     <div class="note">
         <strong>Key differentiator:</strong> Unlike VMware Cloud on AWS (VMC), Amazon EVS runs inside <em>your own VPC</em> with no AWS-managed intermediate layer. You own the VCF lifecycle &mdash; patches, upgrades, and Day 2 operations are managed by you or an AWS Partner.
@@ -693,7 +695,7 @@
         </div>
         <div class="info-card">
             <h4><span class="card-icon" style="background:#f3e8ff;">⚖</span> Flexible management</h4>
-            <p>Self-managed or choose an AWS Partner for fully managed VCF operations. On-demand, 1-year, or 3-year subscription terms.</p>
+            <p>Self-managed, or an AWS Partner runs VCF for you. Hosts on demand or on 1- or 3-year terms.</p>
         </div>
     </div>
 
@@ -701,7 +703,11 @@
     <h2 id="architecture"><span class="step-num">2</span> Architecture</h2>
 
     <h3>The VCF stack on AWS</h3>
-    <p>EVS deploys the full VMware Cloud Foundation stack automatically when you call <code>CreateEnvironment</code>. Every layer is configured and connected by EVS &mdash; no manual installation required.</p>
+    <p>How the stack gets built depends on the VCF version:</p>
+    <ul>
+        <li><strong>VCF 5.2:</strong> EVS deploys the whole stack when you call <code>CreateEnvironment</code>: hosts, networking, vCenter, NSX, vSAN and SDDC Manager.</li>
+        <li><strong>VCF 9.0 and 9.1:</strong> EVS provisions the bare-metal hosts running ESX 9 and the VLANs in your VPC. You then install VCF with Broadcom&rsquo;s VCF Installer, the same way as on-premises, or let the <a href="https://github.com/aws/solutions-for-amazon-evs" target="_blank" rel="noopener" style="color:var(--blue);">EVS Deployment Orchestrator</a> do the whole build from one CloudFormation stack in about 4 to 7 hours.</li>
+    </ul>
 
     <div class="stack-visual">
         <div class="stack-layer" style="background:#f0f4ff;border-color:#c7d2fe;">
@@ -721,22 +727,22 @@
         <div class="stack-layer" style="background:#fef3e2;border-color:#fcd34d;">
             <span style="font-size:1.1rem;">▣</span>
             <div>
-                <div style="color:#92400e;">VMware vSphere (ESXi + vCenter) &amp; vSAN ESA</div>
-                <div class="stack-sub" style="color:#92400e;">Compute virtualization · Pooled NVMe storage (Express Storage Architecture)</div>
+                <div style="color:#92400e;">VMware vSphere (ESX + vCenter) &amp; principal storage</div>
+                <div class="stack-sub" style="color:#92400e;">vSAN on local NVMe (i4i, i7i) · or FSx for NetApp ONTAP (required on r7i) · Memory tiering on NVMe (VCF 9.1)</div>
             </div>
         </div>
         <div class="stack-layer" style="background:#fff3cd;border-color:#fcd34d;">
             <span style="font-size:1.1rem;">⊞</span>
             <div>
-                <div style="color:#856404;">SDDC Manager — Lifecycle Management</div>
+                <div style="color:#856404;">SDDC Manager &amp; VCF Operations — Lifecycle</div>
                 <div class="stack-sub" style="color:#856404;">Patches · Upgrades · Domain management · Day 2 operations</div>
             </div>
         </div>
         <div class="stack-layer" style="background:#fef2f2;border-color:#fca5a5;">
             <span style="font-size:1.1rem;">⚙</span>
             <div>
-                <div style="color:#dc2626;">EC2 i4i.metal — Dedicated Bare-Metal</div>
-                <div class="stack-sub" style="color:#dc2626;">128 vCPU · 1,024 GiB RAM · 30 TiB NVMe · 75 Gbps · Intel Xeon Ice Lake</div>
+                <div style="color:#dc2626;">EC2 bare metal — i4i, i7i or r7i</div>
+                <div class="stack-sub" style="color:#dc2626;">Dedicated hosts in your VPC · 48 to 96 cores and 768 to 1,536 GiB per host · see host types</div>
             </div>
         </div>
         <div class="stack-layer" style="background:var(--blue-lt);border-color:#90cdf4;">
@@ -781,10 +787,10 @@
                 <text x="222" y="33" font-family="system-ui,sans-serif" font-size="8.5" font-weight="700" fill="#e67e22">EVS Environment (VLANs — auto-provisioned)</text>
 
                 <rect x="220" y="40" width="335" height="22" rx="3" fill="#fef3e2" stroke="#e67e22" stroke-width="0.75"/>
-                <text x="228" y="55" font-family="system-ui,sans-serif" font-size="7.5" font-weight="600" fill="#e67e22">Management VMs VLAN — vCenter · SDDC Manager · NSX Manager · Cloud Builder</text>
+                <text x="228" y="55" font-family="system-ui,sans-serif" font-size="7.5" font-weight="600" fill="#e67e22">Management VMs VLAN — vCenter · SDDC Manager · NSX Manager · VCF Operations</text>
 
                 <rect x="220" y="68" width="335" height="22" rx="3" fill="#fef3e2" stroke="#e67e22" stroke-width="0.75"/>
-                <text x="228" y="83" font-family="system-ui,sans-serif" font-size="7.5" font-weight="600" fill="#e67e22">Host Management VLAN — ESXi management interfaces (min 4 hosts)</text>
+                <text x="228" y="83" font-family="system-ui,sans-serif" font-size="7.5" font-weight="600" fill="#e67e22">Host Management VLAN — ESX management interfaces</text>
 
                 <rect x="220" y="96" width="160" height="22" rx="3" fill="#eafaf1" stroke="#1d8348" stroke-width="0.75"/>
                 <text x="228" y="111" font-family="system-ui,sans-serif" font-size="7.5" font-weight="600" fill="#1d8348">vMotion VLAN</text>
@@ -840,9 +846,9 @@
         <div class="resp-card resp-aws">
             <h4>AWS manages</h4>
             <ul>
-                <li>Physical bare-metal hardware (EC2 i4i.metal)</li>
+                <li>Bare-metal hosts (EC2 i4i, i7i, r7i) and their firmware</li>
                 <li>AWS global network and VPC infrastructure</li>
-                <li>L1 / L2 support for EVS and EC2</li>
+                <li>Support for the whole stack, VCF included</li>
                 <li>Physical data center security</li>
                 <li>EVS control plane (<code>CreateEnvironment</code> API)</li>
                 <li>Hardware failure and replacement</li>
@@ -851,10 +857,10 @@
         <div class="resp-card resp-customer">
             <h4>Customer / Partner manages</h4>
             <ul>
-                <li>VCF lifecycle — patches, upgrades, Day 2 ops</li>
+                <li>VCF installation (VCF 9), patches, upgrades, Day 2 ops</li>
                 <li>VM workloads, guest OS, application security</li>
                 <li>NSX network policies and micro-segmentation</li>
-                <li>VCF licensing (BYOS from Broadcom)</li>
+                <li>VCF subscription from Broadcom (optional direct Broadcom support)</li>
                 <li>IAM roles and VPC access controls</li>
                 <li>Backup, DR configuration, data protection</li>
                 <li>Regulatory and compliance requirements</li>
@@ -874,7 +880,7 @@
 
     <div class="step-card">
         <h4>Disaster Recovery</h4>
-        <p>Use EVS as a secondary DR site with fast RTO/RPO. VMware Live Site Recovery (SRM/VLSR) automates failover and failback. HCX L2 extension stretches networks between on-prem and AWS. Advanced Cyber Recovery (ACC) add-on provides ransomware protection with immutable backups.</p>
+        <p>Use EVS as a recovery site, from a cold standby up to a warm cluster sized for critical workloads. VMware Live Recovery with vSphere Replication gives about a five-minute RPO and automates failover; FSx for ONTAP SnapMirror and Veeam are other options. NSX Federation keeps segments and firewall rules in place at both sites. AWS walks through the patterns in <a href="https://aws.amazon.com/blogs/migration-and-modernization/disaster-recovery-for-vmware-workloads-on-amazon-evs/" target="_blank" rel="noopener" style="color:var(--blue);">Disaster Recovery for VMware Workloads on Amazon EVS</a>.</p>
     </div>
 
     <div class="step-card">
@@ -884,24 +890,24 @@
 
     <div class="step-card">
         <h4>VCF as a Service (CapEx → OpEx)</h4>
-        <p>Shift VMware infrastructure from capital expenditure to a consumption model. On-demand, 1-year, or 3-year terms available. Choose self-managed operations or delegate to an AWS Partner managed service provider. Ideal for organizations with a board mandate to reduce data center footprint.</p>
+        <p>Shift VMware infrastructure from capital expenditure to a consumption model. Hosts run on demand or on 1- or 3-year terms; AWS&rsquo;s example puts i4i.metal at $10.98 an hour on demand and $5.08 an hour on a 3-year Instance Savings Plan in US East (Ohio). Windows Server can be licensed through EVS at $0.046 per vCPU-hour for VMs without license portability.</p>
     </div>
 
     <div class="step-card">
         <h4>AI / Analytics &amp; Modern App Platform</h4>
-        <p>Keep data gravity on EVS while reaching native AWS AI/ML services (SageMaker, Bedrock) without data movement. VMware Kubernetes Service (VKS) runs containers natively alongside VMs. Data Services Manager (DSM) provides self-service databases on VCF.</p>
+        <p>Keep data gravity on EVS while reaching native AWS AI/ML services (SageMaker, Bedrock) without data movement. VMware Kubernetes Service (VKS) runs containers natively alongside VMs, and VCF 9.1 memory tiering lets memory-heavy clusters run up to twice the VMs per host when active memory stays within DRAM.</p>
     </div>
 
     <!-- REGIONS -->
     <h2 id="regions"><span class="step-num">4</span> Regional Availability</h2>
 
-    <p>Amazon EVS is available in <strong>19 AWS regions</strong> today. Additional regions are added on an ad-hoc basis each quarter.</p>
+    <p>Amazon EVS is available in <strong>26 AWS Regions</strong>. AWS added fourteen of them between December 2025 and September 2026. An EVS environment runs in one Availability Zone, so check that the host type you want is offered in your Region and AZ. AWS keeps the current list in the <a href="https://aws.amazon.com/evs/faqs/" target="_blank" rel="noopener" style="color:var(--blue);">EVS FAQ</a>.</p>
 
     <div class="regions-grid">
         <div class="region-item"><span class="region-dot"></span>US East (N. Virginia)</div>
         <div class="region-item"><span class="region-dot"></span>US East (Ohio)</div>
-        <div class="region-item"><span class="region-dot"></span>US West (Oregon)</div>
         <div class="region-item"><span class="region-dot"></span>US West (N. California)</div>
+        <div class="region-item"><span class="region-dot"></span>US West (Oregon)</div>
         <div class="region-item"><span class="region-dot"></span>Canada (Central)</div>
         <div class="region-item"><span class="region-dot"></span>Canada West (Calgary)</div>
         <div class="region-item"><span class="region-dot"></span>Mexico (Central)</div>
@@ -909,14 +915,21 @@
         <div class="region-item"><span class="region-dot"></span>Europe (Frankfurt)</div>
         <div class="region-item"><span class="region-dot"></span>Europe (Ireland)</div>
         <div class="region-item"><span class="region-dot"></span>Europe (London)</div>
-        <div class="region-item"><span class="region-dot"></span>Europe (Paris)</div>
         <div class="region-item"><span class="region-dot"></span>Europe (Milan)</div>
-        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Singapore)</div>
-        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Tokyo)</div>
-        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Sydney)</div>
-        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Mumbai)</div>
+        <div class="region-item"><span class="region-dot"></span>Europe (Paris)</div>
+        <div class="region-item"><span class="region-dot"></span>Europe (Spain)</div>
+        <div class="region-item"><span class="region-dot"></span>Europe (Stockholm)</div>
+        <div class="region-item"><span class="region-dot"></span>Europe (Zurich)</div>
         <div class="region-item"><span class="region-dot"></span>Asia Pacific (Hyderabad)</div>
         <div class="region-item"><span class="region-dot"></span>Asia Pacific (Malaysia)</div>
+        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Mumbai)</div>
+        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Osaka)</div>
+        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Seoul)</div>
+        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Singapore)</div>
+        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Sydney)</div>
+        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Taipei)</div>
+        <div class="region-item"><span class="region-dot"></span>Asia Pacific (Tokyo)</div>
+        <div class="region-item"><span class="region-dot"></span>Israel (Tel Aviv)</div>
     </div>
 
     <!-- FEATURES -->
@@ -929,18 +942,20 @@
                 <tr><th>Feature</th><th>Status</th><th>Notes</th></tr>
             </thead>
             <tbody>
-                <tr><td>VCF Version</td><td><span class="check">✓</span> VCF 5.2.2</td><td></td></tr>
-                <tr><td>Bare-Metal Instance</td><td><span class="check">✓</span> i4i.metal</td><td>i7i.metal-24xl — verify current EVS availability in official AWS docs</td></tr>
-                <tr><td>Hosts per Cluster</td><td><span class="check">✓</span> 4 minimum, 16 maximum</td><td></td></tr>
-                <tr><td>Subscription Terms</td><td><span class="check">✓</span> On-Demand · 1yr · 3yr</td><td>BYOS — bring your own VCF subscription</td></tr>
-                <tr><td>Customer Root Access</td><td><span class="check">✓</span> Full root to all components</td><td>ESXi, vCenter, NSX, SDDC Manager</td></tr>
-                <tr><td>L1/L2 Support</td><td><span class="check">✓</span> By AWS</td><td>L3 by Broadcom</td></tr>
-                <tr><td>AWS Transit Gateway</td><td><span class="check">✓</span> Supported</td><td>Connect VPCs, Direct Connect, VPN</td></tr>
-                <tr><td>HCX Migration</td><td><span class="check">✓</span> Supported</td><td>Live migration · bulk migration · L2 extension — deployed separately after EVS; not pre-installed</td></tr>
-                <tr><td>NSX Federation</td><td><span class="check">✓</span> Available</td><td>AWS validation required for multi-site</td></tr>
-                <tr><td>External Datastore</td><td><span class="check">✓</span> FSx ONTAP · Pure Storage</td><td></td></tr>
-                <tr><td>Hybrid Linked Mode</td><td><span class="check">✓</span> Supported</td><td>Unified vCenter view across on-prem and EVS</td></tr>
-                <tr><td>Microsoft Licensing</td><td><span class="check">✓</span> BYOL today</td><td></td></tr>
+                <tr><td>VCF versions</td><td><span class="check">✓</span> 5.2.1 · 5.2.2 · 9.0 · 9.1</td><td>Pick a supported VCF/ESX combination when you create an environment or add hosts</td></tr>
+                <tr><td>Host types</td><td><span class="check">✓</span> i4i · i7i · r7i</td><td>i4i.metal, i7i.metal-24xl/48xl, r7i.metal-24xl/48xl — see the comparison in the sidebar</td></tr>
+                <tr><td>Hosts</td><td><span class="check">✓</span> Up to 32 per environment</td><td>16 by default; 32 with a service quota increase. One large cluster or several</td></tr>
+                <tr><td>Principal storage</td><td><span class="check">✓</span> vSAN or FSx for ONTAP</td><td>vSAN on i4i/i7i local NVMe; FSx for NetApp ONTAP required on r7i. Pure Cloud Block Store also supported as external storage</td></tr>
+                <tr><td>Memory tiering</td><td><span class="check">✓</span> VCF 9.1</td><td>NVMe as a second memory tier, 1:1 with DRAM by default. Drives used for tiering come out of vSAN</td></tr>
+                <tr><td>Purchase options</td><td><span class="check">✓</span> On demand · 1yr · 3yr</td><td>Plus the EVS control plane and a pair of Route Server endpoints per environment. VCF subscription is BYOS from Broadcom</td></tr>
+                <tr><td>Windows Server</td><td><span class="check">✓</span> BYOL or from AWS</td><td>AWS-provided licenses at $0.046 per vCPU-hour for VMs without portability rights; needs an EVS vCenter connector</td></tr>
+                <tr><td>Support</td><td><span class="check">✓</span> AWS, or Broadcom direct for VCF</td><td>AWS Support covers the whole stack; VCF software cases can also go straight to Broadcom</td></tr>
+                <tr><td>Customer root access</td><td><span class="check">✓</span> Full</td><td>ESX, vCenter, NSX Manager, SDDC Manager, VCF Operations</td></tr>
+                <tr><td>NSX Tier-0 gateways</td><td><span class="check">✓</span> Multiple</td><td>Separate routing domains and more north-south throughput, each on its own Edge cluster</td></tr>
+                <tr><td>Connectivity</td><td><span class="check">✓</span> Transit Gateway · Direct Connect · VPN</td><td>VPN or Direct Connect terminating at Transit Gateway</td></tr>
+                <tr><td>HCX migration</td><td><span class="check">✓</span> Supported</td><td>Live, bulk and L2 extension; deployed separately after the environment is up</td></tr>
+                <tr><td>NSX Federation</td><td><span class="check">✓</span> Supported</td><td>AWS design guidance for multi-site networking and DR</td></tr>
+                <tr><td>Automation</td><td><span class="check">✓</span> EDO · Agent Skill</td><td>EVS Deployment Orchestrator builds VCF 9 end to end; the Agent Skill lets AI agents plan and run EDO deployments</td></tr>
             </tbody>
         </table>
     </div>
@@ -953,20 +968,19 @@
             </thead>
             <tbody>
                 <tr><td>VCF Automation</td><td><span class="check">✓</span> Included</td><td>Self-service catalog and orchestration</td></tr>
-                <tr><td>VCF Operations</td><td><span class="check">✓</span> Included</td><td>vROps-based monitoring and analytics</td></tr>
+                <tr><td>VCF Operations</td><td><span class="check">✓</span> Included</td><td>Monitoring, capacity, cost and lifecycle</td></tr>
                 <tr><td>vDefend (Advanced Firewall)</td><td><span class="check">✓</span> Available</td><td>Distributed IDS/IPS and network detection &amp; response</td></tr>
                 <tr><td>AVI (Advanced Load Balancer)</td><td><span class="check">✓</span> Available</td><td>Software-defined load balancing with autoscaling</td></tr>
                 <tr><td>VMware Kubernetes Service (VKS)</td><td><span class="check">✓</span> Available</td><td>Kubernetes natively alongside VMs on VCF</td></tr>
-                <tr><td>VLSR / SRM (Site Recovery)</td><td><span class="check">✓</span> Available</td><td>Automated DR failover and failback orchestration</td></tr>
+                <tr><td>VMware Live Recovery</td><td><span class="check">✓</span> Available</td><td>DR orchestration and cyber recovery with an isolated clean room</td></tr>
                 <tr><td>Data Services Manager (DSM)</td><td><span class="check">✓</span> Available</td><td>Self-service database platform on VCF</td></tr>
-                <tr><td>NSX Federation</td><td><span class="check">✓</span> Available</td><td>Multi-site NSX policy management</td></tr>
-                <tr><td>VCF Operations for Networks</td><td><span class="check">✓</span> Available</td><td>Network observability and troubleshooting</td></tr>
+                                <tr><td>VCF Operations for Networks</td><td><span class="check">✓</span> Available</td><td>Network observability and troubleshooting</td></tr>
             </tbody>
         </table>
     </div>
 
     <h3>Getting started</h3>
-    <p>Before running <code>CreateEnvironment</code>, AWS requires a specific set of VPC prerequisites to be in place. The vCloudOne prereq guide covers all 10 steps with step-by-step instructions, and the Terraform kit automates the AWS infrastructure deployment in under 5 minutes.</p>
+    <p>Before running <code>CreateEnvironment</code>, AWS requires a specific set of VPC prerequisites to be in place. The vCloudOne prereq guide covers all 10 steps for the VCF 5.x flow, and the Terraform kit automates the AWS side in under 5 minutes. For VCF 9, most of the same AWS prerequisites apply; the <a href="https://aws.amazon.com/blogs/migration-and-modernization/one-stack-full-vcf-deploying-vmware-cloud-foundation-9-on-amazon-evs-with-the-evs-deployment-orchestrator/" target="_blank" rel="noopener" style="color:var(--blue);">EVS Deployment Orchestrator</a> builds them and VCF together. To size an environment, try the <a href="/evs-sizing/" style="color:var(--blue);">EVS sizer</a>.</p>
 
     <div class="note">
         <strong>Next step:</strong> Use the <a href="/evs-guide/" style="color:var(--blue);">EVS Prerequisite Guide</a> to set up your VPC, Route 53, DHCP, Route Server, and IAM resources &mdash; then run the <a href="/evs-guide/#validator" style="color:var(--blue);">Prereq Validator</a> to confirm your environment is ready before calling <code>CreateEnvironment</code>.
@@ -989,18 +1003,15 @@
     </div>
 
     <div class="sidebar-card">
-        <h4>i4i.metal Host Specs</h4>
+        <h4>Host types</h4>
         <ul class="spec-list">
-            <li><span class="k">Processor</span><span class="v">Intel Xeon Ice Lake</span></li>
-            <li><span class="k">vCPUs</span><span class="v">128 (64 physical)</span></li>
-            <li><span class="k">RAM</span><span class="v">1,024 GiB</span></li>
-            <li><span class="k">NVMe Storage</span><span class="v">30 TiB raw</span></li>
-            <li><span class="k">Networking</span><span class="v">75 Gbps</span></li>
-            <li><span class="k">Min Cluster</span><span class="v">4 hosts</span></li>
-            <li><span class="k">Max Cluster</span><span class="v">16 hosts</span></li>
-            <li><span class="k">Storage Type</span><span class="v">vSAN ESA</span></li>
-            <li><span class="k">VCF Version</span><span class="v">5.2.2</span></li>
+            <li style="display:block;"><span class="v" style="display:block;text-align:left;">i4i.metal</span><span class="k" style="display:block;font-size:0.82rem;">64 cores · 1,024 GiB<br>8 × 3.75 TB NVMe<br>Ice Lake · the original</span></li>
+            <li style="display:block;"><span class="v" style="display:block;text-align:left;">i7i.metal-24xl</span><span class="k" style="display:block;font-size:0.82rem;">48 cores · 768 GiB<br>6 × 3.75 TB NVMe<br>Emerald Rapids · fewer, faster cores</span></li>
+            <li style="display:block;"><span class="v" style="display:block;text-align:left;">i7i.metal-48xl</span><span class="k" style="display:block;font-size:0.82rem;">96 cores · 1,536 GiB<br>12 × 3.75 TB NVMe<br>Emerald Rapids · big clusters</span></li>
+            <li style="display:block;"><span class="v" style="display:block;text-align:left;">r7i.metal-24xl</span><span class="k" style="display:block;font-size:0.82rem;">48 cores · 768 GiB<br>No local disks<br>Sapphire Rapids · needs FSx</span></li>
+            <li style="display:block;"><span class="v" style="display:block;text-align:left;">r7i.metal-48xl</span><span class="k" style="display:block;font-size:0.82rem;">96 cores · 1,536 GiB<br>No local disks<br>Sapphire Rapids · needs FSx</span></li>
         </ul>
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:0.75rem;">Physical cores. Source: EC2 instance pages and the EVS FAQ.</p>
     </div>
 
     <div class="sidebar-card tf-download">
@@ -1020,8 +1031,8 @@
     <div class="sidebar-card">
         <h4>Support Model</h4>
         <ul style="list-style:none;font-size:0.87rem;color:#374151;display:flex;flex-direction:column;gap:0.5rem;">
-            <li>&#9679;&nbsp; <strong>L1/L2</strong> &mdash; AWS Support</li>
-            <li>&#9679;&nbsp; <strong>L3</strong> &mdash; Broadcom / VMware</li>
+            <li>&#9679;&nbsp; <strong>Whole stack</strong> &mdash; AWS Support</li>
+            <li>&#9679;&nbsp; <strong>VCF software</strong> &mdash; also Broadcom direct</li>
             <li>&#9679;&nbsp; <strong>Managed ops</strong> &mdash; AWS Partners</li>
             <li style="margin-top:0.5rem;color:var(--muted);font-size:0.82rem;">Requires Business, Enterprise On-Ramp, or Enterprise AWS Support plan.</li>
         </ul>
