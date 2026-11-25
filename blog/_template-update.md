@@ -8,14 +8,9 @@ diagram:
 sources:
   - AWS What's New: Exact title of the announcement | https://aws.amazon.com/about-aws/whats-new/...
 ---
-## What
-What changed, in a sentence or two. Bullets are fine:
+Write it the way you'd explain it to a customer. By the end, a reader should know what changed, why it matters and whether it's for them. No need to label those parts.
+
+Lists are fine when there are several items:
 
 - First thing
 - Second thing
-
-## Why it matters
-Why someone should care. Leave this out if there's nothing to say.
-
-## Who it's for
-Who should read it. Optional too.

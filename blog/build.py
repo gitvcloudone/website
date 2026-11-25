@@ -164,7 +164,7 @@ def blocks(md, h2="h2", h3="h3"):
 
 
 def sections(md):
-    """Update bodies: '## What' etc. become small labelled sections."""
+    """Update bodies: plain paragraphs; an optional '## Heading' becomes a small subheading."""
     parts = re.split(r"^## +(.+)$", md, flags=re.M)
     out = blocks(parts[0]) if parts[0].strip() else ""
     for i in range(1, len(parts), 2):
@@ -202,8 +202,8 @@ def card(p):
     body = sections(p["body"])
     if p["diagram"]:
         d = diagram(p["diagram"])
-        i = body.find("</div>")
-        body = body[: i + 6] + d + body[i + 6:] if i >= 0 else body + d
+        i = body.find("</p>")
+        body = body[: i + 4] + d + body[i + 4:] if i >= 0 else body + d
     first = p["sources"][0][1] if p["sources"] else f"#{p['slug']}"
     t = ' target="_blank" rel="noopener"' if ext(first) else ""
     return (

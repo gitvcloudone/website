@@ -27,7 +27,8 @@ To build locally instead: `python3 blog/build.py` (Python 3, no packages needed)
 
 ## Writing
 
-- Updates use `## What`, `## Why it matters` and `## Who it's for`. Leave out a section if there's nothing to say.
+- Every post should leave the reader knowing what changed, why it matters and who it's for. Work that into the writing; don't label it.
+- Updates are usually two or three short paragraphs. A `##` heading is fine if one gets long.
 - Articles use any `##` and `###` headings.
 - Markdown supported: paragraphs, `- ` bullets, `**bold**`, `*italic*`, `` `code` ``, `[links](https://...)`.
 - Put a diagram anywhere in an article on its own line: `{{diagram:memory-tiering}}`.

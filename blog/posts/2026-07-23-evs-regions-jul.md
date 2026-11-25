@@ -7,8 +7,4 @@ topics: hyperscalers, vmware
 sources:
   - AWS What's New: Amazon EVS is now available in additional Regions | https://aws.amazon.com/about-aws/whats-new/2026/07/amazon-evs-available-in-additional-regions/
 ---
-## What
-Amazon EVS is now in Asia Pacific (Seoul), Europe (Zurich) and Europe (Stockholm), with every existing feature, VCF 9.0 and 9.1 included.
-
-## Who it's for
-Customers who need VMware workloads in Korea, Switzerland or Sweden.
+Amazon EVS is now in Asia Pacific (Seoul), Europe (Zurich) and Europe (Stockholm), with every existing feature, VCF 9.0 and 9.1 included. Good news if you need VMware workloads to stay in Korea, Switzerland or Sweden.
