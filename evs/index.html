@@ -3,9 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Amazon Elastic VMware Service (EVS) — Run VMware Cloud Foundation natively on AWS. Architecture, features, use cases, and getting started guide.">
-    <title>Amazon EVS Overview | vCloudOne</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☁</text></svg>">
+    <title>Amazon EVS overview | vCloudOne</title>
+<meta name="description" content="What Amazon Elastic VMware Service is, how it is built, and how it compares with running VMware on-premises or on VMware Cloud on AWS.">
+<link rel="canonical" href="https://vcloudone.com/evs/">
+<meta property="og:site_name" content="vCloudOne">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Amazon EVS overview">
+<meta property="og:description" content="What Amazon Elastic VMware Service is, how it is built, and how it compares with running VMware on-premises or on VMware Cloud on AWS.">
+<meta property="og:url" content="https://vcloudone.com/evs/">
+<meta property="og:image" content="https://vcloudone.com/assets/og/default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="/vcloudone_button.png">
+<link rel="alternate" type="application/rss+xml" title="vCloudOne" href="/feed.xml">
     <style>
         :root {
             --primary:   #0f1923;
@@ -560,81 +569,54 @@
             .article-card { padding: 1rem 0.75rem; }
             .article-card h2 { font-size: 1.1rem; }
         }
-            .nav-links a.active, .nav-dd-btn.active { color: #fff; background: rgba(255,255,255,0.08); }
-        .nav-social svg { flex: none; width: 18px; height: 18px; }
-        .nav-dd { position: relative; }
-        .nav-dd-btn { background: none; border: 0; color: rgba(255,255,255,0.75); font: inherit; font-size: 0.9rem; padding: 0.4rem 0.85rem; border-radius: 6px; cursor: pointer; }
-        .nav-dd-btn span { font-size: 0.7rem; margin-left: 2px; }
-        .nav-dd-btn:hover, .nav-dd.open .nav-dd-btn { background: rgba(255,255,255,0.08); color: #fff; }
-        .nav-dd-menu { display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 210px; background: var(--nav-bg); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px; padding: 0.35rem; box-shadow: 0 12px 32px rgba(0,0,0,0.35); z-index: 120; }
-        .nav-dd-menu a { display: block; white-space: nowrap; }
-        .nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu, .nav-dd.open .nav-dd-menu { display: block; }
-        .nav-dd::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; }
-        @media (max-width: 768px) {
-            .nav-dd { width: 100%; }
-            .nav-dd-btn { width: 100%; text-align: left; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); border-radius: 0; font-size: 0.95rem; }
-            .nav-dd-btn:hover, .nav-dd.open .nav-dd-btn { background: none; }
-            .nav-dd-menu { position: static; display: block; border: 0; box-shadow: none; padding: 0 0 0 1rem; background: none; min-width: 0; }
-            .nav-dd:hover .nav-dd-menu { display: block; }
-        }
-
-
-        .nav-dd-h { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,0.4); padding: .5rem .85rem .2rem; }
-        .nav-dd-menu .nav-dd-h:first-child { padding-top: .25rem; }
-    </style>
+        </style>
+<link rel="stylesheet" href="/assets/site.css?v=4453cda7">
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-    <div class="nav-inner">
-        <a href="/" class="nav-logo">
-            <img src="/vcloudone_button.png" alt="vCloudOne">
-            vCloudOne<span class="sep">/</span><span class="page-name">Amazon EVS</span>
-        </a>
-        <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false">
-            <span class="nav-toggle-bar"></span>
-            <span class="nav-toggle-bar"></span>
-            <span class="nav-toggle-bar"></span>
-        </button>
-        <div class="nav-links" id="nav-links">
-            <a href="/articles/">Articles</a>
-            <a href="/updates/">Updates</a>
-            <div class="nav-dd">
-                <button type="button" class="nav-dd-btn" aria-expanded="false">Topics <span aria-hidden="true">&#9662;</span></button>
-                <div class="nav-dd-menu">
-                    <a href="/topics/hyperscalers/">Hyperscalers</a>
-                    <a href="/topics/vmware/">VMware</a>
-                    <a href="/topics/ai/">AI</a>
-                    <a href="/topics/cloud/">Cloud</a>
-                    <a href="/topics/tech/">Tech</a>
-                </div>
-            </div>
-            <div class="nav-dd">
-                <button type="button" class="nav-dd-btn active" aria-expanded="false">Tools <span aria-hidden="true">&#9662;</span></button>
-                <div class="nav-dd-menu">
-                    <span class="nav-dd-h">Sizing</span>
-                    <a href="/evs-sizing/">EVS Sizing</a>
-                    <a href="/vmc-sizing/">VMC Sizing</a>
-                    <a href="/vcf-sizing/">VCF Sizing</a>
-                    <span class="nav-dd-h">Amazon EVS</span>
-                    <a href="/evs/">EVS overview</a>
-                    <a href="/evs-guide/">Deployment guide</a>
-                    <a href="/evs-guide/#terraform">Terraform automation</a>
-                    <a href="/evs-guide/#validator">Prerequisite validator</a>
-                </div>
-            </div>
-            <a href="/about/">About</a>
-            <div class="nav-social">
-                <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="@dchung615 on X"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
-                <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="gitvcloudone on GitHub"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg></a>
-                <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" title="David Chung on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></a>
-            </div>
-            <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" class="btn-nav" target="_blank" rel="noopener">Download Kit &rarr;</a>
+<!-- vc:nav -->
+<nav class="sn" aria-label="Main">
+  <div class="sn-inner">
+    <a href="/" class="sn-logo"><img src="/vcloudone_button.png" alt="" width="28" height="28"><span>vCloud<b>One</b></span></a>
+    <button class="sn-toggle" id="sn-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sn-links"><span></span><span></span><span></span></button>
+    <div class="sn-links" id="sn-links">
+      <a href="/articles/">Articles</a>
+      <a href="/updates/">Updates</a>
+      <div class="sn-dd">
+        <button type="button" class="sn-dd-btn" aria-expanded="false">Topics <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <div class="sn-menu">
+          <a href="/topics/hyperscalers/">Hyperscalers</a>
+          <a href="/topics/vmware/">VMware</a>
+          <a href="/topics/ai/">AI</a>
+          <a href="/topics/cloud/">Cloud</a>
         </div>
+      </div>
+      <div class="sn-dd">
+        <button type="button" class="sn-dd-btn on" aria-expanded="false">Tools <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <div class="sn-menu">
+          <span class="sn-h">Sizing</span>
+          <a href="/evs-sizing/">EVS Sizing<small>Hosts and clusters for Amazon EVS</small></a>
+          <a href="/vmc-sizing/">VMC Sizing<small>SDDCs and hosts for VMware Cloud on AWS</small></a>
+          <a href="/vcf-sizing/">VCF Sizing<small>Fleets and clusters on your own hardware</small></a>
+          <span class="sn-h">Amazon EVS</span>
+          <a href="/evs/">EVS overview</a>
+          <a href="/evs-guide/">Deployment guide</a>
+          <a href="/evs-guide/#terraform">Terraform automation</a>
+          <a href="/evs-guide/#validator">Prerequisite validator</a>
+        </div>
+      </div>
+      <a href="/about/">About</a>
+      <div class="sn-social">
+        <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" title="LinkedIn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></a>
+        <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="X" aria-label="X"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg></a>
+        <a href="/rss/" title="RSS feed" aria-label="RSS feed"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20 5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg></a>
+      </div>
+      <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" class="sn-cta" target="_blank" rel="noopener">EVS Terraform Kit</a>
     </div>
+  </div>
 </nav>
+<!-- /vc:nav -->
 
 <!-- HERO -->
 <section class="hero">
@@ -1043,23 +1025,38 @@
 </aside>
 </div>
 
-<!-- FOOTER -->
-<footer>
-    <p>&copy; 2026 <strong>vCloudOne</strong> &mdash; Architected for Enterprise</p>
-    <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:0.5rem;">
-        <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="@dchung615 on X" style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.88rem;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            @dchung615
-        </a>
-        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="gitvcloudone on GitHub" style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.88rem;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-            gitvcloudone
-        </a>
-        <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" title="David Chung on LinkedIn" style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.88rem;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
-            LinkedIn
-        </a>
+<!-- vc:footer -->
+<footer class="sf">
+  <div class="sf-inner">
+    <div>
+      <div class="sf-brand"><img src="/vcloudone_button.png" alt="" width="24" height="24">vCloudOne</div>
+      <p>Notes, guides and sizing tools for VMware on AWS and beyond, by David Chung.</p>
+      <p>Views here are my own and not those of my employer.</p>
     </div>
+    <div>
+      <h5>Read</h5>
+      <a href="/articles/">Articles</a>
+      <a href="/updates/">Updates</a>
+      <a href="/about/">About</a>
+      <a href="/rss/">RSS feed</a>
+    </div>
+    <div>
+      <h5>Tools</h5>
+      <a href="/evs-sizing/">EVS Sizing</a>
+      <a href="/vmc-sizing/">VMC Sizing</a>
+      <a href="/vcf-sizing/">VCF Sizing</a>
+      <a href="/evs-guide/">EVS deployment guide</a>
+    </div>
+    <div>
+      <h5>Follow</h5>
+      <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://x.com/dchung615" target="_blank" rel="noopener">X @dchung615</a>
+      <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+  <div class="sf-base"><span>&copy; 2026 vCloudOne</span><span>Notes on cloud, VMware and AI</span></div>
 </footer>
+<!-- /vc:footer -->
 
 <script>
 (function () {
@@ -1083,21 +1080,6 @@
     }
 })();
 </script>
-<script>
-(function () {
-    /* dropdowns: hover on desktop, tap to open/close */
-    document.querySelectorAll('.nav-dd').forEach(function (dd) {
-        var btn = dd.querySelector('.nav-dd-btn');
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            var open = !dd.classList.contains('open');
-            document.querySelectorAll('.nav-dd.open').forEach(function (o) { o.classList.remove('open'); o.querySelector('.nav-dd-btn').setAttribute('aria-expanded', 'false'); });
-            dd.classList.toggle('open', open); btn.setAttribute('aria-expanded', open);
-        });
-    });
-    document.addEventListener('click', function () { document.querySelectorAll('.nav-dd.open').forEach(function (o) { o.classList.remove('open'); o.querySelector('.nav-dd-btn').setAttribute('aria-expanded', 'false'); }); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') document.querySelectorAll('.nav-dd.open').forEach(function (o) { o.classList.remove('open'); }); });
-})();
-</script>
+<script src="/assets/site.js?v=4453cda7" defer></script>
 </body>
 </html>

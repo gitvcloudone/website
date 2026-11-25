@@ -3,9 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="vCloudOne — Amazon EVS implementation guides, Terraform automation, and VMware Cloud on AWS architecture expertise.">
     <title>Amazon EVS Deployment Guide | vCloudOne</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☁</text></svg>">
+<meta name="description" content="Step-by-step Amazon EVS prerequisites for VCF 5.x: IAM, IP planning, VPC, Route 53, DHCP, Route Server and BGP, capacity and licensing, with a Terraform kit and validator.">
+<link rel="canonical" href="https://vcloudone.com/evs-guide/">
+<meta property="og:site_name" content="vCloudOne">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Amazon EVS Deployment Guide">
+<meta property="og:description" content="Step-by-step Amazon EVS prerequisites for VCF 5.x: IAM, IP planning, VPC, Route 53, DHCP, Route Server and BGP, capacity and licensing, with a Terraform kit and validator.">
+<meta property="og:url" content="https://vcloudone.com/evs-guide/">
+<meta property="og:image" content="https://vcloudone.com/assets/og/default.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="/vcloudone_button.png">
+<link rel="alternate" type="application/rss+xml" title="vCloudOne" href="/feed.xml">
     <style>
         :root {
             --primary:   #0f1923;
@@ -608,81 +617,54 @@
         }
 
         .ex { color: #bf00ff; font-style: italic; }
-            .nav-links a.active, .nav-dd-btn.active { color: #fff; background: rgba(255,255,255,0.08); }
-        .nav-social svg { flex: none; width: 18px; height: 18px; }
-        .nav-dd { position: relative; }
-        .nav-dd-btn { background: none; border: 0; color: rgba(255,255,255,0.75); font: inherit; font-size: 0.9rem; padding: 0.4rem 0.85rem; border-radius: 6px; cursor: pointer; }
-        .nav-dd-btn span { font-size: 0.7rem; margin-left: 2px; }
-        .nav-dd-btn:hover, .nav-dd.open .nav-dd-btn { background: rgba(255,255,255,0.08); color: #fff; }
-        .nav-dd-menu { display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 210px; background: var(--nav-bg); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px; padding: 0.35rem; box-shadow: 0 12px 32px rgba(0,0,0,0.35); z-index: 120; }
-        .nav-dd-menu a { display: block; white-space: nowrap; }
-        .nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu, .nav-dd.open .nav-dd-menu { display: block; }
-        .nav-dd::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; }
-        @media (max-width: 768px) {
-            .nav-dd { width: 100%; }
-            .nav-dd-btn { width: 100%; text-align: left; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); border-radius: 0; font-size: 0.95rem; }
-            .nav-dd-btn:hover, .nav-dd.open .nav-dd-btn { background: none; }
-            .nav-dd-menu { position: static; display: block; border: 0; box-shadow: none; padding: 0 0 0 1rem; background: none; min-width: 0; }
-            .nav-dd:hover .nav-dd-menu { display: block; }
-        }
-
-
-        .nav-dd-h { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,0.4); padding: .5rem .85rem .2rem; }
-        .nav-dd-menu .nav-dd-h:first-child { padding-top: .25rem; }
-    </style>
+        </style>
+<link rel="stylesheet" href="/assets/site.css?v=4453cda7">
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-    <div class="nav-inner">
-        <a href="/" class="nav-logo">
-            <img src="/vcloudone_button.png" alt="vCloudOne">
-            vCloudOne
-        </a>
-        <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false">
-            <span class="nav-toggle-bar"></span>
-            <span class="nav-toggle-bar"></span>
-            <span class="nav-toggle-bar"></span>
-        </button>
-        <div class="nav-links" id="nav-links">
-            <a href="/articles/">Articles</a>
-            <a href="/updates/">Updates</a>
-            <div class="nav-dd">
-                <button type="button" class="nav-dd-btn" aria-expanded="false">Topics <span aria-hidden="true">&#9662;</span></button>
-                <div class="nav-dd-menu">
-                    <a href="/topics/hyperscalers/">Hyperscalers</a>
-                    <a href="/topics/vmware/">VMware</a>
-                    <a href="/topics/ai/">AI</a>
-                    <a href="/topics/cloud/">Cloud</a>
-                    <a href="/topics/tech/">Tech</a>
-                </div>
-            </div>
-            <div class="nav-dd">
-                <button type="button" class="nav-dd-btn active" aria-expanded="false">Tools <span aria-hidden="true">&#9662;</span></button>
-                <div class="nav-dd-menu">
-                    <span class="nav-dd-h">Sizing</span>
-                    <a href="/evs-sizing/">EVS Sizing</a>
-                    <a href="/vmc-sizing/">VMC Sizing</a>
-                    <a href="/vcf-sizing/">VCF Sizing</a>
-                    <span class="nav-dd-h">Amazon EVS</span>
-                    <a href="/evs/">EVS overview</a>
-                    <a href="/evs-guide/">Deployment guide</a>
-                    <a href="/evs-guide/#terraform">Terraform automation</a>
-                    <a href="/evs-guide/#validator">Prerequisite validator</a>
-                </div>
-            </div>
-            <a href="/about/">About</a>
-            <div class="nav-social">
-                <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="@dchung615 on X"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
-                <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="gitvcloudone on GitHub"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg></a>
-                <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" title="David Chung on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></a>
-            </div>
-            <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" class="btn-nav" target="_blank" rel="noopener">Download Kit &rarr;</a>
+<!-- vc:nav -->
+<nav class="sn" aria-label="Main">
+  <div class="sn-inner">
+    <a href="/" class="sn-logo"><img src="/vcloudone_button.png" alt="" width="28" height="28"><span>vCloud<b>One</b></span></a>
+    <button class="sn-toggle" id="sn-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sn-links"><span></span><span></span><span></span></button>
+    <div class="sn-links" id="sn-links">
+      <a href="/articles/">Articles</a>
+      <a href="/updates/">Updates</a>
+      <div class="sn-dd">
+        <button type="button" class="sn-dd-btn" aria-expanded="false">Topics <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <div class="sn-menu">
+          <a href="/topics/hyperscalers/">Hyperscalers</a>
+          <a href="/topics/vmware/">VMware</a>
+          <a href="/topics/ai/">AI</a>
+          <a href="/topics/cloud/">Cloud</a>
         </div>
+      </div>
+      <div class="sn-dd">
+        <button type="button" class="sn-dd-btn on" aria-expanded="false">Tools <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <div class="sn-menu">
+          <span class="sn-h">Sizing</span>
+          <a href="/evs-sizing/">EVS Sizing<small>Hosts and clusters for Amazon EVS</small></a>
+          <a href="/vmc-sizing/">VMC Sizing<small>SDDCs and hosts for VMware Cloud on AWS</small></a>
+          <a href="/vcf-sizing/">VCF Sizing<small>Fleets and clusters on your own hardware</small></a>
+          <span class="sn-h">Amazon EVS</span>
+          <a href="/evs/">EVS overview</a>
+          <a href="/evs-guide/">Deployment guide</a>
+          <a href="/evs-guide/#terraform">Terraform automation</a>
+          <a href="/evs-guide/#validator">Prerequisite validator</a>
+        </div>
+      </div>
+      <a href="/about/">About</a>
+      <div class="sn-social">
+        <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" title="LinkedIn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></a>
+        <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="X" aria-label="X"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg></a>
+        <a href="/rss/" title="RSS feed" aria-label="RSS feed"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20 5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg></a>
+      </div>
+      <a href="https://github.com/gitvcloudone/EVS-PreREQ-Terraform" class="sn-cta" target="_blank" rel="noopener">EVS Terraform Kit</a>
     </div>
+  </div>
 </nav>
+<!-- /vc:nav -->
 
 <!-- HERO -->
 <section class="hero">
@@ -746,7 +728,7 @@
             </div>
 
             <figure style="margin:2rem 0;">
-                <img src="/images/evs-prereq-diagram.png" alt="Amazon EVS prerequisite architecture diagram" class="lb-trigger" style="width:100%;border-radius:8px;border:1px solid var(--border);box-shadow:var(--shadow);" loading="lazy">
+                <img width="2223" height="1445" src="/images/evs-prereq-diagram.png" alt="Amazon EVS prerequisite architecture diagram" class="lb-trigger" style="height:auto;width:100%;border-radius:8px;border:1px solid var(--border);box-shadow:var(--shadow);" loading="lazy">
                 <figcaption style="margin-top:0.6rem;font-size:0.85rem;color:var(--muted);text-align:center;">Amazon EVS prerequisite architecture — all required resources and their relationships</figcaption>
             </figure>
 
@@ -763,7 +745,7 @@
             <div class="step-card">
                 <h3>1.2 Supported AWS Regions &amp; Availability Zones</h3>
                 <p>Amazon EVS is available in select regions. All EVS resources — VPC, subnets, hosts, and the Route Server — must reside in the <strong>same single AZ</strong>. EVS does not support multi-AZ deployments within a single environment. Choose your target AZ before proceeding and plan all subnets accordingly.</p>
-                <img src="/images/1.2_region_map.jpg" alt="AWS regions supporting Amazon EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1497" height="880" src="/images/1.2_region_map.jpg" alt="AWS regions supporting Amazon EVS" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -949,7 +931,7 @@
                         </tbody>
                     </table>
                 </div>
-                <img src="/images/3.1_vpc_marked.jpg" alt="EVS VPC configuration in AWS console" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1872" height="1142" src="/images/3.1_vpc_marked.jpg" alt="EVS VPC configuration in AWS console" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -992,7 +974,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                         </tbody>
                     </table>
                 </div>
-                <img src="/images/6.1_service_access_subnet.jpg" alt="Service Access Subnet configuration in AWS console" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1835" height="1391" src="/images/6.1_service_access_subnet.jpg" alt="Service Access Subnet configuration in AWS console" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
 
                 <h4 style="margin:1.25rem 0 0.5rem;">Network ACL for the Service Access Subnet</h4>
                 <p>The Service Access Subnet hosts both the Route 53 Resolver inbound ENIs (DNS) and the VPC Route Server endpoints (BGP). Configure the NACL now to allow both protocols. NACLs are stateless — both directions must be explicitly permitted.</p>
@@ -1024,7 +1006,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
             <div class="step-card">
                 <h3>5.1 Create the Route 53 Private Hosted Zone</h3>
                 <p>Create a <strong>private hosted zone</strong> in Route 53 and associate it with the EVS VPC. Choose a domain that matches the <code>domain_name</code> you will put in the DHCP Options Set (e.g., <code>evs.vcloudone.local</code>). This domain must be unique within the VPC — do not reuse an existing zone.</p>
-                <img src="/images/4.1_route53_host_zone.jpg" alt="Route 53 private hosted zone for EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1797" height="531" src="/images/4.1_route53_host_zone.jpg" alt="Route 53 private hosted zone for EVS" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -1043,7 +1025,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     </table>
                 </div>
                 <p style="margin-top:1rem;">Note both IP addresses. They are used directly as <code>domain-name-servers</code> in the DHCP Options Set in Step 6.</p>
-                <img src="/images/4.2_inbound_resolver.jpg" alt="Route 53 inbound resolver endpoints for EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1771" height="912" src="/images/4.2_inbound_resolver.jpg" alt="Route 53 inbound resolver endpoints for EVS" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -1070,10 +1052,10 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                         </tbody>
                     </table>
                 </div>
-                <img src="/images/4.3_dns_records.jpg" alt="DNS A and PTR records for EVS components in Route 53" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1722" height="1307" src="/images/4.3_dns_records.jpg" alt="DNS A and PTR records for EVS components in Route 53" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
                 <p style="margin-top:1rem;">Also create <strong>reverse lookup (PTR) zones</strong> for each subnet: <code>10.0.10.in-addr.arpa</code> (Host Mgmt) and <code>11.0.10.in-addr.arpa</code> (Mgmt VM), associated with the EVS VPC.</p>
-                <img src="/images/4.3_dns_reverse_ptr_10.jpg" alt="Reverse PTR zone for Host Management VLAN (10.0.10.x)" style="width:100%;margin-top:0.75rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
-                <img src="/images/4.3_dns_reverse_ptr_11.jpg" alt="Reverse PTR zone for Management VM VLAN (10.0.11.x)" style="width:100%;margin-top:0.75rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1797" height="1187" src="/images/4.3_dns_reverse_ptr_10.jpg" alt="Reverse PTR zone for Host Management VLAN (10.0.10.x)" style="height:auto;width:100%;margin-top:0.75rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1746" height="1385" src="/images/4.3_dns_reverse_ptr_11.jpg" alt="Reverse PTR zone for Management VM VLAN (10.0.11.x)" style="height:auto;width:100%;margin-top:0.75rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="note">
@@ -1116,7 +1098,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     </table>
                 </div>
                 <p style="margin-top:1rem;">After creating the set, associate it with the EVS VPC: select the VPC &rsaquo; <strong>Actions &rsaquo; Edit DHCP options set</strong> &rsaquo; choose the new set.</p>
-                <img src="/images/5.1_dhcp_option_set.jpg" alt="DHCP Options Set configuration for EVS" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1897" height="1022" src="/images/5.1_dhcp_option_set.jpg" alt="DHCP Options Set configuration for EVS" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="note">
@@ -1158,7 +1140,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                     </table>
                 </div>
                 <p style="margin-top:0.75rem;">Wait for Route Server status to reach <strong>Available</strong> before proceeding.</p>
-                <img src="/images/7.1_route_server.jpg" alt="VPC Route Server creation in AWS console" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="2277" height="923" src="/images/7.1_route_server.jpg" alt="VPC Route Server creation in AWS console" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -1183,7 +1165,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <div class="note" style="margin-top:1rem;">
                     <strong>Important:</strong> Use <strong>BGP Keepalive</strong> only. BFD (Bidirectional Forwarding Detection) is not supported for Amazon EVS and will cause undefined session behavior.
                 </div>
-                <img src="/images/7.3_route_server_endpoint_peering.jpg" alt="Route Server endpoint peering configuration" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="1873" height="946" src="/images/7.3_route_server_endpoint_peering.jpg" alt="Route Server endpoint peering configuration" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="step-card">
@@ -1192,7 +1174,7 @@ aws ec2 modify-vpc-attribute --vpc-id <span class="str">vpc-xxxxxxxxxxxxxxxxx</s
                 <div class="note" style="margin-top:1rem;">
                     <strong>Common failure:</strong> Every propagated route table must have an <strong>explicit subnet association</strong>. Route tables that only have the implicit main-route-table association will silently fail to receive BGP routes. Verify explicit associations exist before proceeding.
                 </div>
-                <img src="/images/7.4_route_server_propagation.jpg" alt="Route Server route propagation to service access route table" style="width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
+                <img width="2262" height="868" src="/images/7.4_route_server_propagation.jpg" alt="Route Server route propagation to service access route table" style="height:auto;width:100%;margin-top:1rem;border-radius:6px;border:1px solid var(--border);" loading="lazy">
             </div>
 
             <div class="note">
@@ -1896,23 +1878,38 @@ Exit code 0 — environment is ready for EVS deployment.
     </aside>
 </div>
 
-<!-- FOOTER -->
-<footer>
-    <p>&copy; 2026 <strong>vCloudOne</strong> &mdash; Architected for Enterprise</p>
-    <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:0.5rem;">
-        <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="@dchung615 on X" style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.88rem;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            @dchung615
-        </a>
-        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="gitvcloudone on GitHub" style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.88rem;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-            gitvcloudone
-        </a>
-        <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" title="David Chung on LinkedIn" style="display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.88rem;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.55)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
-            LinkedIn
-        </a>
+<!-- vc:footer -->
+<footer class="sf">
+  <div class="sf-inner">
+    <div>
+      <div class="sf-brand"><img src="/vcloudone_button.png" alt="" width="24" height="24">vCloudOne</div>
+      <p>Notes, guides and sizing tools for VMware on AWS and beyond, by David Chung.</p>
+      <p>Views here are my own and not those of my employer.</p>
     </div>
+    <div>
+      <h5>Read</h5>
+      <a href="/articles/">Articles</a>
+      <a href="/updates/">Updates</a>
+      <a href="/about/">About</a>
+      <a href="/rss/">RSS feed</a>
+    </div>
+    <div>
+      <h5>Tools</h5>
+      <a href="/evs-sizing/">EVS Sizing</a>
+      <a href="/vmc-sizing/">VMC Sizing</a>
+      <a href="/vcf-sizing/">VCF Sizing</a>
+      <a href="/evs-guide/">EVS deployment guide</a>
+    </div>
+    <div>
+      <h5>Follow</h5>
+      <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://x.com/dchung615" target="_blank" rel="noopener">X @dchung615</a>
+      <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+  <div class="sf-base"><span>&copy; 2026 vCloudOne</span><span>Notes on cloud, VMware and AI</span></div>
 </footer>
+<!-- /vc:footer -->
 
 <!-- LIGHTBOX -->
 <div id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview">
@@ -1972,21 +1969,6 @@ Exit code 0 — environment is ready for EVS deployment.
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLb(); });
 })();
 </script>
-<script>
-(function () {
-    /* dropdowns: hover on desktop, tap to open/close */
-    document.querySelectorAll('.nav-dd').forEach(function (dd) {
-        var btn = dd.querySelector('.nav-dd-btn');
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            var open = !dd.classList.contains('open');
-            document.querySelectorAll('.nav-dd.open').forEach(function (o) { o.classList.remove('open'); o.querySelector('.nav-dd-btn').setAttribute('aria-expanded', 'false'); });
-            dd.classList.toggle('open', open); btn.setAttribute('aria-expanded', open);
-        });
-    });
-    document.addEventListener('click', function () { document.querySelectorAll('.nav-dd.open').forEach(function (o) { o.classList.remove('open'); o.querySelector('.nav-dd-btn').setAttribute('aria-expanded', 'false'); }); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') document.querySelectorAll('.nav-dd.open').forEach(function (o) { o.classList.remove('open'); }); });
-})();
-</script>
+<script src="/assets/site.js?v=4453cda7" defer></script>
 </body>
 </html>

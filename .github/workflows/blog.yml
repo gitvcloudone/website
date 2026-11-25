@@ -11,11 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Build
-        run: python3 blog/build.py
+        run: |
+          pip install --quiet pillow
+          python blog/build.py
       - name: Commit generated pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add index.html updates articles topics about feed.xml
+          git add index.html 404.html updates articles topics about feed.xml feed.xsl sitemap.xml robots.txt assets/og evs-guide evs evs-sizing vmc-sizing vcf-sizing
           git diff --cached --quiet || (git commit -m "Rebuild blog" && git push)
