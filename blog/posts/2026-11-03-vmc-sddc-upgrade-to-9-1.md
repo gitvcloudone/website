@@ -7,16 +7,16 @@ topics: hyperscalers, vmware
 sources:
   - Broadcom blog: What's Coming Next: VMware Cloud on AWS SDDC Upgrade to Version 9.1 | https://blogs.vmware.com/cloud-foundation/2026/11/03/whats-coming-next-vmware-cloud-on-aws-sddc-upgrade-to-version-9-1/
 ---
-Broadcom says the SDDC software on VMware Cloud on AWS will be upgraded to version 9.1. That's a change of the managed stack itself, not another 1.26 patch. Feature-level details are still being finalized and will come in later communications.
+Broadcom says the SDDC software on VMware Cloud on AWS will be upgraded to version 9.1. This is an upgrade of the SDDC software components themselves, not another 1.26 release. Broadcom is still finalizing feature details and will share them in later communications.
 
-The rollout is planned in three phases, with timelines still in development:
+The rollout comes in three phases, and the timelines are still being worked out:
 
-- **Early Access:** nomination only, for application testing in a non-production organization. Ask your account team or the VMware Cloud on AWS product team; Broadcom decides who gets in.
-- **General Availability:** expected sometime in calendar year 2027. From then on, new SDDCs will be deployed on 9.1 by default.
-- **Fleet Upgrades:** soon after GA, existing SDDCs, including those on 1.26, move to 9.1. Broadcom says all new and existing SDDCs will go through this during 2027.
+- **Early Access:** By nomination only, for testing applications in a non-production organization. You ask through your account team or the VMware Cloud on AWS product team, and Broadcom decides who gets in.
+- **General Availability:** Expected sometime in calendar year 2027. From that point, new SDDCs deploy on 9.1 by default.
+- **Fleet Upgrades:** Soon after GA, the Fleet Upgrades phase is expected to begin, moving existing SDDCs, including those on 1.26, to 9.1. Broadcom says all new and existing SDDCs, including those on 1.26, will upgrade their software components to 9.1 throughout 2027.
 
-A few rules are already set. There is no option to stay on 1.26; this is a managed service, and Broadcom performs the upgrade with advance notice and no customer action required. You cannot mix 9.1 and 1.26 clusters in the same SDDC, because every cluster in an SDDC has to run the same version. You can, once GA is out, deploy a new 9.1 SDDC alongside existing 1.26 SDDCs until those older ones are upgraded.
+Some rules are already settled. You can't stay on 1.26. This is a managed service, so Broadcom performs the upgrade with advance notice and no action needed on your side. You also can't mix 9.1 and 1.26 clusters in one SDDC, since every cluster in an SDDC has to run the same version. What you can do, once GA is out, is deploy a new 9.1 SDDC next to your existing 1.26 SDDCs until those are upgraded.
 
-The operating model does not change. Broadcom still handles patching and lifecycle, the uptime SLA stays at 99.9% (99.99% on a stretched cluster), and 24/7 global support and SRE coverage continue. Until your SDDC is upgraded, 1.26 releases keep shipping as usual. Broadcom anticipates 9.1 will run on i4i, i3en and i7i hosts, and on later instance types added to the service.
+The operating model stays the same. Broadcom still handles patching and lifecycle, the uptime SLA stays at 99.9% (99.99% on a stretched cluster), and 24/7 global support and SRE coverage continue. Until your SDDC is upgraded, 1.26 releases keep shipping as usual. Broadcom anticipates 9.1 will be supported on i4i, i3en and i7i instances, plus future instance types added to the service.
 
-If you have production on VMC, I'd ask about Early Access so you can test applications in a non-prod org before fleet upgrades start. Treat the 2027 timing as a plan, not a fixed date: Broadcom marks this announcement as forward-looking and subject to change.
+If you run production on VMC, ask about Early Access now so you can test your applications in a non-production org before fleet upgrades begin. Plan around 2027 but don't treat it as fixed, since Broadcom labels this announcement forward-looking and subject to change.
