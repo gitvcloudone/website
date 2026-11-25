@@ -33,3 +33,11 @@ To build locally instead: `python3 blog/build.py` (Python 3, no packages needed)
 - Markdown supported: paragraphs, `- ` bullets, `**bold**`, `*italic*`, `` `code` ``, `[links](https://...)`.
 - Put a diagram anywhere in an article on its own line: `{{diagram:memory-tiering}}`.
 - New diagrams go in `blog/diagrams/` as SVG. The first line can be `<!-- caption: Your caption -->`.
+
+## How the site fits together
+
+- `blog/shell.html` is the page frame. `blog/partials/nav.html` and `blog/partials/footer.html` are the top menu and footer.
+- The build also copies that menu and footer into the guide, the EVS overview and the three sizers (between the `<!-- vc:nav -->` and `<!-- vc:footer -->` markers), so every page stays the same.
+- Styles live in `assets/site.css` (fonts, menu, footer: every page) and `assets/blog.css` (blog pages).
+- Share images for link previews are made in `assets/og/` when Pillow is installed (the GitHub Action installs it).
+- `/feed.xml` is the RSS feed; `/rss/` explains how to subscribe.
