@@ -65,6 +65,14 @@
     <description>Broadcom announced three changes to the VCF portfolio in early November. vSphere Express. A new entry edition built on vSphere 9, for customers with up to 128 cores across all their environments. It includes vMotion, High Availability (VMs restart on another host if one fails), the Distributed…</description>
   </item>
   <item>
+    <title>VMware Cloud on AWS SDDCs will move to version 9.1</title>
+    <link>https://vcloudone.com/updates/#vmc-sddc-upgrade-to-9-1</link>
+    <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-sddc-upgrade-to-9-1</guid>
+    <pubDate>Tue, 03 Nov 2026 12:00:00 +0000</pubDate>
+    <category>Hyperscalers</category><category>VMware</category>
+    <description>The SDDC software on VMware Cloud on AWS is being upgraded to version 9.1. This is an upgrade of the SDDC software components themselves, not another 1.26 release. Broadcom is still finalizing feature details and will share them in later communications. The rollout comes in three phases, and the…</description>
+  </item>
+  <item>
     <title>Amazon EVS adds Osaka, Taipei, Spain and Tel Aviv</title>
     <link>https://vcloudone.com/updates/#evs-regions-sep</link>
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-regions-sep</guid>
@@ -239,14 +247,6 @@
     <pubDate>Mon, 15 Dec 2025 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
     <description>Amazon EVS is now in seven more Regions: US West (N. California), Asia Pacific (Hyderabad), Asia Pacific (Malaysia), Canada West (Calgary), Europe (Milan), Mexico (Central) and South America (São Paulo). A quick reminder of how EVS uses a Region. An EVS environment runs on bare-metal EC2 hosts in…</description>
-  </item>
-  <item>
-    <title>VMware Cloud on AWS: December 2025 roundup</title>
-    <link>https://vcloudone.com/updates/#vmc-dec-2025</link>
-    <guid isPermaLink="true">https://vcloudone.com/updates/#vmc-dec-2025</guid>
-    <pubDate>Tue, 02 Dec 2025 12:00:00 +0000</pubDate>
-    <category>Hyperscalers</category><category>VMware</category>
-    <description>Broadcom&#x27;s December roundup for VMware Cloud on AWS had four changes worth knowing about. Two of them affect how you design and pay for an SDDC. Smaller stretched clusters. A stretched cluster spreads one vSAN cluster across two Availability Zones, with a witness in a third AZ that breaks ties if…</description>
   </item>
 </channel>
 </rss>
