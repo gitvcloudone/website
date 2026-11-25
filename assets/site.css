@@ -53,6 +53,14 @@ nav.sn { position: sticky; top: 0; z-index: 200; background: #111a26; border-bot
   .sn .sn-links > a.sn-cta { justify-content: center; margin-top: 10px; border-radius: 10px; border: 0; }
 }
 
+.sn .sn-theme { display: flex; align-items: center; gap: 8px; background: none; border: 0; margin: 0 0 0 6px; padding: 8px; border-radius: 8px; color: rgba(255,255,255,0.7); cursor: pointer; font: inherit; font-size: 14.5px; }
+.sn .sn-theme:hover { color: #fff; background: rgba(255,255,255,0.07); }
+.sn .sn-theme svg { width: 18px; height: 18px; display: block; flex: none; }
+.sn .sn-theme .i-sun, [data-theme="dark"] .sn .sn-theme .i-moon { display: none; }
+[data-theme="dark"] .sn .sn-theme .i-sun { display: block; }
+.sn .sn-theme-l { display: none; }
+@media (max-width: 960px) { .sn .sn-theme { width: 100%; padding: 13px 4px; margin: 0; border-radius: 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 15.5px; } .sn .sn-theme-l { display: inline; } }
+
 /* ── Footer ── */
 footer.sf { background: #111a26; color: rgba(255,255,255,0.55); padding: 40px 24px 36px; margin: 0; text-align: left; border-top: 0;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 14px; line-height: 1.6; }

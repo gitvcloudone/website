@@ -1,0 +1,38 @@
+/* vCloudOne look for the EVS guide and EVS overview: site fonts, and dark mode that follows the site theme. */
+body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+h1, .article-card h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; letter-spacing: -0.01em; }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --text: #e8edf3; --muted: #93a0b0; --border: #253244; --bg: #0a1017;
+  --blue: #5fb0ee; --blue-lt: rgba(95,176,238,.15);
+  --note-bg: rgba(251,191,36,.10); --note-bdr: #b7791f;
+  --shadow: 0 1px 3px rgba(0,0,0,.4); --shadow-lg: 0 10px 30px rgba(0,0,0,.45);
+}
+[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+[data-theme="dark"] .stats-bar, [data-theme="dark"] .article-card, [data-theme="dark"] .sidebar-card, [data-theme="dark"] .diagram-body { background: #131c27; }
+[data-theme="dark"] .article-card p, [data-theme="dark"] .article-card ul, [data-theme="dark"] .article-card li, [data-theme="dark"] .step-card p,
+[data-theme="dark"] .info-card p, [data-theme="dark"] .info-card ul, [data-theme="dark"] .resp-card ul, [data-theme="dark"] .region-item { color: #c7ced8; }
+[data-theme="dark"] .step-card, [data-theme="dark"] .info-card, [data-theme="dark"] .region-item, [data-theme="dark"] .diagram-caption { background: #18222f; }
+[data-theme="dark"] th { background: #18222f; }
+[data-theme="dark"] tr:nth-child(even) td { background: #111a24; }
+[data-theme="dark"] code { background: #1d2938; color: #f9a8d4; }
+[data-theme="dark"] .note strong, [data-theme="dark"] .resp-customer h4 { color: #fbbf24; }
+[data-theme="dark"] .resp-aws { border-color: rgba(95,176,238,.35); }
+[data-theme="dark"] .resp-customer { border-color: rgba(251,191,36,.35); }
+[data-theme="dark"] .road-tag { background: rgba(251,191,36,.15); color: #fbbf24; }
+[data-theme="dark"] .check { color: #4ade80; }
+[data-theme="dark"] .ex { color: #d8a4ff; }
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3, [data-theme="dark"] h4, [data-theme="dark"] strong { color: inherit; }
+[data-theme="dark"] .article-card h2, [data-theme="dark"] .article-card h3, [data-theme="dark"] .article-card h4 { color: #eef1f5; }
+/* inline colours used in a few spots */
+[data-theme="dark"] .article-card [style*="background:#f"], [data-theme="dark"] .article-card [style*="background: #f"] { background: #18222f !important; border-color: #33435a !important; }
+[data-theme="dark"] [style*="color:#374151"] { color: #c7ced8 !important; }
+[data-theme="dark"] [style*="color:#92400e"], [data-theme="dark"] [style*="color:#856404"] { color: #fbbf24 !important; }
+[data-theme="dark"] [style*="color:#3730a3"], [data-theme="dark"] [style*="color:#6366f1"] { color: #a5b4fc !important; }
+[data-theme="dark"] [style*="color:#7c3aed"] { color: #c4b5fd !important; }
+[data-theme="dark"] [style*="color:#dc2626"] { color: #f87171 !important; }
+/* screenshots stay as they are, on a light frame */
+[data-theme="dark"] .article-card img { background: #fff; }
+[data-theme="dark"] .toc-list li { border-bottom-color: var(--border); }
+[data-theme="dark"] .spec-list li, [data-theme="dark"] .spec-list > div { border-color: var(--border); }

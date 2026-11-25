@@ -343,8 +343,9 @@ def read(rel):
 
 SHELL = read("shell.html")
 NAV = read("partials/nav.html")
+THEMEHEAD = read("partials/theme-head.html").strip()
 FOOTER = read("partials/footer.html").replace("{{YEAR}}", str(date.today().year))
-VER = hashlib.sha1(b"".join(open(os.path.join(ROOT, "assets", f), "rb").read() for f in ("site.css", "blog.css", "site.js"))).hexdigest()[:8]
+VER = hashlib.sha1(b"".join(open(os.path.join(ROOT, "assets", f), "rb").read() for f in ("site.css", "blog.css", "site.js", "theme-sizer.css", "theme-guide.css"))).hexdigest()[:8]
 
 
 def nav_html(posts, active=""):
@@ -362,7 +363,7 @@ def page(posts, path, title, desc, main, active="", ogtype="website", image="/as
     url = SITE + path
     rep = {
         "{{TITLE}}": esc(title), "{{OGTITLE}}": esc(title.split(" | ")[0]), "{{DESC}}": esc(desc), "{{URL}}": url,
-        "{{OGTYPE}}": ogtype, "{{IMAGE}}": SITE + image, "{{VER}}": VER, "{{HEAD}}": head,
+        "{{OGTYPE}}": ogtype, "{{THEMEHEAD}}": THEMEHEAD, "{{IMAGE}}": SITE + image, "{{VER}}": VER, "{{HEAD}}": head,
         "{{NAV}}": nav_html(posts, active), "{{FOOTER}}": FOOTER, "{{SCRIPT}}": script, "{{MAIN}}": main,
     }
     out = SHELL
@@ -650,7 +651,8 @@ def sync_static(posts):
         foot = "<!-- vc:footer -->\n" + FOOTER.rstrip() + "\n<!-- /vc:footer -->"
         s = re.sub(r"<!-- vc:nav -->.*?<!-- /vc:nav -->", lambda m: nav, s, count=1, flags=re.S)
         s = re.sub(r"<!-- vc:footer -->.*?<!-- /vc:footer -->", lambda m: foot, s, count=1, flags=re.S)
-        s = re.sub(r"/assets/site\.(css|js)\?v=\w+", lambda m: f"/assets/site.{m.group(1)}?v={VER}", s)
+        s = re.sub(r"<!-- vc:theme -->.*?<!-- /vc:theme -->", lambda m: "<!-- vc:theme -->\n" + THEMEHEAD + "\n<!-- /vc:theme -->", s, count=1, flags=re.S)
+        s = re.sub(r"/assets/(site|theme-sizer|theme-guide)\.(css|js)\?v=\w+", lambda m: f"/assets/{m.group(1)}.{m.group(2)}?v={VER}", s)
         if crlf:
             s = s.replace("\n", "\r\n")
         if s != raw:
