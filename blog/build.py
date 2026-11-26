@@ -151,6 +151,9 @@ def blocks(md, h2="h2", h3="h3"):
         if not s:
             flush()
             continue
+        m = re.fullmatch(r"\{\{\s*chips:\s*(.+?)\s*\}\}", s)
+        if m:
+            flush(); out.append('<p class="chips"><span class="lbl">Off the clock</span>' + "".join(f"<span>{esc(x.strip())}</span>" for x in m.group(1).split(",")) + "</p>"); continue
         m = re.fullmatch(r"\{\{\s*diagram:\s*([\w-]+)\s*\}\}", s)
         if m:
             flush(); out.append(diagram(m.group(1))); continue
@@ -305,8 +308,8 @@ def hero(p):
 
 SIDEBAR = """<aside class="side">
   <div class="box">
-    <div class="me"><div class="avatar">DC</div><div><b>David Chung</b><small>Cloud solutions architect</small></div></div>
-    <p>I help customers run VMware workloads on AWS, mostly on Amazon EVS and VMware Cloud on AWS. Here I write about that, and about cloud, AI and tech. <a href="/about/">More about me</a></p>
+    <div class="me"><div class="avatar">DC</div><div><b>David Chung</b><small>Technology enthusiast</small></div></div>
+    <p>Everything AI, cloudy and virtual. This is where I keep the tools and notes I build along the way. <a href="/about/">More about me</a></p>
   </div>
   <div class="box">
     <h4>Tools</h4>
@@ -413,15 +416,15 @@ def build_home(posts):
     col += f'<div class="sec-h"><h2>Latest</h2><a href="/updates/">All updates &rarr;</a></div>{stream(rest)}'
     LI = '<a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" aria-label="LinkedIn">LinkedIn</a>'
     top = band('<div class="who"><div class="avatar">DC</div><div><h1>David Chung</h1>'
-               '<p>Solutions architect for VMware on AWS. Amazon EVS, VMware Cloud on AWS, VCF and AI.</p>'
+               '<p>Technology enthusiast in everything AI, cloudy and virtual.</p>'
                f'<p class="who-links">{LI}<span>·</span><a href="https://x.com/dchung615" target="_blank" rel="noopener">X</a>'
                '<span>·</span><a href="/rss/">RSS</a><span>·</span><a href="/about/">About</a></p></div></div>'
                + topic_tabs(posts), "home")
     boxes = SIDEBAR.split('<div class="box">')        # [head, about, tools, follow]: the front page keeps Follow only
     side = boxes[0] + '<div class="box">' + boxes[3]
     main = top + f'<main class="wrap main"><div class="col">{col}</div>{side}</main>'
-    write("index.html", page(posts, "/", "vCloudOne | Notes on cloud, VMware and AI",
-                             "David Chung on Amazon EVS, VMware Cloud on AWS, VCF, cloud and AI: articles, product updates and sizing tools.", main))
+    write("index.html", page(posts, "/", "vCloudOne | David Chung",
+                             "David Chung on AI, cloud and infrastructure: articles, updates and sizing tools.", main))
 
 
 def build_updates(posts):
@@ -489,7 +492,7 @@ def build_articles(posts):
             pn = '<div class="pn">' + (f'<a href="{url_of(older)}"><small>&larr; Older</small>{inline(older["title"])}</a>' if older else "<span></span>") \
                  + (f'<a class="next" href="{url_of(newer)}"><small>Newer &rarr;</small>{inline(newer["title"])}</a>' if newer else "") + "</div>"
         end = (f'<div class="endbox">{src_list(p)}<div class="author" style="margin-top:24px"><div class="avatar">DC</div>'
-               f'<p><b>David Chung</b> helps customers run VMware workloads on AWS. '
+               f'<p><b>David Chung</b> writes about AI, cloud and infrastructure. '
                f'<a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener">Connect on LinkedIn</a> or '
                f'<a href="/rss/">follow the RSS feed</a>.</p></div>{pn}</div>')
         top = band(f'<p class="eyebrow">{topic_links(p)}</p><h1>{inline(p["title"])}</h1>'
@@ -531,10 +534,10 @@ def build_topics(posts):
 
 def build_about(posts):
     md = read("about.md")
-    top = band('<div class="me" style="margin-bottom:18px"><div class="avatar" style="width:72px;height:72px;font-size:26px">DC</div></div>'
-               '<p class="eyebrow">About</p><h1>Hi, I&rsquo;m David.</h1>'
-               '<p class="lede">Cloud solutions architect. I work on VMware workloads on AWS, and I write about cloud, VMware and AI.</p>', "slim")
-    main = top + f'<main class="wrap main"><div class="col"><div class="page-card prose">{blocks(md)}</div></div>{SIDEBAR}</main>'
+    top = band('<div class="who"><div class="avatar">DC</div><div><p class="eyebrow" style="margin:0 0 6px">About</p><h1>Hi, I&rsquo;m David.</h1></div></div>', "home")
+    boxes = SIDEBAR.split('<div class="box">')        # no About card on the About page
+    side = boxes[0] + "".join('<div class="box">' + x for x in boxes[2:])
+    main = top + f'<main class="wrap main"><div class="col"><div class="page-card prose">{blocks(md)}</div></div>{side}</main>'
     write("about/index.html", page(posts, "/about/", "About | vCloudOne", "About David Chung and vCloudOne.", main, "about"))
 
 
@@ -562,7 +565,7 @@ def build_feed(posts):
   <title>vCloudOne</title>
   <link>{SITE}/</link>
   <atom:link href="{SITE}/feed.xml" rel="self" type="application/rss+xml"/>
-  <description>David Chung on cloud, VMware and AI</description>
+  <description>David Chung on AI, cloud and infrastructure</description>
   <language>en-us</language>
   <lastBuildDate>{last}</lastBuildDate>
   <image><url>{SITE}/vcloudone_button.png</url><title>vCloudOne</title><link>{SITE}/</link></image>
@@ -655,7 +658,7 @@ def build_og(posts):
         d.text((72, 548), sub, font=F("inter-500.ttf", 26), fill="#9aa6b5")
         im.save(path, optimize=True)
 
-    make(os.path.join(og, "default.png"), "David Chung", "Notes on cloud, VMware and AI", "vcloudone.com · articles, updates and sizing tools")
+    make(os.path.join(og, "default.png"), "David Chung", "Technology enthusiast in everything AI, cloudy and virtual", "vcloudone.com · articles, updates and sizing tools")
     for p in posts:
         if p["type"] == "article":
             make(os.path.join(og, p["slug"] + ".png"), " · ".join(TOPICS[t][0] for t in p["topics"]) or "Article", p["title"],
