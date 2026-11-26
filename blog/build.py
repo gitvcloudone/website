@@ -385,11 +385,31 @@ def write(rel, text, sitemap=True):
 
 
 # ── pages ────────────────────────────────────────────────────────────────────
+TOOLS = [
+    ("evs", "/evs-sizing/", "EVS Sizing", "Hosts and clusters for Amazon EVS on i4i, i7i or r7i.",
+     ["RVTools import or manual totals", "VCF cores for BYOL licensing", "Memory tiering and FSx for ONTAP"],
+     '<path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/><rect x="3" y="4" width="18" height="16" rx="2.5"/>'),
+    ("vmc", "/vmc-sizing/", "VMC Sizing", "SDDCs, clusters and hosts for VMware Cloud on AWS.",
+     ["Stretched or single AZ per SDDC", "Placement and DR per workload group", "Topology diagram and Excel export"],
+     '<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5H7z" stroke-linejoin="round"/>'),
+    ("vcf", "/vcf-sizing/", "VCF Sizing", "Fleets, domains and clusters on your own hardware.",
+     ["VCF instance and domain layout", "Licensing and add-on overhead", "Excel export with saved settings"],
+     '<path d="M12 3l8 4.5-8 4.5-8-4.5L12 3z" stroke-linejoin="round"/><path d="M4 12l8 4.5 8-4.5M4 16.5L12 21l8-4.5" stroke-linejoin="round"/>'),
+]
+
+
+def tools_block():
+    cards = "".join(
+        f'<a class="tool {k}" href="{u}"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">{ic}</svg></span>'
+        f'<h3>{n}</h3><p>{d}</p><ul>{"".join(f"<li>{x}</li>" for x in pts)}</ul><span class="go">Open the sizer &rarr;</span></a>'
+        for k, u, n, d, pts, ic in TOOLS)
+    return (f'<div class="sec-h"><h2>Sizing tools</h2><span class="note">Free, runs in your browser. Customer data never leaves your machine.</span></div>'
+            f'<div class="tools">{cards}</div>')
+
+
 def build_home(posts):
-    arts = [p for p in posts if p["type"] == "article"]
-    featured = next((p for p in arts if p["featured"]), arts[0] if arts else None)
-    rest = [p for p in posts if p is not featured][:STREAM_ON_HOME]
-    col = (hero(featured) if featured else "")
+    rest = posts[:STREAM_ON_HOME]
+    col = tools_block()
     col += f'<div class="sec-h"><h2>Latest</h2><a href="/updates/">All updates &rarr;</a></div>{stream(rest)}'
     LI = '<a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" aria-label="LinkedIn">LinkedIn</a>'
     top = band('<div class="who"><div class="avatar">DC</div><div><h1>David Chung</h1>'
@@ -397,8 +417,8 @@ def build_home(posts):
                f'<p class="who-links">{LI}<span>·</span><a href="https://x.com/dchung615" target="_blank" rel="noopener">X</a>'
                '<span>·</span><a href="/rss/">RSS</a><span>·</span><a href="/about/">About</a></p></div></div>'
                + topic_tabs(posts), "home")
-    first = SIDEBAR.index('<div class="box">')
-    side = SIDEBAR[:first] + SIDEBAR[SIDEBAR.index('<div class="box">', first + 1):]
+    boxes = SIDEBAR.split('<div class="box">')        # [head, about, tools, follow]: the front page keeps Follow only
+    side = boxes[0] + '<div class="box">' + boxes[3]
     main = top + f'<main class="wrap main"><div class="col">{col}</div>{side}</main>'
     write("index.html", page(posts, "/", "vCloudOne | Notes on cloud, VMware and AI",
                              "David Chung on Amazon EVS, VMware Cloud on AWS, VCF, cloud and AI: articles, product updates and sizing tools.", main))

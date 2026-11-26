@@ -22,7 +22,7 @@ To build locally instead: `python3 blog/build.py` (Python 3, no packages needed)
 | `type` | `update` or `article` |
 | `product` | Optional: `evs`, `vmc`, `vcf` or `site`. Sets the colour chip and the Updates filter |
 | `topics` | Comma list from `hyperscalers, vmware, ai, cloud, tech` |
-| `featured` | Articles only. `true` puts it at the top of the front page (otherwise the newest article is used) |
+| `featured` | Not used at the moment: the front page leads with the sizing tools, and articles appear under Latest |
 | `summary` | Articles: the one or two lines shown on cards, in previews and in RSS |
 | `diagram` | Optional name of an SVG in `blog/diagrams/` (without `.svg`) |
 | `sources` | One per line: `  - Label | https://...` |

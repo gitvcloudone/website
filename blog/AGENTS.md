@@ -26,7 +26,7 @@ sources:
 ---
 ```
 
-- `type`: `update` for news, `article` for longer analysis. Articles also need `summary:` (one or two sentences) and use `##` headings.
+- `type`: `update` for news, `article` for longer analysis. Articles also need `summary:` (one or two sentences) and use `##` headings. Don't set `featured`: the front page leads with the sizing tools, and new posts appear under Latest.
 - `product`: `evs`, `vmc` or `vcf`. Leave it empty for anything else.
 - `topics`: one or more of `hyperscalers, vmware, ai, cloud, tech`, and nothing else. EVS and VMC posts use `hyperscalers, vmware`. VCF posts use `vmware`, plus `ai` when the release is about AI.
 - `sources`: at least one, written as `  - Label | URL` (two spaces before the dash). Link the exact official page, not a news write-up, unless no official page exists.
