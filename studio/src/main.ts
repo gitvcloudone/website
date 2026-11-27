@@ -157,7 +157,7 @@ document.addEventListener("click", e => {
   }
 });
 // ---------- Expert view edits ----------
-type Edit = { t: "sec"; sec: "project" | "policy" | "fleet" | "addons"; key: string } | { t: "node" | "ht"; id: string; key: string } | { t: "grp"; i: number; sub?: "values" | "opts"; key: string };
+type Edit = { t: "sec"; sec: "project" | "policy" | "fleet" | "addons"; key: string } | { t: "node"; id: string; key: string } | { t: "ht"; id: string; key: string } | { t: "grp"; i: number; sub?: "values" | "opts"; key: string };
 function editOps(e: Edit, v: unknown) {
   if (e.t === "sec") return [{ op: "set" as const, path: [e.sec, e.key], value: v }];
   if (e.t === "node") return fieldOps(design, e.id, e.key, v);
