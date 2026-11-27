@@ -1,0 +1,71 @@
+// Built from TypeScript by studio/build.mjs. Edit the .ts source, then run npm run build.
+// The design document: one versioned JSON object holding every choice. Everything else reads or
+// writes this. Sections follow the guided flow; inside them the engine's own field names are used,
+// so the mapping to the engine (designToEngine) is direct.
+import { DEFAULTS } from "../knowledge.js";
+                                                                       
+
+export const FORMAT = "vcf-design";
+export const FORMAT_VERSION = 1;
+
+// Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
+export const SECTION_KEYS = {
+  project: ["customer", "site", "notes", "version"],
+  fleet: ["profile", "automation", "logs", "logReplicas", "opsNet", "opsNetNodes", "opsNetCollectors"],
+  policy: ["cpuRatio", "mgmtRatio", "ramRatio", "memReserve", "vsanMem", "memFill", "vmOverhead", "growth", "uplift", "activePct", "storageBasis"],
+  addons: ["vdefend", "ids", "mps", "ssp", "gwfw", "vlrOn", "vlrVms", "aviOn", "aviCtl", "aviSe", "aviSeSize", "aviSeOn", "hcxOn", "hcxNe", "hcxNeHa", "dsmOn"],
+}                                                               ;
+                                                    
+                                                                                       
+
+                                                                                                                                    
+export const DEFAULT_SCOPE               = { includeOff: true, templatesStorage: true, exVcls: true, patterns: "", groupBy: "file" };
+
+                                                                                                                   
+
+                         
+                        
+                        
+                                                                                  
+                                                                  
+                            
+                          
+                        
+                     
+                            
+ 
+
+const pick =                        (n   , s                         ) => Object.fromEntries(SECTION_KEYS[n].map(k => [k, s[k]]))              ;
+
+/** Split flat page settings into design sections. */
+export function sectionsFromSettings(s          ) {
+  const r = s                                      ;
+  return { project: pick("project", r)                     , fleet: pick("fleet", r), policy: pick("policy", r), addons: pick("addons", r) };
+}
+
+/** Flat page settings from a design (the engine's `s`). */
+export function settingsFromDesign(d        )           {
+  return { ...d.project, ...d.fleet, ...d.policy, ...d.addons }            ;
+}
+
+/** A new, empty design with today's defaults. */
+export function newDesign()         {
+  return {
+    format: FORMAT, formatVersion: FORMAT_VERSION,
+    ...sectionsFromSettings({ ...DEFAULTS, customer: "", site: "", notes: "" }),
+    workload: { groups: [], rvtoolsScope: { ...DEFAULT_SCOPE } },
+    hostTypes: [], topology: { instances: [] },
+  }          ;
+}
+
+/** Engine inputs for a design: exactly what the page passes to size(). A deep copy, so sizing never touches the design. */
+export function designToEngine(d        ) {
+  const c = structuredClone(d);
+  return {
+    s: { ...settingsFromDesign(c) },
+    hostTypes: c.hostTypes,
+    topo: c.topology,
+    groups: c.workload.groups.map(g => ({ ...g }))           ,
+    scope: c.workload.rvtoolsScope,
+  };
+}

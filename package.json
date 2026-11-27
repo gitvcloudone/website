@@ -3,11 +3,14 @@
   "private": true,
   "type": "module",
   "description": "VCF Design Studio engine and tests. The site itself is static; nothing here is served.",
-  "engines": { "node": ">=23.6" },
+  "engines": {
+    "node": ">=23.6"
+  },
   "scripts": {
     "test": "node --test \"engine/test/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "golden:record": "node engine/baseline/record.mjs"
+    "golden:record": "node engine/baseline/record.mjs",
+    "build": "node --no-warnings studio/build.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

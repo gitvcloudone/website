@@ -8,12 +8,14 @@ import { runCase, units } from "../baseline/harness.mjs";
 import { CASES } from "../fixtures/cases.mjs";
 import { fakeFiles, privateCases } from "../baseline/rvtools-files.mjs";
 import * as engine from "../src/index.ts";
+const built = await import("../../vcf-design-studio/app/engine/src/index.js");
 
 const gold = (dir: string, name: string) => JSON.parse(readFileSync(new URL(`../${dir}/${name}.json`, import.meta.url), "utf8"));
 
 const ENGINES: Record<string, () => any> = {
   "live page engine (vcf-sizing/index.html)": loadLegacy,
   "TypeScript engine (engine/src)": () => engine,
+  "browser build (vcf-design-studio/app)": () => built,
 };
 
 const fake = fakeFiles();

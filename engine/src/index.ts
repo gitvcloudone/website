@@ -16,3 +16,4 @@ export { MIGRATIONS, migrateDesign } from "./design/migrations.ts";
 export type { Design, DesignGroup, RvtoolsScope, SectionName } from "./design/document.ts";
 export type { LoadResult, LoadOptions } from "./design/load.ts";
 export type { Migration } from "./design/migrations.ts";
+export { clusterReason, summaryLine, hostsFor } from "./explain.ts";
