@@ -69,16 +69,13 @@ export function changes(d        , step        )           {
 
                                                                                           
 
-/** Identity choices that are still open (the provider, provisioning, roles and break-glass are the customer's, so there's no default for them). */
+/** Identity entries that can't work as they are (roles that lost their scope or have no group). What's not chosen yet is in the best-practice rules. */
 export function identityOpen(d        )           {
+  // provider, provisioning and role matrix: the SC-IDENTITY rule; break-glass holder and rotation: RC-BREAKGLASS
   const x = d.identity, out           = [];
-  if (!x.idp) out.push("Choose the identity provider.");
-  else if (!x.provisioning) out.push("Choose how users and groups are provisioned.");
-  if (!x.roles.length) out.push("Define who gets which access (role matrix).");
   const lost = x.roles.filter(r => !r.scope).length;
   if (lost) out.push(`${lost} role${lost > 1 ? "s" : ""} lost ${lost > 1 ? "their" : "its"} scope when an instance or domain was removed: choose again.`);
   if (x.roles.some(r => !r.group.trim())) out.push("A role has no identity provider group.");
-  if (!x.breakGlass.holder.trim()) out.push("Name who holds the break-glass accounts.");
   return out;
 }
 

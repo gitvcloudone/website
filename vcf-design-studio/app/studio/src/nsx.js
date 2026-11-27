@@ -30,7 +30,7 @@ const carriesWorkloads = (inst          , dm        ) => dm.kind === "wld" || in
 
 /** Connectivity choices still open, and settings that can't work as set. */
 export function nsxOpen(d        )           {
-  const out           = [], used = new Map                  ();
+  const out           = [];
   for (const { inst, dm } of allDomains(d)) {
     const v = effectiveNsx(d, dm), a = asns(d, dm), nm = d.topology.instances.length > 1 ? `${inst.name} / ${dm.name}` : dm.name;
     const nodes = dm.edges.reduce((s, e) => s + (e.nodes || 0), 0);
@@ -40,16 +40,15 @@ export function nsxOpen(d        )           {
     }
     if (!dm.edges.length) { if (carriesWorkloads(inst, dm)) out.push(`${nm}: centralized connectivity needs an NSX Edge cluster. Add one in Topology, or choose distributed connectivity.`); continue; }
     if (!a.localAsn) out.push(`${nm}: enter the Tier-0 BGP ASN.`);
-    else { if (!isPrivateAsn(a.localAsn)) out.push(`${nm}: Tier-0 ASN ${a.localAsn} isn't a private ASN (64512-65534 or 4200000000-4294967294).`); used.set(a.localAsn, [...(used.get(a.localAsn) || []), nm]); }
+    // a non-private or shared ASN: the SC-ASN rule
     if (!a.peerAsn) out.push(`${nm}: enter the physical network's BGP ASN.`);
     for (const e of dm.edges) {
-      if (e.nodes < NSX.edge.minNodes) out.push(`${nm} / ${e.name}: an edge cluster needs ${NSX.edge.minNodes} or more nodes.`);
+      // fewer than 2 nodes: the AV-EDGE-NODES rule
       if (v.t0Ha === "as" && e.nodes > NSX.centralized.asMaxNodes) out.push(`${nm} / ${e.name}: an active/standby Tier-0 runs on ${NSX.centralized.asMaxNodes} edge nodes; this edge cluster has ${e.nodes}.`);
       if (v.t0Ha === "aa" && e.nodes > NSX.centralized.aaMaxNodes) out.push(`${nm} / ${e.name}: an active/active Tier-0 scales to ${NSX.centralized.aaMaxNodes} edge nodes; this edge cluster has ${e.nodes}.`);
     }
-    if (v.tgwHa === "aa" && tgwNeedsStandby(d, dm)) out.push(`${nm}: the transit gateway must be active/standby for VCF Automation All Apps orgs and vSphere Supervisor.`);
+    // transit gateway active/active where standby is required: the AV-TGW-AS rule
   }
-  for (const [asn, where] of used) if (where.length > 1) out.push(`Tier-0 ASN ${asn} is used by ${where.join(", ")}: each Tier-0 needs its own ASN.`);
   return out;
 }
 

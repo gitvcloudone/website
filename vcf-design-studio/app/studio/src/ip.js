@@ -89,7 +89,8 @@ export function planNets(d        , r              )            {
 }
 
 // ---------- checks ----------
-                                                              
+/** A plan check: `code` says what kind, `key` which network (or networks) it is about. */
+                                                                                         
 export function planIssues(d        , r              )                                           {
   const nets = planNets(d, r), issues              = [], ok                                             = [];
   const label = (n         ) => `${n.name} (${n.where})`;
@@ -99,41 +100,41 @@ export function planIssues(d        , r              )                          
     if (!row.cidr || (n.kind === "vlan" && !row.vlan)) missing++;
     if (!row.cidr) continue;
     const s = parseCidr(row.cidr);
-    if (!s) { issues.push({ lvl: "crit", t: `${label(n)}: "${row.cidr}" isn't an IPv4 subnet (a.b.c.d/nn).` }); continue; }
-    if (s.hostBits) { issues.push({ lvl: "crit", t: `${label(n)}: ${row.cidr} has host bits set. Did you mean ${cidrText(s)}?` }); continue; }
+    if (!s) { issues.push({ code: "invalid", key: n.key, lvl: "crit", t: `${label(n)}: "${row.cidr}" isn't an IPv4 subnet (a.b.c.d/nn).` }); continue; }
+    if (s.hostBits) { issues.push({ code: "hostbits", key: n.key, lvl: "crit", t: `${label(n)}: ${row.cidr} has host bits set. Did you mean ${cidrText(s)}?` }); continue; }
     ok.push({ n, s, vlan: row.vlan });
-    if (n.kind === "block") { if (s.prefix > n.prefix) issues.push({ lvl: "warn", t: `${label(n)}: ${row.cidr} is smaller than the /${n.prefix} chosen in NSX & connectivity.` }); continue; }
+    if (n.kind === "block") { if (s.prefix > n.prefix) issues.push({ code: "block-small", key: n.key, lvl: "warn", t: `${label(n)}: ${row.cidr} is smaller than the /${n.prefix} chosen in NSX & connectivity.` }); continue; }
     const gw = row.gw ? ipNum(row.gw) : null;
-    if (!row.gw) issues.push({ lvl: "crit", t: `${label(n)}: enter the gateway.` });
-    else if (gw === null) issues.push({ lvl: "crit", t: `${label(n)}: gateway "${row.gw}" isn't an IPv4 address.` });
-    else if (gw <= s.net || gw >= s.net + sizeOf(s.prefix) - 1) issues.push({ lvl: "crit", t: `${label(n)}: gateway ${row.gw} isn't a usable address in ${row.cidr}.` });
-    if (n.fixed && s.prefix > n.prefix) issues.push({ lvl: "warn", t: `${label(n)}: ${row.cidr} is smaller than the recommended /${n.prefix}.` });
+    if (!row.gw) issues.push({ code: "gw-missing", key: n.key, lvl: "crit", t: `${label(n)}: enter the gateway.` });
+    else if (gw === null) issues.push({ code: "gw-invalid", key: n.key, lvl: "crit", t: `${label(n)}: gateway "${row.gw}" isn't an IPv4 address.` });
+    else if (gw <= s.net || gw >= s.net + sizeOf(s.prefix) - 1) issues.push({ code: "gw-outside", key: n.key, lvl: "crit", t: `${label(n)}: gateway ${row.gw} isn't a usable address in ${row.cidr}.` });
+    if (n.fixed && s.prefix > n.prefix) issues.push({ code: "fixed-small", key: n.key, lvl: "warn", t: `${label(n)}: ${row.cidr} is smaller than the recommended /${n.prefix}.` });
   }
   // a subnet entered on more than one network is shared: one VLAN, and room for all of them
   const bySubnet = new Map                   ();
   for (const x of ok) bySubnet.set(cidrText(x.s), [...(bySubnet.get(cidrText(x.s)) || []), x]);
   for (const [cidr, xs] of bySubnet) {
-    if (new Set(xs.map(x => x.vlan)).size > 1) issues.push({ lvl: "crit", t: `${cidr} is used by ${xs.map(x => label(x.n)).join(", ")} on different VLANs.` });
-    if (xs.some(x => x.n.kind === "block") && xs.length > 1) { issues.push({ lvl: "crit", t: `${cidr} is used by more than one network or block: ${xs.map(x => label(x.n)).join(", ")}.` }); continue; }
+    if (new Set(xs.map(x => x.vlan)).size > 1) issues.push({ code: "vlan-diff", key: xs[0].n.key, lvl: "crit", t: `${cidr} is used by ${xs.map(x => label(x.n)).join(", ")} on different VLANs.` });
+    if (xs.some(x => x.n.kind === "block") && xs.length > 1) { issues.push({ code: "block-shared", key: xs[0].n.key, lvl: "crit", t: `${cidr} is used by more than one network or block: ${xs.map(x => label(x.n)).join(", ")}.` }); continue; }
     if (xs[0].n.kind === "block") continue;
     const need = xs.reduce((a, x) => a + x.n.need, 0), usable = sizeOf(xs[0].s.prefix) - 3, who = xs.length > 1 ? `${cidr} (shared by ${xs.map(x => label(x.n)).join(", ")})` : `${label(xs[0].n)}: ${cidr}`;
-    if (usable < need) issues.push({ lvl: "crit", t: `${who} is too small: ${need} addresses needed, ${Math.max(0, usable)} usable after the gateway.` });
-    else if (!xs.some(x => x.n.fixed) && usable < need * IPPLAN.growth) issues.push({ lvl: "warn", t: `${who} has little room to grow (${need} of ${usable} usable addresses needed today). VCF can't change the mask later.` });
+    if (usable < need) issues.push({ code: "too-small", key: xs[0].n.key, lvl: "crit", t: `${who} is too small: ${need} addresses needed, ${Math.max(0, usable)} usable after the gateway.` });
+    else if (!xs.some(x => x.n.fixed) && usable < need * IPPLAN.growth) issues.push({ code: "growth", key: xs[0].n.key, lvl: "warn", t: `${who} has little room to grow (${need} of ${usable} usable addresses needed today). VCF can't change the mask later.` });
   }
   const subnets = [...bySubnet.values()].map(xs => xs[0]);
   for (let i = 0; i < subnets.length; i++) for (let j = i + 1; j < subnets.length; j++) if (overlaps(subnets[i].s, subnets[j].s))
-    issues.push({ lvl: "crit", t: `${cidrText(subnets[i].s)} (${label(subnets[i].n)}) overlaps ${cidrText(subnets[j].s)} (${label(subnets[j].n)}).` });
+    issues.push({ code: "overlap", key: subnets[i].n.key + "+" + subnets[j].n.key, lvl: "crit", t: `${cidrText(subnets[i].s)} (${label(subnets[i].n)}) overlaps ${cidrText(subnets[j].s)} (${label(subnets[j].n)}).` });
   for (const x of subnets) for (const res of IPPLAN.reserved) if (overlaps(x.s, parseCidr(res.cidr) ))
-    issues.push({ lvl: "crit", t: `${label(x.n)}: ${cidrText(x.s)} overlaps ${res.cidr}, reserved for ${res.use}.` });
+    issues.push({ code: "reserved", key: x.n.key, lvl: "crit", t: `${label(x.n)}: ${cidrText(x.s)} overlaps ${res.cidr}, reserved for ${res.use}.` });
   // one VLAN per subnet within an instance (VLANs can repeat at another site)
   for (const inst of d.topology.instances) {
     const byVlan = new Map                     ();
     for (const x of ok) if (x.vlan && x.n.inst === inst) byVlan.set(x.vlan, (byVlan.get(x.vlan) || new Set()).add(cidrText(x.s)));
-    for (const [v, s] of byVlan) if (s.size > 1) issues.push({ lvl: "crit", t: `${inst.name}: VLAN ${v} is used for different subnets (${[...s].join(", ")}).` });
+    for (const [v, s] of byVlan) if (s.size > 1) issues.push({ code: "vlan-dup", key: `${inst.id}:vlan${v}`, lvl: "crit", t: `${inst.name}: VLAN ${v} is used for different subnets (${[...s].join(", ")}).` });
     // design rule: host management (ESX) and the management VMs each on their own VLAN
     const vm = ok.find(x => x.n.inst === inst && x.n.key.endsWith(":vmmgmt"));
     for (const x of ok) if (vm && vm.vlan && x.n.inst === inst && x.n.key.endsWith(":esx") && x.vlan === vm.vlan)
-      issues.push({ lvl: "warn", t: `${label(x.n)} shares VLAN ${x.vlan} with VM management: host management and the management VMs each get their own VLAN.` });
+      issues.push({ code: "mgmt-vlan", key: x.n.key, lvl: "warn", t: `${label(x.n)} shares VLAN ${x.vlan} with VM management: host management and the management VMs each get their own VLAN.` });
   }
   return { issues, missing };
 }

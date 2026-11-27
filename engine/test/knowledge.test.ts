@@ -16,7 +16,9 @@ const dir = new URL("../knowledge/", import.meta.url);
 for (const f of readdirSync(dir).filter(f => f.endsWith(".json"))) test(`knowledge/${f}: every table has a source and a verified date`, () => {
   const j = JSON.parse(readFileSync(new URL(f, dir), "utf8"));
   assert.ok(j.about);
-  for (const [name, t] of Object.entries(j.tables as Record<string, { source: string; verified: string; data: unknown }>)) {
+  // the rules file is a list of rules, each with its own source and verified date
+  const tables = j.rules ? Object.fromEntries((j.rules as { id: string }[]).map(r => [r.id, { ...r, data: r }])) : j.tables;
+  for (const [name, t] of Object.entries(tables as Record<string, { source: string; verified: string; data: unknown }>)) {
     assert.ok(t.source, `${name}: source`);
     assert.match(t.verified, /^\d{4}-\d{2}-\d{2}$/, `${name}: verified`);
     assert.ok(t.data !== undefined, `${name}: data`);

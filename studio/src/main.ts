@@ -11,6 +11,7 @@ import { fieldOps, hostTypeOps, actionOps, identityOps } from "./edit.ts";
 import { netOps, nicsOps } from "./hostnet.ts";
 import { nsxOps } from "./nsx.ts";
 import { planOps, proposePlan } from "./ip.ts";
+import { evaluate, scorecard, deviationOps } from "./rules.ts";
 import { readExport, rebuild, SHEETS } from "./rvimport.ts";
 import { stepHtml, stateTag } from "./guided.ts";
 import { stepState, recommendOps, skipOps, reopenOps } from "./steps.ts";
@@ -75,6 +76,7 @@ function summaryHtml() {
     <p class="line">${esc(summaryLine(r))}</p>
     <div class="tiles">${tiles.map(([k, v]) => `<div class="tile"><span class="k">${k}</span><span class="big num">${v}</span></div>`).join("")}</div>
     ${r.clusters.length ? `<ul class="reasons">${r.clusters.slice(0, 8).map(c => `<li><b>${esc(c.c.name)}</b> ${esc(clusterReason(c))}</li>`).join("")}${r.clusters.length > 8 ? `<li class="hint">…and ${r.clusters.length - 8} more clusters</li>` : ""}</ul>` : ""}
+    ${(sc => `<p class="hint bp">Best practices: ${sc.reduce((a, p) => a + p.open, 0)} not met, ${sc.reduce((a, p) => a + p.accepted, 0)} accepted as deviations${sc.some(p => p.atRisk) ? ` · <span class="pill crit">At risk: ${esc(sc.filter(p => p.atRisk).map(p => p.label).join(", "))}</span>` : ""}. <a href="#/step/review">Scorecard</a></p>`)(scorecard(design, evaluate(design, r)))}
     ${crit.length || warn.length ? `<p class="hint">${crit.length ? `<span class="pill crit">${crit.length} to fix</span> ` : ""}${warn.length ? `<span class="pill warn">${warn.length} to check</span>` : ""}</p>
       <ul class="warns">${[...crit, ...warn].slice(0, 3).map(w => `<li class="${w.lvl}">${esc(w.t)}</li>`).join("")}</ul>` : ""}
   </section>`;
@@ -154,7 +156,7 @@ document.addEventListener("click", e => {
   }
 });
 // ---------- Expert view edits ----------
-type Edit = { t: "scope"; key: string } | { t: "role"; i: number; key: string } | { t: "net"; cid: string; key: "vds" | "nicGbps" | "mtu" | "tep" } | { t: "nics"; ht: string } | { t: "plan"; key: string; f: "vlan" | "cidr" | "gw" } | { t: "nsx"; did: string; key: "model" | "t0Ha" | "tgwHa" | "bfd" | "edgeTep" | "extPrefix" | "privPrefix" | "localAsn" | "peerAsn" } | { t: "sec"; sec: "project" | "policy" | "fleet" | "addons" | "identity" | "identity.breakGlass" | "network" | "plan"; key: string } | { t: "node"; id: string; key: string } | { t: "ht"; id: string; key: string } | { t: "grp"; i: number; sub?: "values" | "opts"; key: string };
+type Edit = { t: "scope"; key: string } | { t: "role"; i: number; key: string } | { t: "net"; cid: string; key: "vds" | "nicGbps" | "mtu" | "tep" } | { t: "nics"; ht: string } | { t: "dev"; key: string } | { t: "plan"; key: string; f: "vlan" | "cidr" | "gw" } | { t: "nsx"; did: string; key: "model" | "t0Ha" | "tgwHa" | "bfd" | "edgeTep" | "extPrefix" | "privPrefix" | "localAsn" | "peerAsn" } | { t: "sec"; sec: "project" | "policy" | "fleet" | "addons" | "identity" | "identity.breakGlass" | "network" | "plan"; key: string } | { t: "node"; id: string; key: string } | { t: "ht"; id: string; key: string } | { t: "grp"; i: number; sub?: "values" | "opts"; key: string };
 function editOps(e: Edit, v: unknown) {
   if (e.t === "scope") {   // a scope change rebuilds the RVTools groups in the same proposal
     const scope = { ...design.workload.rvtoolsScope, [e.key]: v }, rb = rebuild(design, rv.files, scope);
@@ -164,6 +166,7 @@ function editOps(e: Edit, v: unknown) {
   if (e.t === "sec" && e.sec === "identity") return identityOps(design, e.key, v);
   if (e.t === "sec") return [{ op: "set" as const, path: [...e.sec.split("."), e.key], value: v }];
   if (e.t === "net") return netOps(design, e.cid, e.key, e.key === "nicGbps" ? Number(v) : v);
+  if (e.t === "dev") return deviationOps(design, e.key, v);
   if (e.t === "plan") return planOps(design, e.key, e.f, v);
   if (e.t === "nsx") return nsxOps(design, e.did, e.key, v);
   if (e.t === "nics") return nicsOps(design, e.ht, Number(v));

@@ -11,6 +11,7 @@ import identity from "../knowledge/identity.json" with { type: "json" };
 import network from "../knowledge/network.json" with { type: "json" };
 import nsx from "../knowledge/nsx.json" with { type: "json" };
 import ipplan from "../knowledge/ipplan.json" with { type: "json" };
+import rules from "../knowledge/rules.json" with { type: "json" };
                                                                                    
 
                                                             
@@ -94,3 +95,9 @@ export const IPPLAN = {
   growth: ipplan.tables.sizing.data.growth,
   minPrefix: ipplan.tables.sizing.data.minPrefix,
 };
+
+// Best-practice rules: pillar, level, step, why, risk, source (checks in the studio, by id)
+                                                                                                               
+                                                                                                                                                                                                                  
+export const RULES = rules.rules          ;
+export const PILLARS = rules.pillars                          ;

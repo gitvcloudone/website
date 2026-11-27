@@ -90,7 +90,10 @@ function normalize(o     , opt                                       )          
       id => { const n = tid.remap.get(id); return n && domainIds.has(n) ? n : undefined; }),
     plan: planFrom(o.plan, id => { const n = tid.remap.get(id); return n && (scopes.has(n) || clusterIds.has(n)) ? n : undefined; }),
     // only known choices, keyed by step id (a design from a newer build may know more steps: keep those too)
-    decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v              )))                               } }          ;
+    decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v              )))                              ,
+      // accepted deviations: a reason is required; kept as saved (a deviation whose finding has gone simply no longer shows)
+      deviations: Object.fromEntries(Object.entries((o.decisions && o.decisions.deviations) || {}).filter(([k, v]) => /^[A-Z][A-Z0-9-]*@.+$/.test(k) && v && typeof (v       ).reason === "string" && (v       ).reason.trim())
+        .map(([k, v]) => [k, { reason: ((v       ).reason          ).trim() }])) } }          ;
   return { design, notes };
 }
 

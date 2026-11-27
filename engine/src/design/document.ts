@@ -5,7 +5,7 @@ import { DEFAULTS } from "../knowledge.ts";
 import type { Settings, HostType, Topology, Group } from "../types.ts";
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 7;
+export const FORMAT_VERSION = 8;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -26,7 +26,9 @@ export type DesignGroup = Pick<Group, "id" | "name" | "include" | "values" | "op
 /** Explicit choices on the skippable guided steps (format 3+). Whether a step is "decided" is worked out from its values. */
 export type StepChoice = "recommended" | "skipped";
 export const STEP_CHOICES: readonly StepChoice[] = ["recommended", "skipped"];
-export interface Decisions { steps: Record<string, StepChoice> }
+/** A best-practice deviation accepted with a reason, keyed "<rule id>@<target>" (format 8+). */
+export interface Deviation { reason: string }
+export interface Decisions { steps: Record<string, StepChoice>; deviations: Record<string, Deviation> }
 
 /** Identity & access (format 4+). "" = not decided yet. A role's scope is "fleet" or an instance / domain id; "" when that was removed. */
 export type Access = "admin" | "operator" | "readonly";
@@ -98,7 +100,7 @@ export function newDesign(): Design {
     identity: newIdentity(),
     network: newNetwork(),
     plan: newPlan(),
-    decisions: { steps: {} },
+    decisions: { steps: {}, deviations: {} },
   } as Design;
 }
 

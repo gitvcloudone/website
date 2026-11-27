@@ -8,6 +8,8 @@ import { FORMAT_VERSION } from "./document.js";
                                         
 
 export const MIGRATIONS                            = {
+  // 7 → 8: accepted best-practice deviations, none yet.
+  7: d => ({ ...d, decisions: { ...d.decisions, deviations: {} } }),
   // 6 → 7: the IP / VLAN plan, nothing entered yet.
   6: d => ({ ...d, plan: { base: "", vlanStart: 0, rows: {} } }),
   // 5 → 6: NSX connectivity per domain, all recommended.

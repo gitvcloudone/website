@@ -6,7 +6,7 @@ import { DEFAULTS } from "../knowledge.js";
                                                                        
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 7;
+export const FORMAT_VERSION = 8;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -27,7 +27,9 @@ export const DEFAULT_SCOPE               = { includeOff: true, templatesStorage:
 /** Explicit choices on the skippable guided steps (format 3+). Whether a step is "decided" is worked out from its values. */
                                                    
 export const STEP_CHOICES                        = ["recommended", "skipped"];
-                                                                
+/** A best-practice deviation accepted with a reason, keyed "<rule id>@<target>" (format 8+). */
+                                             
+                                                                                                       
 
 /** Identity & access (format 4+). "" = not decided yet. A role's scope is "fleet" or an instance / domain id; "" when that was removed. */
                                                        
@@ -99,7 +101,7 @@ export function newDesign()         {
     identity: newIdentity(),
     network: newNetwork(),
     plan: newPlan(),
-    decisions: { steps: {} },
+    decisions: { steps: {}, deviations: {} },
   }          ;
 }
 

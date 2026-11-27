@@ -45,9 +45,7 @@ export function hostsByCluster(r              ) {
 /** Host networking choices still open, and settings that can't work as set. */
 export function hostnetOpen(d        )           {
   const out           = [], n = d.network;
-  if (!n.domain.trim()) out.push("Enter the DNS domain.");
-  if (!n.dns.trim()) out.push("Enter the DNS servers.");
-  if (!n.ntp.trim()) out.push("Enter the NTP servers.");
+  // DNS domain, DNS and NTP servers: the MG-DNS-NTP best-practice rule (so a deviation can be accepted)
   for (const { c } of allClusters(d)) {
     const v = effective(d, c), need = NETWORK.vdsModels[v.vds].nics, have = nicsOf(d, c.hostType);
     if (have < need) out.push(`${c.name}: the ${v.vds === "storage" ? "storage separation" : "switch"} model needs ${need} NICs per host; its host type has ${have}.`);

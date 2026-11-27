@@ -189,7 +189,7 @@ test("a format 1 design opens in the current format with nothing changed: RVTool
   assert.equal(raw.formatVersion, 1);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
   assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
-  assert.deepStrictEqual(r.design.decisions, { steps: {} });
+  assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {} });
   assert.deepStrictEqual(r.design.workload.groups.map(g => [g.source, g.parsed]), [["rvtools", null], ["rvtools", null], ["manual", null]]);
   assert.deepStrictEqual(r.design.workload.groups.map(g => g.values), raw.workload.groups.map((g: { values: unknown }) => g.values));
   assert.ok(r.design.workload.groups.every(g => rvi.overridden(g).length === 0));
@@ -262,7 +262,7 @@ test("a format 2 design opens in the current format with no step choices", () =>
   const raw = JSON.parse(readText(new URL("../fixtures/designs/format-2.vcf-design.json", import.meta.url), "utf8"));
   assert.equal(raw.formatVersion, 2);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
-  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION); assert.deepStrictEqual(r.design.decisions, { steps: {} });
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION); assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {} });
   assert.equal(r.design.workload.groups[1].values.vms, raw.workload.groups[1].values.vms);
   assert.deepStrictEqual(rvi.overridden(r.design.workload.groups[1]), ["vms"], "format 2 parsed values kept");
   assert.equal(steps.stepState(r.design, "policy").state, "decided", "cpuRatio 5 is a decision");
@@ -342,7 +342,10 @@ test("identity: choices are checked against the knowledge file; the step reports
   d = must(d, steps.recommendOps(d, "identity"));
   let st = steps.stepState(d, "identity");
   assert.equal(st.state, "recommended"); assert.equal(d.identity.mode, "instance");
-  assert.deepStrictEqual(st.open, ["Choose the identity provider.", "Define who gets which access (role matrix).", "Name who holds the break-glass accounts."]);
+  const wh = (d0: engine.Design, id: string) => rules.evaluate(d0, store.sizeDesign(d0)).find(x => x.rule.id === id)!.findings.map(f => f.where);
+  assert.deepStrictEqual(st.open, [], "nothing broken; what's not chosen yet is in the rules");
+  assert.deepStrictEqual(wh(d, "SC-IDENTITY"), ["No identity provider", "No role matrix"]);
+  assert.deepStrictEqual(wh(d, "RC-BREAKGLASS"), ["No holder named", "No password rotation set"]);
   assert.ok(!store.propose(d, { source: "t", ops: [{ op: "set", path: ["identity", "idp"], value: "myidp" }] }).ok, "unknown provider refused");
   assert.ok(!store.propose(d, { source: "t", ops: [{ op: "set", path: ["identity", "provisioning"], value: "scim" }] }).ok, "provisioning needs a provider");
   d = must(d, edit.identityOps(d, "idp", "okta")); d = must(d, [{ op: "set", path: ["identity", "provisioning"], value: "jit" }]);
@@ -351,7 +354,7 @@ test("identity: choices are checked against the knowledge file; the step reports
   assert.equal(d.identity.provisioning, "", "switching to a directory clears JIT");
   d = must(d, [{ op: "set", path: ["identity", "provisioning"], value: "directory" }, { op: "set", path: ["identity", "breakGlass", "holder"], value: "On-call lead" }]);
   d = must(d, edit.actionOps(d, { act: "suggestRoles" }).ops);
-  assert.deepStrictEqual(steps.stepState(d, "identity").open, []);
+  assert.deepStrictEqual(wh(d, "SC-IDENTITY"), []); assert.deepStrictEqual(wh(d, "RC-BREAKGLASS"), ["No password rotation set"]);
   d = must(d, [{ op: "set", path: ["identity", "mode"], value: "embedded" }]);
   assert.equal(steps.stepState(d, "identity").state, "decided");
   assert.deepStrictEqual(steps.changes(d, "identity").map(c => c.value), ["Embedded in the management vCenter"]);
@@ -442,11 +445,13 @@ test("host networking: networks and address counts follow the switch model and t
     ["ESX management", 1, 1500, "Static", n], ["vMotion", 1, 9000, "Network pool", n], ["vSAN", 2, 9000, "Network pool", n], ["Host TEP (NSX overlay)", 1, 9000, "DHCPv4", 2 * n]]);
 });
 
-test("host networking: open items for DNS / NTP and for a switch model the hardware can't carry", () => {
+test("host networking: DNS / NTP (a best-practice rule) and open items for a switch model the hardware can't carry", () => {
   let d = caseDesign("multi-instance");
-  const c = hostnet.allClusters(d)[0].c;
-  assert.deepStrictEqual(hostnet.hostnetOpen(d), ["Enter the DNS domain.", "Enter the DNS servers.", "Enter the NTP servers."]);
+  const c = hostnet.allClusters(d)[0].c, wh = (d0: engine.Design, id: string) => rules.evaluate(d0, store.sizeDesign(d0)).find(x => x.rule.id === id)!.findings.map(f => f.where);
+  assert.deepStrictEqual(hostnet.hostnetOpen(d), []);
+  assert.deepStrictEqual(wh(d, "MG-DNS-NTP"), ["DNS domain not set", "DNS servers not set", "NTP servers not set"]);
   d = must(d, [{ op: "set", path: ["network", "domain"], value: "vcf.example.com" }, { op: "set", path: ["network", "dns"], value: "10.0.0.10" }, { op: "set", path: ["network", "ntp"], value: "10.0.0.10" }]);
+  assert.deepStrictEqual(wh(d, "MG-DNS-NTP"), []);
   d = must(d, hostnet.netOps(d, c.id, "vds", "storage"));
   assert.ok(hostnet.hostnetOpen(d).some(t => t.startsWith(`${c.name}: the storage separation model needs 4 NICs`)));
   assert.ok(steps.stepState(d, "hostnet").open!.length > 0);
@@ -503,20 +508,18 @@ test("NSX: centralized by default, distributed when chosen; transit gateway stan
 });
 
 test("NSX: open items for ASNs, edge node limits, transit gateway HA and edges a distributed domain doesn't need", () => {
-  let d = caseDesign("vdefend-atp");
+  let d = caseDesign("vdefend-atp"); const wh = (d0: engine.Design, id: string) => rules.evaluate(d0, store.sizeDesign(d0)).find(x => x.rule.id === id)!.findings.map(f => f.where);
   const m = dom(d, "Management"), w1 = dom(d, "WLD-01"), w2 = dom(d, "WLD-02");
   let open = nsx.nsxOpen(d);
   assert.ok(open.includes("WLD-01: enter the Tier-0 BGP ASN.") && open.includes("WLD-01: enter the physical network's BGP ASN."));
-  assert.ok(open.some(t => /^WLD-01 \/ .+: an edge cluster needs 2 or more nodes\.$/.test(t)), "the 1-node edge cluster");
+  assert.ok(wh(d, "AV-EDGE-NODES").some(t => /^WLD-01 \/ .+: 1 node$/.test(t)), "the 1-node edge cluster (a rule)");
   d = must(d, [...nsx.nsxOps(d, w1.id, "t0Ha", "as")]);
   assert.ok(nsx.nsxOpen(d).some(t => /an active\/standby Tier-0 runs on 2 edge nodes; this edge cluster has 4\./.test(t)));
   d = must(d, nsx.nsxOps(d, w1.id, "tgwHa", "aa"));
-  assert.ok(nsx.nsxOpen(d).includes("WLD-01: the transit gateway must be active/standby for VCF Automation All Apps orgs and vSphere Supervisor."));
+  assert.deepStrictEqual(wh(d, "AV-TGW-AS"), ["WLD-01: active/active"]);
   // ASNs: private, unique per Tier-0; a bad entry is refused, blank clears
   d = must(d, nsx.nsxOps(d, m.id, "localAsn", "65001")); d = must(d, nsx.nsxOps(d, w1.id, "localAsn", " 65001 ")); d = must(d, nsx.nsxOps(d, w2.id, "localAsn", "64000"));
-  open = nsx.nsxOpen(d);
-  assert.ok(open.includes("Tier-0 ASN 65001 is used by Management, WLD-01: each Tier-0 needs its own ASN."));
-  assert.ok(open.includes("WLD-02: Tier-0 ASN 64000 isn't a private ASN (64512-65534 or 4200000000-4294967294)."));
+  assert.deepStrictEqual(wh(d, "SC-ASN"), ["Management: ASN 65001 is used by another Tier-0", "WLD-01: ASN 65001 is used by another Tier-0", "WLD-02: ASN 64000 isn't private"]);
   assert.throws(() => nsx.nsxOps(d, w1.id, "peerAsn", "65a"), /whole number/);
   d = must(d, nsx.nsxOps(d, w2.id, "localAsn", ""));
   assert.equal(d.network.domains[w2.id], undefined);
@@ -679,4 +682,84 @@ test("plan: an additional instance has its own per-instance components and none 
   for (const l of per) assert.ok(labels(i2).includes(l), `additional instance: ${l}`);
   for (const l of fleet) assert.ok(!labels(i2).includes(l), `not in the additional instance: ${l}`);
   assert.ok(labels(i2).some(l => l.startsWith("vCenter")) && labels(i2).includes("NSX Manager cluster VIP"));
+});
+
+// ---------- best practices, scorecard, decisions and risks (5) ----------
+import * as rules from "../../studio/src/rules.ts";
+const ruleOf = (res: rules.RuleResult[], id: string) => res.find(x => x.rule.id === id)!;
+test("a format 7 design opens with no deviations and its plan kept", () => {
+  const raw = JSON.parse(readText(new URL("../fixtures/designs/format-7.vcf-design.json", import.meta.url), "utf8"));
+  assert.equal(raw.formatVersion, 7);
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
+  assert.deepStrictEqual(r.design.decisions.deviations, {}); assert.deepStrictEqual(r.design.plan, raw.plan);
+});
+
+test("rules: every rule has a check and every check a rule; Broadcom rules link TechDocs, the others say whose rule they are", () => {
+  assert.deepStrictEqual(engine.RULES.map(x => x.id).sort(), Object.keys(rules.CHECKS).sort());
+  for (const x of engine.RULES) {
+    assert.ok(engine.PILLARS[x.pillar] && ["required", "recommended", "consider"].includes(x.level) && x.why && x.risk, x.id);
+    assert.ok(STEPS.some(s => s.id === x.step) || x.step === "plan", `${x.id}: step ${x.step}`);
+    if (x.url) assert.match(x.url, /^https:\/\/techdocs\.broadcom\.com\//, x.id);
+    else assert.ok(["vCloudOne standard", "Studio rule"].includes(x.source), x.id);
+  }
+});
+
+test("rules: findings follow the design, deviations need a reason, and nothing changes sizing", () => {
+  let d = caseDesign("vdefend-atp"); const r0 = store.sizeDesign(d);
+  let res = rules.evaluate(d, r0);
+  const edge = ruleOf(res, "AV-EDGE-NODES");
+  assert.equal(edge.status, "open"); assert.equal(edge.findings.length, 1); assert.match(edge.findings[0].where, /^WLD-01 \/ .+: 1 node$/);
+  assert.equal(ruleOf(res, "MG-DNS-NTP").status, "open");
+  assert.equal(ruleOf(res, "MG-PLAN-CONSISTENT").status, "na", "no plan entered yet");
+  assert.equal(ruleOf(res, "AV-IDB-INSTANCE").status, "na", "mode not chosen");
+  assert.equal(ruleOf(res, "AV-TGW-AS").status, "met", "standby is recommended with VCF Automation");
+  let sc = rules.scorecard(d, res), av = sc.find(p => p.pillar === "availability")!;
+  assert.equal(av.atRisk, true, "a required rule is open");
+  // accept the single-node edge cluster with a reason: a decision and a high risk
+  const key = rules.devKey(edge.rule, edge.findings[0]);
+  d = must(d, rules.deviationOps(d, key, "  Lab edge, replaced in phase 2 "));
+  res = rules.evaluate(d, store.sizeDesign(d));
+  assert.equal(ruleOf(res, "AV-EDGE-NODES").status, "accepted");
+  assert.equal(rules.scorecard(d, res).find(p => p.pillar === "availability")!.atRisk, false);
+  const risks = rules.riskRegister(res);
+  assert.equal(risks.length, 1); assert.equal(risks[0].high, true); assert.equal(risks[0].reason, "Lab edge, replaced in phase 2");
+  assert.ok(rules.decisionRegister(d, res).some(x => x.kind === "deviation" && x.reason === "Lab edge, replaced in phase 2" && x.step === "NSX & connectivity"));
+  // an empty reason withdraws it
+  const back = must(d, rules.deviationOps(d, key, " "));
+  assert.deepStrictEqual(back.decisions.deviations, {}); assert.equal(ruleOf(rules.evaluate(back, r0), "AV-EDGE-NODES").status, "open");
+  // a skipped step leaves its pillars incomplete
+  d = must(d, steps.skipOps(d, "nsx"));
+  sc = rules.scorecard(d, rules.evaluate(d, r0));
+  for (const p of ["availability", "performance", "manageability", "security"]) assert.ok(sc.find(x => x.pillar === p)!.incomplete.includes("NSX & connectivity"), p);
+  assert.deepStrictEqual(store.sizeDesign(d), r0);
+});
+
+test("rules: cluster checks (host failure capacity, vSAN four hosts and rebuild reserve, memory tiering, hosts set by hand)", () => {
+  let d = caseDesign("vdefend-atp"); const r = store.sizeDesign(d);
+  const small = r.clusters.find(x => !x.c.clone && engine.isVsan(x.c) && x.total < 4);
+  const res = rules.evaluate(d, r);
+  assert.ok(small, "a 3-host vSAN cluster in the case"); assert.ok(ruleOf(res, "RC-VSAN-4").findings.some(f => f.target === small.c.id));
+  const big = r.clusters.find(x => !x.c.clone && engine.isVsan(x.c) && x.total >= 4 && x.c.topo !== "stretched")!;
+  assert.ok(big, "a vSAN cluster with 4+ hosts in the case");
+  d = must(d, [...edit.fieldOps(d, big.c.id, "rebuild", false), ...edit.fieldOps(d, big.c.id, "nPlus", 0)]);
+  const r2 = store.sizeDesign(d), res2 = rules.evaluate(d, r2), b2 = r2.clusters.find(x => x.c.id === big.c.id)!;
+  assert.ok(b2.total >= 4); assert.ok(ruleOf(res2, "RC-VSAN-RESERVE").findings.some(f => f.target === big.c.id));
+  assert.ok(ruleOf(res2, "AV-HA-N1").findings.some(f => f.target === big.c.id));
+  for (const x of r2.clusters.filter(x => !x.c.clone && x.limiter === "RAM" && !x.c.tierOn)) assert.ok(ruleOf(res2, "CO-TIERING").findings.some(f => f.target === x.c.id));
+  d = must(d, edit.fieldOps(d, big.c.id, "fixedHosts", b2.need * 3));
+  assert.ok(ruleOf(rules.evaluate(d, store.sizeDesign(d)), "CO-OVERSIZED").findings.some(f => f.target === big.c.id));
+});
+
+test("rules: the plan rules read the plan checks; deviations in a saved file need a reason and a rule-shaped key", () => {
+  let d = caseDesign("vdefend-atp"); const r = store.sizeDesign(d);
+  const c1 = dom(d, "WLD-01").clusters[0];
+  d = must(d, [...ip.planOps(d, `${c1.id}:esx`, "cidr", "10.0.0.0/28"), ...[]]);
+  const res = rules.evaluate(d, r), pc = ruleOf(res, "MG-PLAN-CONSISTENT");
+  assert.equal(pc.status, "open");
+  assert.ok(pc.findings.some(f => f.target === `too-small:${c1.id}:esx`) && pc.findings.some(f => f.target === `gw-missing:${c1.id}:esx`));
+  const raw = JSON.parse(engine.serializeDesign(d));
+  raw.decisions.deviations = { "AV-BFD@w1": { reason: "Switches lack BFD" }, "AV-BFD@w2": { reason: "  " }, "bad key": { reason: "x" }, "AV-T0-AA@w1": "no" };
+  const l = engine.loadDesign(raw); if (l.kind !== "design") throw new Error();
+  assert.deepStrictEqual(l.design.decisions.deviations, { "AV-BFD@w1": { reason: "Switches lack BFD" } });
 });

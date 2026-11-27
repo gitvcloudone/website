@@ -16,7 +16,7 @@ export { loadDesign, parseHostTypesFile, mergeHostTypes, serializeDesign } from 
 export { MIGRATIONS, migrateDesign } from "./design/migrations.js";
                                                                                                                   
 export { STEP_CHOICES, newIdentity, newNetwork, newPlan } from "./design/document.js";
-                                                                                          
+                                                                                                     
                                                                    
                                                                 
                                                         

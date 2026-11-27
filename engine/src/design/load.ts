@@ -89,7 +89,10 @@ function normalize(o: Obj, opt: LoadOptions & { keepSource: boolean }): { design
       id => { const n = tid.remap.get(id); return n && domainIds.has(n) ? n : undefined; }),
     plan: planFrom(o.plan, id => { const n = tid.remap.get(id); return n && (scopes.has(n) || clusterIds.has(n)) ? n : undefined; }),
     // only known choices, keyed by step id (a design from a newer build may know more steps: keep those too)
-    decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v as StepChoice))) as Record<string, StepChoice> } } as Design;
+    decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v as StepChoice))) as Record<string, StepChoice>,
+      // accepted deviations: a reason is required; kept as saved (a deviation whose finding has gone simply no longer shows)
+      deviations: Object.fromEntries(Object.entries((o.decisions && o.decisions.deviations) || {}).filter(([k, v]) => /^[A-Z][A-Z0-9-]*@.+$/.test(k) && v && typeof (v as Obj).reason === "string" && (v as Obj).reason.trim())
+        .map(([k, v]) => [k, { reason: ((v as Obj).reason as string).trim() }])) } } as Design;
   return { design, notes };
 }
 

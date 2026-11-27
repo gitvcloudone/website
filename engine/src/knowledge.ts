@@ -10,6 +10,7 @@ import identity from "../knowledge/identity.json" with { type: "json" };
 import network from "../knowledge/network.json" with { type: "json" };
 import nsx from "../knowledge/nsx.json" with { type: "json" };
 import ipplan from "../knowledge/ipplan.json" with { type: "json" };
+import rules from "../knowledge/rules.json" with { type: "json" };
 import type { Spec, Vendor, Profile, Settings, ClusterDefaults } from "./types.ts";
 
 interface S3 { vcpu: number; ramGB: number; diskGB: number }
@@ -93,3 +94,9 @@ export const IPPLAN = {
   growth: ipplan.tables.sizing.data.growth,
   minPrefix: ipplan.tables.sizing.data.minPrefix,
 };
+
+// Best-practice rules: pillar, level, step, why, risk, source (checks in the studio, by id)
+export type Pillar = "availability" | "manageability" | "performance" | "recoverability" | "security" | "cost";
+export interface Rule { id: string; pillar: Pillar; level: "required" | "recommended" | "consider"; step: string; title: string; why: string; risk: string; source: string; url: string | null; verified: string }
+export const RULES = rules.rules as Rule[];
+export const PILLARS = rules.pillars as Record<Pillar, string>;

@@ -12,6 +12,8 @@ import { sizeDesign } from "./store.js";
 import { allClusters, recommended, effective, networksOf, hostsByCluster, nicsOf } from "./hostnet.js";
 import { allDomains, recommendedNsx, effectiveNsx, asns, nsxNetworks } from "./nsx.js";
 import { planNets, planIssues, dnsRecords } from "./ip.js";
+import { evaluate, devKey } from "./rules.js";
+                                             
 import { overridden, estate } from "./rvimport.js";
                                                          
 
@@ -266,6 +268,21 @@ export function nsxHtml(d        ) {
   return cards ? `<div class="addons">${cards}</div><p class="hint">Edge clusters and their nodes are set in Topology. VLAN IDs and subnets come with the IP plan.</p>` : `<p class="hint">No domains yet. Add them in Topology.</p>`;
 }
 
+const LEVEL                         = { required: "Required", recommended: "Recommended", consider: "Consider" };
+const STATUS                         = { met: "Met", accepted: "Deviation accepted", open: "Not met", na: "Not applicable" };
+/** The best-practice rules for one or more steps: level badge, status, why and source, and for each place a rule isn't met, a reason box that accepts the deviation. */
+export function rulesBox(d        , r              , steps          , res               = evaluate(d, r)) {
+  const rs = res.filter(x => steps.includes(x.rule.step)); if (!rs.length) return "";
+  const li = (x            ) => {
+    const src = x.rule.url ? `<a href="${esc(x.rule.url)}" target="_blank" rel="noopener">${esc(x.rule.source)}</a>` : esc(x.rule.source);
+    const fs = x.findings.map(f => `<li><span>${esc(f.where)}</span><input type="text" value="${esc(f.reason || "")}" placeholder="Reason, to accept this as a design decision" data-edit="${attr({ t: "dev", key: devKey(x.rule, f) })}" data-type="text" aria-label="Reason for the deviation: ${esc(f.where)}"></li>`).join("");
+    return `<li class="rule st-${x.status}"><div class="rhead"><span class="lvl lvl-${x.rule.level}">${LEVEL[x.rule.level]}</span> <b>${esc(x.rule.title)}</b> <span class="rstat">${STATUS[x.status]}</span></div>
+      <p class="hint">${esc(x.rule.why)} <span class="src">Source: ${src}</span></p>${fs ? `<ul class="findings">${fs}</ul>` : ""}</li>`;
+  };
+  const order = { open: 0, accepted: 1, met: 2, na: 3 }                          ;
+  return `<div class="rules"><h4>Best practices</h4><ul>${[...rs].sort((a, b) => order[a.status] - order[b.status]).map(li).join("")}</ul></div>`;
+}
+
 /** The IP / VLAN plan (editable, with the proposer and its checks) and the DNS records the design needs. */
 export function planHtml(d        , r              ) {
   const nets = planNets(d, r), { issues, missing } = planIssues(d, r), recs = dnsRecords(d, r), multi = d.topology.instances.length > 1;
@@ -290,7 +307,8 @@ export function planHtml(d        , r              ) {
     ${issues.length ? `<ul class="warns">${[...crit, ...warn].map(i => `<li class="${i.lvl}">${esc(i.t)}</li>`).join("")}</ul>` : `<p class="hint">${missing ? "Nothing wrong in what's entered." : "No issues."}</p>`}
     <h4>DNS records</h4>
     <p class="hint">Each needs a forward (A) and reverse (PTR) record${d.network.domain ? ` in ${esc(d.network.domain)}` : ""}, with no capital letters. VCF management services, VCF Automation and the Identity Broker don't support .local domains. VCF services runtime nodes use the internal 198.18.0.0/15 block (change it at deployment if that range is in use). Every instance has its own vCenters, NSX Managers, SDDC Manager, Cloud Proxy, services runtime and VCF Automation; VCF Operations, the License Server and other fleet components are in the first instance only.</p>
-    ${byInst}`;
+    ${byInst}
+    ${rulesBox(d, r, ["plan"])}`;
 }
 
 export function addonsHtml(d        ) {
@@ -309,11 +327,11 @@ export function expertHtml(d        , r              , ui          )         {
     section("workload", "Workload", `${plural(d.workload.groups.length, "group")}${d.workload.groups.length ? ` · ${nf(t.vcpu)} vCPU · ${nf(t.vramGiB)} GiB vRAM` : ""}`, workloadHtml(d, ui), ui, "workload"),
     section("policy", "Sizing policy", `${d.policy.cpuRatio}:1 CPU · RAM ${d.policy.ramRatio}:1 · fill ${d.policy.memFill}%`, `<div class="grid">${fields(policyFields(), d.policy                                      , { t: "sec", sec: "policy" })}</div>`, ui, "policy"),
     section("fleet", "Fleet management", d.fleet.profile, `<div class="grid">${fields(fleetFields(d.fleet), d.fleet                                      , { t: "sec", sec: "fleet" })}</div>`, ui, "fleet"),
-    section("identity", "Identity & access", d.identity.mode ? (d.identity.mode === "instance" ? "Instance mode" : "Embedded mode") + (d.identity.idp ? " · " + IDENTITY.providers[d.identity.idp].label : "") : "not decided", identityHtml(d), ui, "identity"),
+    section("identity", "Identity & access", d.identity.mode ? (d.identity.mode === "instance" ? "Instance mode" : "Embedded mode") + (d.identity.idp ? " · " + IDENTITY.providers[d.identity.idp].label : "") : "not decided", identityHtml(d) + rulesBox(d, r, ["identity"]), ui, "identity"),
     section("hosts", "Host types", plural(d.hostTypes.length, "host type"), hostTypesHtml(d), ui, "hosts"),
-    section("topology", "Topology", `${plural(d.topology.instances.length, "instance")} · ${plural(nClu, "cluster")}`, topologyHtml(d, r, ui), ui, "topology"),
-    section("hostnet", "Host networking", d.network.domain || "DNS domain not set", hostnetHtml(d, r), ui, "hostnet"),
-    section("nsx", "NSX & connectivity", plural(Object.values(d.network.domains).filter(x => x.model === "distributed").length, "distributed domain"), nsxHtml(d), ui, "nsx"),
+    section("topology", "Topology", `${plural(d.topology.instances.length, "instance")} · ${plural(nClu, "cluster")}`, topologyHtml(d, r, ui) + rulesBox(d, r, ["topology", "storage"]), ui, "topology"),
+    section("hostnet", "Host networking", d.network.domain || "DNS domain not set", hostnetHtml(d, r) + rulesBox(d, r, ["hostnet"]), ui, "hostnet"),
+    section("nsx", "NSX & connectivity", plural(Object.values(d.network.domains).filter(x => x.model === "distributed").length, "distributed domain"), nsxHtml(d) + rulesBox(d, r, ["nsx"]), ui, "nsx"),
     section("plan", "IP / VLAN / DNS plan", (m => m ? `${plural(m, "network")} to fill` : "complete")(planIssues(d, r).missing), planHtml(d, r), ui, "plan"),
     section("addons", "Add-ons", addOns ? `${addOns} on` : "none", addonsHtml(d), ui, "addons"),
   ].join("");

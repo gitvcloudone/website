@@ -5,7 +5,8 @@ import { maxFor, tierMax } from "../../engine/src/index.ts";
 import type { Design, SizingResult } from "../../engine/src/index.ts";
 import { STEPS, stepById } from "./flow.ts";
 import { policyFields, fleetFields, clusterFields } from "./fields.ts";
-import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml, nsxHtml, planHtml } from "./expert.ts";
+import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml, nsxHtml, planHtml, rulesBox } from "./expert.ts";
+import { evaluate, scorecard, decisionRegister, riskRegister } from "./rules.ts";
 import type { ExpertUi } from "./expert.ts";
 import { stepState, changes, STORAGE_KEYS } from "./steps.ts";
 import type { StepState } from "./steps.ts";
@@ -46,12 +47,12 @@ function body(d: Design, r: SizingResult, ui: ExpertUi, id: string): string {
     case "workload": return workloadHtml(d, ui);
     case "policy": return `<div class="grid">${fields(policyFields(), d.policy as unknown as Record<string, unknown>, { t: "sec", sec: "policy" })}</div>`;
     case "fleet": return `<div class="grid">${fields(fleetFields(d.fleet), d.fleet as unknown as Record<string, unknown>, { t: "sec", sec: "fleet" })}</div>`;
-    case "identity": return identityHtml(d);
+    case "identity": return identityHtml(d) + rulesBox(d, r, ["identity"]);
     case "hosts": return hostTypesHtml(d);
-    case "topology": return topologyHtml(d, r, ui, STORAGE_KEYS) + `<p class="hint">vSAN policy, reserves and memory tiering for each cluster are in the next step, Cluster storage.</p>`;
-    case "storage": return storageHtml(d);
-    case "hostnet": return hostnetHtml(d, r);
-    case "nsx": return nsxHtml(d);
+    case "topology": return topologyHtml(d, r, ui, STORAGE_KEYS) + `<p class="hint">vSAN policy, reserves and memory tiering for each cluster are in the next step, Cluster storage.</p>` + rulesBox(d, r, ["topology"]);
+    case "storage": return storageHtml(d) + rulesBox(d, r, ["storage"]);
+    case "hostnet": return hostnetHtml(d, r) + rulesBox(d, r, ["hostnet"]);
+    case "nsx": return nsxHtml(d) + rulesBox(d, r, ["nsx"]);
     case "addons": return addonsHtml(d);
     default: return "";
   }
@@ -63,12 +64,24 @@ function reviewHtml(d: Design, r: SizingResult) {
     const detail = ch.length ? `<ul class="changes">${ch.map(c => `<li>${c.where ? `<b>${esc(c.where)}</b> ` : ""}${esc(c.label)}: ${esc(c.value)} <span class="hint">(recommended ${esc(c.def)})</span></li>`).join("")}</ul>` : `<span class="hint">${esc(st.note)}</span>`;
     return `<tr><td>${s.n}</td><td>${s.kind === "coming" ? esc(s.title) : `<a href="#/step/${s.id}">${esc(s.title)}</a>`}</td><td>${stateTag(st.state)}</td><td>${detail}</td></tr>`;
   }).join("");
+  const res = evaluate(d, r), score = scorecard(d, res), decs = decisionRegister(d, res), risks = riskRegister(res);
   const open = STEPS.flatMap(s => { const st = stepState(d, s.id);
     return [...(["todo", "skipped", "open"].includes(st.state) ? [{ s, t: st.note }] : []), ...(st.open || []).map(t => ({ s, t }))]; });
+  const ruleOpen = res.filter(x => x.status === "open").flatMap(x => x.findings.filter(f => !f.reason).map(f => ({ x, f })));
+  const stepLink = (id: string) => id === "plan" ? `<a href="#plan">IP / VLAN / DNS plan</a>` : `<a href="#/step/${id}">${esc(stepById(id)?.title || id)}</a>`;
+  const KIND: Record<string, string> = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", deviation: "Deviation accepted" };
   const crit = r.warnings.filter(w => w.lvl === "crit"), warn = r.warnings.filter(w => w.lvl === "warn");
   return `<div class="tablewrap"><table class="review"><thead><tr><th>#</th><th>Step</th><th>Status</th><th>Decisions and open items</th></tr></thead><tbody>${rows}</tbody></table></div>
     <h4>Open items</h4>
-    ${open.length ? `<ul>${open.map(o => `<li><a href="#/step/${o.s.id}">${esc(o.s.title)}</a>: ${esc(o.t)}</li>`).join("")}</ul>` : `<p class="hint">None.</p>`}
+    ${open.length || ruleOpen.length ? `<ul>${open.map(o => `<li><a href="#/step/${o.s.id}">${esc(o.s.title)}</a>: ${esc(o.t)}</li>`).join("")}${ruleOpen.map(o => `<li>${stepLink(o.x.rule.step)}: <span class="lvl lvl-${o.x.rule.level}">${o.x.rule.level === "required" ? "Required" : o.x.rule.level === "recommended" ? "Recommended" : "Consider"}</span> ${esc(o.x.rule.title)}: ${esc(o.f.where)}. Change the design, or accept it with a reason.</li>`).join("")}</ul>` : `<p class="hint">None.</p>`}
+    <h4>Best-practice scorecard</h4>
+    <div class="tablewrap"><table class="score"><thead><tr><th>Pillar</th><th class="n">Met</th><th class="n">Deviations accepted</th><th class="n">Not met</th><th>Status</th></tr></thead><tbody>
+      ${score.map(p => `<tr><td>${esc(p.label)}</td><td class="n num">${p.met} of ${p.applicable}</td><td class="n num">${p.accepted}</td><td class="n num">${p.open}</td><td>${p.atRisk ? `<span class="pill crit">At risk</span> ` : ""}${p.incomplete.length ? `<span class="pill warn">Incomplete: ${esc(p.incomplete.join(", "))} skipped</span>` : ""}${!p.atRisk && !p.incomplete.length ? (p.open ? "Open items" : p.applicable ? "Good" : "Nothing to check yet") : ""}</td></tr>`).join("")}
+    </tbody></table></div>
+    <h4>Design decisions</h4>
+    ${decs.length ? `<div class="tablewrap"><table class="decisions"><thead><tr><th>Step</th><th>Decision</th><th>Kind</th><th>Reason</th></tr></thead><tbody>${decs.map(x => `<tr><td>${esc(x.step)}</td><td>${esc(x.text)}</td><td>${KIND[x.kind]}</td><td>${esc(x.reason || "")}</td></tr>`).join("")}</tbody></table></div>` : `<p class="hint">None yet.</p>`}
+    <h4>Risks</h4>
+    ${risks.length ? `<div class="tablewrap"><table class="risks"><thead><tr><th>Risk</th><th>Where</th><th>Rule</th><th>Accepted because</th></tr></thead><tbody>${risks.map(x => `<tr class="${x.high ? "high" : ""}"><td>${x.high ? `<span class="pill crit">High</span> ` : ""}${esc(x.risk)}</td><td>${esc(x.where)}</td><td>${esc(x.rule.title)} <span class="hint">(${esc(x.rule.source)})</span></td><td>${esc(x.reason)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="hint">None: every deviation accepted with a reason becomes a risk here.</p>`}
     <h4>Sizing checks</h4>
     ${crit.length || warn.length ? `<ul class="warns">${[...crit, ...warn].map(w => `<li class="${w.lvl}">${esc(w.t)}</li>`).join("")}</ul>` : `<p class="hint">No issues.</p>`}
     <h3 id="plan">IP / VLAN / DNS plan</h3>
