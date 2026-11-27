@@ -273,7 +273,7 @@ test("required steps say what's missing; a filled design has them done", () => {
   assert.deepStrictEqual(["project", "workload", "hosts", "topology"].map(id => steps.stepState(n, id).state), ["todo", "todo", "todo", "todo"]);
   const d = caseDesign("multi-instance"); d.project.customer = "Acme";
   assert.deepStrictEqual(["project", "workload", "hosts", "topology"].map(id => steps.stepState(d, id).state), ["done", "done", "done", "done"]);
-  assert.equal(steps.stepState(d, "identity").state, "open"); assert.equal(steps.stepState(d, "nsx").state, "coming");
+  assert.equal(steps.stepState(d, "identity").state, "open"); assert.equal(steps.stepState(d, "nsx").state, "open");
 });
 
 test("skippable steps: open, then Skip / Use recommended are recorded; changed values make it a decision; Use recommended resets them", () => {
@@ -459,7 +459,7 @@ test("host networking: a saved file keeps only known values for clusters and hos
   const raw = { ...JSON.parse(engine.serializeDesign(d)), network: { domain: "x.example", dns: 5, ntp: "n", hostNics: { [h]: 4, nope: 4, [d.hostTypes[0].id + "x"]: 2 },
     clusters: { [c.id]: { vds: "storage", nicGbps: 33, mtu: 1200, tep: "pool", junk: 1 }, nope: { vds: "single" } } } };
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
-  assert.deepStrictEqual(r.design.network, { domain: "x.example", dns: "", ntp: "n", hostNics: { [h]: 4 }, clusters: { [c.id]: { vds: "storage", tep: "pool" } } });
+  assert.deepStrictEqual(r.design.network, { domain: "x.example", dns: "", ntp: "n", hostNics: { [h]: 4 }, clusters: { [c.id]: { vds: "storage", tep: "pool" } }, domains: {} });
   // deleting a cluster drops its values
   const dm = r.design.topology.instances[0].wlds[0];
   const add = edit.actionOps(r.design, { act: "addClu", id: dm.id });
@@ -472,5 +472,85 @@ test("host networking: a saved file keeps only known values for clusters and hos
 
 test("the network knowledge file has a source, a link and a verified date for each table", () => {
   const k = JSON.parse(readText(new URL("../knowledge/network.json", import.meta.url), "utf8"));
+  for (const [name, t] of Object.entries(k.tables) as [string, { source: string; url: string; verified: string }][]) assert.ok(t.source && /^https:\/\/techdocs\.broadcom\.com\//.test(t.url) && /^\d{4}-\d\d-\d\d$/.test(t.verified), name);
+});
+
+// ---------- NSX & connectivity (4c) ----------
+import * as nsx from "../../studio/src/nsx.ts";
+const dom = (d: engine.Design, name: string) => nsx.allDomains(d).find(x => x.dm.name === name)!.dm;
+test("a format 5 design opens with NSX connectivity at the recommendation and its host networking kept", () => {
+  const raw = JSON.parse(readText(new URL("../fixtures/designs/format-5.vcf-design.json", import.meta.url), "utf8"));
+  assert.equal(raw.formatVersion, 5);
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
+  assert.deepStrictEqual(r.design.network, { ...raw.network, domains: {} });
+  assert.equal(steps.stepState(r.design, "nsx").state, "open");
+});
+
+test("NSX: centralized by default, distributed when chosen; transit gateway standby follows VCF Automation and Supervisor", () => {
+  let d = caseDesign("vdefend-atp");
+  const w1 = dom(d, "WLD-01");
+  assert.equal(d.fleet.automation, true);
+  assert.deepStrictEqual(nsx.recommendedNsx(d, w1), { model: "centralized", t0Ha: "aa", tgwHa: "as", bfd: true, edgeTep: "separate", extPrefix: 24, privPrefix: 23 });
+  d = must(d, [{ op: "set", path: ["fleet", "automation"], value: false }]);
+  assert.equal(nsx.recommendedNsx(d, dom(d, "WLD-01")).tgwHa, "aa");
+  d = must(d, nsx.nsxOps(d, w1.id, "model", "distributed"));
+  assert.deepStrictEqual(d.network.domains[w1.id], { model: "distributed" });
+  assert.deepStrictEqual(steps.changes(d, "nsx").map(c => [c.where, c.value]), [["WLD-01", "Distributed VLAN (no edges required)"]]);
+  assert.equal(steps.stepState(d, "nsx").state, "decided");
+  d = must(d, nsx.nsxOps(d, w1.id, "model", "centralized"));
+  assert.deepStrictEqual(d.network.domains, {}, "a recommendation is never stored");
+});
+
+test("NSX: open items for ASNs, edge node limits, transit gateway HA and edges a distributed domain doesn't need", () => {
+  let d = caseDesign("vdefend-atp");
+  const m = dom(d, "Management"), w1 = dom(d, "WLD-01"), w2 = dom(d, "WLD-02");
+  let open = nsx.nsxOpen(d);
+  assert.ok(open.includes("WLD-01: enter the Tier-0 BGP ASN.") && open.includes("WLD-01: enter the physical network's BGP ASN."));
+  assert.ok(open.some(t => /^WLD-01 \/ .+: an edge cluster needs 2 or more nodes\.$/.test(t)), "the 1-node edge cluster");
+  d = must(d, [...nsx.nsxOps(d, w1.id, "t0Ha", "as")]);
+  assert.ok(nsx.nsxOpen(d).some(t => /an active\/standby Tier-0 runs on 2 edge nodes; this edge cluster has 4\./.test(t)));
+  d = must(d, nsx.nsxOps(d, w1.id, "tgwHa", "aa"));
+  assert.ok(nsx.nsxOpen(d).includes("WLD-01: the transit gateway must be active/standby for VCF Automation All Apps orgs and vSphere Supervisor."));
+  // ASNs: private, unique per Tier-0; a bad entry is refused, blank clears
+  d = must(d, nsx.nsxOps(d, m.id, "localAsn", "65001")); d = must(d, nsx.nsxOps(d, w1.id, "localAsn", " 65001 ")); d = must(d, nsx.nsxOps(d, w2.id, "localAsn", "64000"));
+  open = nsx.nsxOpen(d);
+  assert.ok(open.includes("Tier-0 ASN 65001 is used by Management, WLD-01: each Tier-0 needs its own ASN."));
+  assert.ok(open.includes("WLD-02: Tier-0 ASN 64000 isn't a private ASN (64512-65534 or 4200000000-4294967294)."));
+  assert.throws(() => nsx.nsxOps(d, w1.id, "peerAsn", "65a"), /whole number/);
+  d = must(d, nsx.nsxOps(d, w2.id, "localAsn", ""));
+  assert.equal(d.network.domains[w2.id], undefined);
+  // distributed with edges: kept, flagged
+  d = must(d, nsx.nsxOps(d, w2.id, "model", "distributed"));
+  assert.ok(nsx.nsxOpen(d).includes("WLD-02: distributed connectivity doesn't need its 2 edge nodes unless you need NAT or other stateful north/south services. Remove them in Topology if not."));
+  assert.equal(dom(d, "WLD-02").edges.length, 1, "edges are never removed by the tool");
+  // Use recommended keeps the ASNs
+  d = must(d, steps.recommendOps(d, "nsx"));
+  assert.deepStrictEqual(d.network.domains, { [m.id]: { localAsn: 65001 }, [w1.id]: { localAsn: 65001 } });
+  assert.equal(steps.stepState(d, "nsx").state, "recommended");
+});
+
+test("NSX: networks and blocks per domain; sizing never changes", () => {
+  const d0 = caseDesign("vdefend-atp"), r0 = store.sizeDesign(d0), w1 = dom(d0, "WLD-01");
+  assert.deepStrictEqual(nsx.nsxNetworks(d0, w1), [
+    { net: "Edge TEP (own VLAN), MTU 9000", size: "IP pool", ips: "14" },
+    { net: "Tier-0 peering VLAN A", size: "/28 or larger", ips: "" }, { net: "Tier-0 peering VLAN B", size: "/28 or larger", ips: "" },
+    { net: "VPC external IP block (enterprise routable)", size: "/24", ips: "" }]);
+  let d = must(d0, [...nsx.nsxOps(d0, w1.id, "model", "distributed")]);
+  d = must(d, [...nsx.nsxOps(d, w1.id, "localAsn", "65010"), ...[]]);
+  assert.deepStrictEqual(nsx.nsxNetworks(d, dom(d, "WLD-01")).map(x => x.net), ["Edge TEP (own VLAN), MTU 9000", "VPC external IP block (from the external VLAN CIDR)", "Private transit gateway IP block (not routed)"]);
+  assert.deepStrictEqual(store.sizeDesign(d), r0);
+});
+
+test("NSX: a saved file keeps only known values for domains in the design", () => {
+  const d = caseDesign("vdefend-atp"), w1 = dom(d, "WLD-01");
+  const raw = { ...JSON.parse(engine.serializeDesign(d)) };
+  raw.network.domains = { [w1.id]: { model: "flat", t0Ha: "as", tgwHa: "x", bfd: "yes", edgeTep: "shared", extPrefix: 40, privPrefix: 22, localAsn: 65001.5, peerAsn: 65000 }, nope: { model: "distributed" } };
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.deepStrictEqual(r.design.network.domains, { [w1.id]: { t0Ha: "as", edgeTep: "shared", privPrefix: 22, peerAsn: 65000 } });
+});
+
+test("the NSX knowledge file has a source, a link and a verified date for each table", () => {
+  const k = JSON.parse(readText(new URL("../knowledge/nsx.json", import.meta.url), "utf8"));
   for (const [name, t] of Object.entries(k.tables) as [string, { source: string; url: string; verified: string }][]) assert.ok(t.source && /^https:\/\/techdocs\.broadcom\.com\//.test(t.url) && /^\d{4}-\d\d-\d\d$/.test(t.verified), name);
 });

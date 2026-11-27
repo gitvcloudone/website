@@ -3,13 +3,13 @@
 // VCF Sizing page (v1, also what its autosave keeps in localStorage "vcfSizer.session"), and
 // host-types files. Settings are normalised exactly as the page's applySettings/loadTopo do, except
 // that ids from the file are kept (a new id is given only when one is missing or already used).
-import { DEFAULTS, CLUSTER_DEFAULTS, PROFILES, IDENTITY, NETWORK } from "../knowledge.js";
+import { DEFAULTS, CLUSTER_DEFAULTS, PROFILES, IDENTITY, NETWORK, NSX } from "../knowledge.js";
 import { fixHw } from "../hardware.js";
                                                                                        
 import { FORMAT, FORMAT_VERSION, DEFAULT_SCOPE, sectionsFromSettings, settingsFromDesign } from "./document.js";
                                                                                    
 import { STEP_CHOICES, newIdentity, newNetwork } from "./document.js";
-                                                                           
+                                                                                      
 import { migrateDesign } from "./migrations.js";
 
                                
@@ -78,6 +78,7 @@ function normalize(o     , opt                                       )          
     opts: { ...newOpts(), ...(g.opts || {}), place: (g.opts && g.opts.place && tid.remap.get(g.opts.place)) || "auto", drTo: (g.opts && g.opts.drTo && tid.remap.get(g.opts.drTo)) || "" }, meta: g.meta || null }));
 
   const clusterIds = new Set(instances.flatMap(i => [i.mgmt, ...i.wlds].flatMap(d => d.clusters.map(c => c.id))));
+  const domainIds = new Set(instances.flatMap(i => [i.mgmt.id, ...i.wlds.map(w => w.id)]));
   const scopes = new Set(instances.flatMap(i => [i.id, i.mgmt.id, ...i.wlds.map(w => w.id)]));
   const notes           = [];
   if (osa) notes.push(`${osa} vSAN OSA cluster${osa > 1 ? "s were" : " was"} switched to vSAN ESA.`);
@@ -85,7 +86,8 @@ function normalize(o     , opt                                       )          
   const design         = { format: FORMAT, formatVersion: FORMAT_VERSION, ...sectionsFromSettings(S),
     workload: { groups, rvtoolsScope }, hostTypes, topology: { instances },
     identity: identityFrom(o.identity, (id         ) => { const n = tid.remap.get(id); return n && scopes.has(n) ? n : undefined; }),
-    network: networkFrom(o.network, id => { const n = tid.remap.get(id); return n && clusterIds.has(n) ? n : undefined; }, id => { const n = hid.remap.get(id); return n && hostTypes.some(h => h.id === n) ? n : undefined; }),
+    network: networkFrom(o.network, id => { const n = tid.remap.get(id); return n && clusterIds.has(n) ? n : undefined; }, id => { const n = hid.remap.get(id); return n && hostTypes.some(h => h.id === n) ? n : undefined; },
+      id => { const n = tid.remap.get(id); return n && domainIds.has(n) ? n : undefined; }),
     // only known choices, keyed by step id (a design from a newer build may know more steps: keep those too)
     decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v              )))                               } }          ;
   return { design, notes };
@@ -109,7 +111,7 @@ function identityFrom(x                 , remap                                 
 
 const int = (v         , lo        , hi        ) => (typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi ? v : undefined);
 /** Host networking, keeping only known choices and values in range, for clusters and host types that are in the design. */
-function networkFrom(x                 , cluster                                     , ht                                     )          {
+function networkFrom(x                 , cluster                                     , ht                                     , domain                                     )          {
   const out = newNetwork(); if (!x || typeof x !== "object") return out;
   out.domain = str(x.domain); out.dns = str(x.dns); out.ntp = str(x.ntp);
   for (const [k, v] of Object.entries(x.hostNics || {})) { const id = ht(k), n = int(v, 2, 8); if (id && n) out.hostNics[id] = n; }
@@ -121,6 +123,17 @@ function networkFrom(x                 , cluster                                
     const m = int(c.mtu, NETWORK.mtu.overlayMin, NETWORK.mtu.max); if (m) n.mtu = m;
     if (["pool", "list", "dhcp"].includes(c.tep)) n.tep = c.tep;
     if (Object.keys(n).length) out.clusters[id] = n;
+  }
+  for (const [k, v] of Object.entries(x.domains || {})) {
+    const id = domain(k); if (!id || !v || typeof v !== "object") continue;
+    const c = v       , n            = {};
+    if (c.model in NSX.models) n.model = c.model;
+    for (const h of ["t0Ha", "tgwHa"]         ) if (c[h] === "aa" || c[h] === "as") n[h] = c[h];
+    if (typeof c.bfd === "boolean") n.bfd = c.bfd;
+    if (c.edgeTep === "separate" || c.edgeTep === "shared") n.edgeTep = c.edgeTep;
+    for (const p of ["extPrefix", "privPrefix"]         ) { const v = int(c[p], 8, 30); if (v) n[p] = v; }
+    for (const a of ["localAsn", "peerAsn"]         ) { const v = int(c[a], 1, 4294967295); if (v) n[a] = v; }
+    if (Object.keys(n).length) out.domains[id] = n;
   }
   return out;
 }

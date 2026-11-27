@@ -1,7 +1,7 @@
 // Field definitions: label, input type, choices, and a one-line "why" for each setting. The Expert view
 // renders from these, and the guided steps (3c) will reuse them. No DOM here.
 // The "why" texts are the VCF Sizing page's own tips (POLICY_TIPS and the cluster tips), shortened where they were long.
-import { DEFAULTS, CLUSTER_DEFAULTS, IDENTITY, NETWORK, PROFILES, VCENTER, NSXMGR, EDGE, SUPERVISOR, POL, VENDORS, NVME_TB, ramOptions } from "../../engine/src/index.ts";
+import { DEFAULTS, CLUSTER_DEFAULTS, IDENTITY, NETWORK, NSX, PROFILES, VCENTER, NSXMGR, EDGE, SUPERVISOR, POL, VENDORS, NVME_TB, ramOptions } from "../../engine/src/index.ts";
 import type { Design, Cluster, HostType, Settings } from "../../engine/src/index.ts";
 
 export type Choice = [value: string | number, label: string, disabled?: boolean];
@@ -211,5 +211,30 @@ export function clusterNetFields(rec: { vds: string; nicGbps: number; mtu: numbe
       why: `For vMotion, vSAN and host TEPs. Broadcom recommends 9000. NSX overlay needs at least 1600, and 1700 is recommended to allow for Geneve header growth; physical switch ports must be at least this. ESX management stays at 1500.` },
     { key: "tep", label: "Host TEP addressing", type: "select", choices: (["pool", "list", "dhcp"] as const).map(k => [k, NETWORK.methods[k]] as Choice),
       why: `One TEP address per active uplink of the NSX switch per host (${NETWORK.tepPerHost} here).${r(`${NETWORK.methods[rec.tep].toLowerCase()}, which avoids depending on a DHCP server`)}` },
+  ];
+}
+
+// ---------- NSX connectivity (VCF 9.1+) ----------
+const HA: Choice[] = [["aa", "Active/active"], ["as", "Active/standby"]];
+export function nsxFields(rec: { tgwHa: string }, model: string, hasEdges: boolean): Field[] {
+  const c = model === "centralized";
+  return [
+    { key: "model", label: "Connectivity model", type: "select", choices: Object.entries(NSX.models).map(([k, m]) => [k, m.label] as Choice),
+      why: `Centralized: ${NSX.models.centralized.use} Distributed VLAN: ${NSX.models.distributed.use}` },
+    { key: "t0Ha", label: "Tier-0 HA mode", type: "select", choices: HA, on: c,
+      why: `Active/active is Broadcom's recommendation and scales to ${NSX.centralized.aaMaxNodes} edge nodes. Only active/standby supports stateful services on the Tier-0, and then it runs on ${NSX.centralized.asMaxNodes} edge nodes.` },
+    { key: "tgwHa", label: "Transit gateway HA mode", type: "select", choices: HA, on: c,
+      why: `Active/standby is required for VCF Automation All Apps orgs and vSphere Supervisor. Recommended here: ${rec.tgwHa === "as" ? "active/standby, as one of them is in this design" : "active/active, as neither is in this design"}.` },
+    { key: "localAsn", label: "Tier-0 BGP ASN", type: "text", placeholder: "e.g. 65001", on: c && hasEdges,
+      why: "A unique private ASN for the Tier-0 gateway (64512-65534, or 4200000000-4294967294)." },
+    { key: "peerAsn", label: "Physical network BGP ASN", type: "text", placeholder: "e.g. 65000", on: c && hasEdges,
+      why: "Each edge node peers with two physical switches, which must be BGP capable, over two peering VLANs." },
+    { key: "bfd", label: "BFD with the physical switches", type: "bool", on: c && hasEdges, why: "Broadcom recommends BFD for fast failure detection, with the default BGP timers (60/180 seconds)." },
+    { key: "edgeTep", label: "Edge TEP VLAN", type: "select", choices: [["separate", "Separate from host TEPs"], ["shared", "Shared with host TEPs"]], on: hasEdges,
+      why: "Broadcom recommends separate TEP VLANs for edges and ESX hosts. Edge TEP MTU must match the distributed switch MTU." },
+    { key: "extPrefix", label: "VPC external IP block", type: "select", choices: [16, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28].map(n => [n, `/${n}`] as Choice),
+      why: c ? "Enterprise-wide routable addresses for VPC external access; /24 or larger is preferred." : "Routable addresses from the external VLAN CIDR, excluding the physical devices' addresses." },
+    { key: "privPrefix", label: "Private transit gateway IP block", type: "select", choices: [16, 18, 20, 21, 22, 23, 24, 25, 26].map(n => [n, `/${n}`] as Choice), on: !c,
+      why: "Non-routable addresses for traffic between VPCs; /23 or larger is preferred." },
   ];
 }

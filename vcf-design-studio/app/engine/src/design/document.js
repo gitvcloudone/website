@@ -6,7 +6,7 @@ import { DEFAULTS } from "../knowledge.js";
                                                                        
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 5;
+export const FORMAT_VERSION = 6;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -40,13 +40,20 @@ export const newIdentity = ()           => ({ mode: "", idp: "", provisioning: "
 
 /** Host networking (format 5+). Per-cluster values are stored only where they differ from the recommendation. */
                                                                                           
+/** A domain's NSX connectivity (format 6+): recommended values stored only when changed; ASNs (0 = not entered) when entered. */
+                            
+                                                                                                          
+                                                                               
+ 
                           
                                            
                                                                                  
                                    
                                        
+                                      
+                                     
  
-export const newNetwork = ()          => ({ domain: "", dns: "", ntp: "", hostNics: {}, clusters: {} });
+export const newNetwork = ()          => ({ domain: "", dns: "", ntp: "", hostNics: {}, clusters: {}, domains: {} });
 
                          
                         

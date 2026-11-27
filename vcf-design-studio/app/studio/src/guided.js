@@ -6,7 +6,7 @@ import { maxFor, tierMax } from "../../engine/src/index.js";
                                                                       
 import { STEPS, stepById } from "./flow.js";
 import { policyFields, fleetFields, clusterFields } from "./fields.js";
-import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml } from "./expert.js";
+import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml, nsxHtml } from "./expert.js";
                                             
 import { stepState, changes, STORAGE_KEYS } from "./steps.js";
                                             
@@ -52,6 +52,7 @@ function body(d        , r              , ui          , id        )         {
     case "topology": return topologyHtml(d, r, ui, STORAGE_KEYS) + `<p class="hint">vSAN policy, reserves and memory tiering for each cluster are in the next step, Cluster storage.</p>`;
     case "storage": return storageHtml(d);
     case "hostnet": return hostnetHtml(d, r);
+    case "nsx": return nsxHtml(d);
     case "addons": return addonsHtml(d);
     default: return "";
   }

@@ -9,6 +9,7 @@ import vsan from "../knowledge/vsan.json" with { type: "json" };
 import defaults from "../knowledge/defaults.json" with { type: "json" };
 import identity from "../knowledge/identity.json" with { type: "json" };
 import network from "../knowledge/network.json" with { type: "json" };
+import nsx from "../knowledge/nsx.json" with { type: "json" };
                                                                                    
 
                                                             
@@ -74,4 +75,12 @@ export const NETWORK = {
   methods: network.tables.addressing.data.methods                          ,
   tepPerHost: network.tables.addressing.data.tepPerHost,
   defaults: network.tables.studioDefaults.data,
+};
+
+// NSX workload connectivity (VCF 9.1+): models, Tier-0 / transit gateway, peering, edge TEPs, VPC IP blocks
+export const NSX = {
+  models: nsx.tables.models.data                                                                                  ,
+  centralized: nsx.tables.centralized.data,
+  distributed: nsx.tables.distributed.data,
+  edge: nsx.tables.edgeNodes.data,
 };

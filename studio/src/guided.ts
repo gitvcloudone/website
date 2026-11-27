@@ -5,7 +5,7 @@ import { maxFor, tierMax } from "../../engine/src/index.ts";
 import type { Design, SizingResult } from "../../engine/src/index.ts";
 import { STEPS, stepById } from "./flow.ts";
 import { policyFields, fleetFields, clusterFields } from "./fields.ts";
-import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml } from "./expert.ts";
+import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml, nsxHtml } from "./expert.ts";
 import type { ExpertUi } from "./expert.ts";
 import { stepState, changes, STORAGE_KEYS } from "./steps.ts";
 import type { StepState } from "./steps.ts";
@@ -51,6 +51,7 @@ function body(d: Design, r: SizingResult, ui: ExpertUi, id: string): string {
     case "topology": return topologyHtml(d, r, ui, STORAGE_KEYS) + `<p class="hint">vSAN policy, reserves and memory tiering for each cluster are in the next step, Cluster storage.</p>`;
     case "storage": return storageHtml(d);
     case "hostnet": return hostnetHtml(d, r);
+    case "nsx": return nsxHtml(d);
     case "addons": return addonsHtml(d);
     default: return "";
   }

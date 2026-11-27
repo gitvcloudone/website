@@ -5,7 +5,7 @@ import { DEFAULTS } from "../knowledge.ts";
 import type { Settings, HostType, Topology, Group } from "../types.ts";
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 5;
+export const FORMAT_VERSION = 6;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -39,13 +39,20 @@ export const newIdentity = (): Identity => ({ mode: "", idp: "", provisioning: "
 
 /** Host networking (format 5+). Per-cluster values are stored only where they differ from the recommendation. */
 export interface ClusterNet { vds?: string; nicGbps?: number; mtu?: number; tep?: string }
+/** A domain's NSX connectivity (format 6+): recommended values stored only when changed; ASNs (0 = not entered) when entered. */
+export interface DomainNsx {
+  model?: string; t0Ha?: "aa" | "as"; tgwHa?: "aa" | "as"; bfd?: boolean; edgeTep?: "separate" | "shared";
+  extPrefix?: number; privPrefix?: number; localAsn?: number; peerAsn?: number;
+}
 export interface Network {
   domain: string; dns: string; ntp: string;
   /** physical NICs per host for VCF traffic, by host type id (2 when not set) */
   hostNics: Record<string, number>;
   clusters: Record<string, ClusterNet>;
+  /** NSX connectivity by domain id */
+  domains: Record<string, DomainNsx>;
 }
-export const newNetwork = (): Network => ({ domain: "", dns: "", ntp: "", hostNics: {}, clusters: {} });
+export const newNetwork = (): Network => ({ domain: "", dns: "", ntp: "", hostNics: {}, clusters: {}, domains: {} });
 
 export interface Design {
   format: typeof FORMAT;

@@ -5,11 +5,12 @@
 // (what they change); buttons carry data-xact (a structural change); main.ts turns both into proposals.
 import { PROFILES, IDENTITY, NETWORK, workloadTotals, hostCfg, maxFor, tierMax, settingsFromDesign, clusterReason, hwText, HOST_LCPU_MAX } from "../../engine/src/index.js";
                                                                                                         
-import { projectFields, policyFields, fleetFields, addonFields, identityFields, breakGlassFields, ACCESS, fleetNetFields, clusterNetFields, NIC_COUNTS, hostTypeFields, domainFields, domainNsxFields, edgeSizes, clusterFields, STORAGE } from "./fields.js";
+import { projectFields, policyFields, fleetFields, addonFields, identityFields, breakGlassFields, ACCESS, fleetNetFields, clusterNetFields, NIC_COUNTS, nsxFields, hostTypeFields, domainFields, domainNsxFields, edgeSizes, clusterFields, STORAGE } from "./fields.js";
                                                  
 import { locate, moveTo91 } from "./edit.js";
 import { sizeDesign } from "./store.js";
 import { allClusters, recommended, effective, networksOf, hostsByCluster, nicsOf } from "./hostnet.js";
+import { allDomains, recommendedNsx, effectiveNsx, asns, nsxNetworks } from "./nsx.js";
 import { overridden, estate } from "./rvimport.js";
                                                          
 
@@ -249,6 +250,21 @@ export function hostnetHtml(d        , r              ) {
     <p class="hint">Addresses are per network at today's host count, with no room for growth. VCF can't change an infrastructure subnet's mask later, so the IP plan sizes subnets with headroom. VLAN IDs and subnets come with that plan.</p>`;
 }
 
+/** NSX connectivity per domain: model, gateway HA, BGP, edge TEPs, VPC IP blocks, and the networks that follow. */
+export function nsxHtml(d        ) {
+  const multi = d.topology.instances.length > 1;
+  const cards = allDomains(d).map(({ inst, dm }) => {
+    const rec = recommendedNsx(d, dm), v = effectiveNsx(d, dm), a = asns(d, dm), nodes = dm.edges.reduce((s, e) => s + (e.nodes || 0), 0);
+    const vals = { ...v, localAsn: a.localAsn || "", peerAsn: a.peerAsn || "" };
+    const rows = nsxNetworks(d, dm).map(x => `<tr><td>${esc(x.net)}</td><td>${esc(x.size)}</td><td class="n num">${esc(x.ips)}</td></tr>`).join("");
+    const fs = nsxFields(rec, v.model, dm.edges.length > 0).filter(f => f.on !== false);
+    return `<div class="addon"><h4>${esc((multi ? inst.name + " / " : "") + dm.name)} <span class="hint">${dm.edges.length ? `${plural(dm.edges.length, "edge cluster")}, ${plural(nodes, "node")}` : "no edge cluster"}</span></h4>
+      <div class="grid">${fields(fs, vals                                      , { t: "nsx", did: dm.id })}</div>
+      <div class="tablewrap"><table class="nets"><thead><tr><th>Network or block</th><th>Size</th><th class="n">IPs</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }).join("");
+  return cards ? `<div class="addons">${cards}</div><p class="hint">Edge clusters and their nodes are set in Topology. VLAN IDs and subnets come with the IP plan.</p>` : `<p class="hint">No domains yet. Add them in Topology.</p>`;
+}
+
 export function addonsHtml(d        ) {
   const S = d.addons                                      ;
   return `<div class="addons">${addonFields(d.addons, clusterChoices(d)).map(g => `<div class="addon"><h4>${esc(g.title)}</h4><div class="grid">${fields(g.fields, S, { t: "sec", sec: "addons" })}</div><p class="hint">${esc(g.note)}</p></div>`).join("")}</div>`;
@@ -269,6 +285,7 @@ export function expertHtml(d        , r              , ui          )         {
     section("hosts", "Host types", plural(d.hostTypes.length, "host type"), hostTypesHtml(d), ui, "hosts"),
     section("topology", "Topology", `${plural(d.topology.instances.length, "instance")} · ${plural(nClu, "cluster")}`, topologyHtml(d, r, ui), ui, "topology"),
     section("hostnet", "Host networking", d.network.domain || "DNS domain not set", hostnetHtml(d, r), ui, "hostnet"),
+    section("nsx", "NSX & connectivity", plural(Object.values(d.network.domains).filter(x => x.model === "distributed").length, "distributed domain"), nsxHtml(d), ui, "nsx"),
     section("addons", "Add-ons", addOns ? `${addOns} on` : "none", addonsHtml(d), ui, "addons"),
   ].join("");
 }

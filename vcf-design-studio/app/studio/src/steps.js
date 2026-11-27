@@ -4,7 +4,8 @@
 // worked out from the design, so the guided steps and the Expert view always agree. No DOM; tested.
 import { CLUSTER_DEFAULTS, IDENTITY } from "../../engine/src/index.js";
                                                                     
-import { policyFields, fleetFields, addonFields, clusterNetFields } from "./fields.js";
+import { policyFields, fleetFields, addonFields, clusterNetFields, nsxFields } from "./fields.js";
+import { allDomains, recommendedNsx, effectiveNsx, nsxOpen, NSX_KEYS } from "./nsx.js";
 import { allClusters, recommended, effective, hostnetOpen, NET_KEYS } from "./hostnet.js";
                                          
                                            
@@ -41,6 +42,16 @@ export function changes(d        , step        )           {
       const rec = recommended(d, c), v = effective(d, c), fs = clusterNetFields(rec);
       for (const key of NET_KEYS) if (v[key] !== rec[key]) { const f = fs.find(x => x.key === key) ;
         out.push({ path: ["network", "clusters", c.id, key], where: c.name, label: f.label, value: show(f, v[key]), def: show(f, rec[key]) }); }
+    });
+    return out;
+  }
+  if (step === "nsx") {
+    const out           = [];
+    allDomains(d).forEach(({ inst, dm }) => {
+      const rec = recommendedNsx(d, dm), v = effectiveNsx(d, dm), fs = nsxFields(rec, v.model, dm.edges.length > 0);
+      const where = d.topology.instances.length > 1 ? `${inst.name} / ${dm.name}` : dm.name;
+      for (const key of NSX_KEYS) if (v[key] !== rec[key]) { const f = fs.find(x => x.key === key) ;
+        out.push({ path: ["network", "domains", dm.id, key], where, label: f.label, value: show(f, v[key]), def: show(f, rec[key]) }); }
     });
     return out;
   }
@@ -96,7 +107,7 @@ export function stepState(d        , id        )                                
   }
   if (s.kind === "skippable") {
     const n = changes(d, id).length, chosen = d.decisions.steps[id];
-    const open = id === "hostnet" && chosen !== "skipped" ? hostnetOpen(d) : undefined;
+    const open = chosen === "skipped" ? undefined : id === "hostnet" ? hostnetOpen(d) : id === "nsx" ? nsxOpen(d) : undefined;
     const rest = open && open.length ? ` ${open.length} item${open.length > 1 ? "s" : ""} still open.` : "";
     if (n) return { state: "decided", note: `${n} value${n > 1 ? "s" : ""} changed from the recommendation.` + rest, open };
     if (chosen === "recommended") return { state: "recommended", note: "Recommended values accepted." + rest, open };
@@ -114,6 +125,10 @@ const withChoice = (d        , id        , c                   )     => {
 export function recommendOps(d        , id        )       {
   if (id === "identity") return [{ op: "set", path: ["identity", "mode"], value: "instance" }, withChoice(d, id, "recommended")];
   if (id === "hostnet") return [{ op: "set", path: ["network", "clusters"], value: {} }, withChoice(d, id, "recommended")];
+  if (id === "nsx") {   // back to the recommendation, keeping the ASNs entered
+    const keep = Object.fromEntries(Object.entries(d.network.domains).map(([k, v]) => [k, { ...(v.localAsn ? { localAsn: v.localAsn } : {}), ...(v.peerAsn ? { peerAsn: v.peerAsn } : {}) }]).filter(([, v]) => Object.keys(v).length));
+    return [{ op: "set", path: ["network", "domains"], value: keep }, withChoice(d, id, "recommended")];
+  }
   const D                          = id === "storage" ? CLUSTER_DEFAULTS                                       : {};
   const ops       = changes(d, id).map(c => {
     if (id === "storage") return { op: "set", path: c.path, value: D[c.path[c.path.length - 1]          ] };

@@ -14,7 +14,7 @@ export const STEPS: Step[] = [
   { id: "topology", n: 8, title: "Topology", kind: "required", blurb: "Instances, workload domains and clusters." },
   { id: "storage", n: 9, title: "Cluster storage", kind: "skippable", blurb: "vSAN policy, capacity reserves, memory tiering." },
   { id: "hostnet", n: 10, title: "Host networking", kind: "skippable", blurb: "Distributed switches, NICs, MTU, host addressing, DNS and NTP." },
-  { id: "nsx", n: 11, title: "NSX & connectivity", kind: "coming", blurb: "Edges, Tier-0 / Tier-1 gateways and BGP." },
+  { id: "nsx", n: 11, title: "NSX & connectivity", kind: "skippable", blurb: "Connectivity model, Tier-0 and transit gateways, BGP peering, edge TEPs and VPC IP blocks." },
   { id: "addons", n: 12, title: "Add-ons", kind: "skippable", blurb: "vDefend, Live Recovery, Avi, HCX, Data Services Manager." },
   { id: "review", n: 13, title: "Review", kind: "review", blurb: "Everything decided, skipped and open." },
   { id: "output", n: 14, title: "Design output", kind: "output", blurb: "High-level design, diagrams and tables." },
