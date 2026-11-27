@@ -29,6 +29,12 @@ date with the source, so always run `npm run build` and commit its output with y
 | Change a guided step's screen | `studio/src/guided.ts`, fields in `studio/src/fields.ts`, step list in `studio/src/flow.ts` | Tests, then look at the page |
 | Change the Expert view | `studio/src/expert.ts` | Same |
 | Change what the design file holds | `engine/src/design/document.ts`, with a migration in `engine/src/design/migrations.ts` and a bumped format version | Add a fixture in `engine/fixtures/designs/`; old files must still open |
+| Change what the design document (HLD) says | `studio/src/hld.ts`: one content model that the page preview, Word and PDF all render | Tests check every section is there with no blanks; open the Word file to look |
+| Change the prerequisite checklist | `studio/src/prereqs.ts` (items by owning team, and when each counts as Done) | Tests |
+| Change the diagrams | `studio/src/diagram.ts` (layout once, then SVG and draw.io) | Tests check boxes don't overlap; look at the SVG |
+| Add or remove a download | `studio/src/export/index.ts` (`EXPORTERS`, each with its feature flag) | Its button appears on the Design output page by itself |
+| Change the Word, Excel or HTML rendering | `studio/src/export/docx.ts`, `xlsx.ts`, `html.ts` (no libraries: they write the file formats directly) | Open the result in Word or Excel |
+| Change the PDF layout | The print rules at the end of `vcf-design-studio/studio.css` (the PDF is the browser printing the HLD preview) | Print from the Design output page |
 | Change the page layout or styles | `vcf-design-studio/index.html`, `vcf-design-studio/studio.css` | Look at it on desktop and phone width |
 
 ## Golden tests

@@ -120,5 +120,8 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
 6b. (Done 27 Nov.) Fixes from the 27 Nov review, before step 7: easy-button options meet the rules; no scores on an
    empty design; drop "design format N" from the banner; add the feature-flags module; add
    MAINTAINING.md and package-lock.json; CI build check. A test for each.
-7. Exporters: HLD, diagrams, draw.io, prerequisite checklist.
+7. (Done 27 Nov.) Exporters: HLD, diagrams, draw.io, prerequisite checklist. The HLD is one content model
+   (`studio/src/hld.ts`) rendered as the page preview, Word (.docx) and PDF (browser print); diagrams are
+   SVG, PNG and draw.io; the prerequisites and IP / VLAN / DNS plan export to Excel. The IP plan moved
+   from Review to Design output.
 8. Ship at a new path (e.g. /vcf-design-studio/), with /vcf-sizing/ redirecting.
