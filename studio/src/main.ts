@@ -12,6 +12,9 @@ import { netOps, nicsOps } from "./hostnet.ts";
 import { nsxOps } from "./nsx.ts";
 import { planOps, proposePlan } from "./ip.ts";
 import { evaluate, scorecard, deviationOps } from "./rules.ts";
+import { easyOptions, applyOptionOps, snapOf } from "./easy.ts";
+import type { EasyInputs, EasyOption } from "./easy.ts";
+import { easyHtml } from "./guided.ts";
 import { readExport, rebuild, SHEETS } from "./rvimport.ts";
 import { stepHtml, stateTag } from "./guided.ts";
 import { stepState, recommendOps, skipOps, reopenOps } from "./steps.ts";
@@ -30,7 +33,11 @@ let flash: { text: string; lvl: "info" | "warn" | "crit" }[] = opened.notes.map(
 let saveTimer = 0;
 if (opened.origin === "vcf-sizing" || opened.origin === "sizing-host-types") save(localStorage, design);   // adopt it once, so later visits open this design
 
+// easy button: inputs for this visit, options cached per design and inputs, one-step undo
+const easyIn: EasyInputs = { source: "generic", vendor: "either", layout: "standard" };
+let easyCache: { key: string; opts: EasyOption[] } | null = null, undoEasy: Design | null = null;
 function commit(p: Proposal) {
+  if (p.source !== "easy-button") undoEasy = null;   // undo only right after the easy button, never over later edits
   const o = propose(design, p);
   if (!o.ok) { flash = [{ text: `That change wasn't applied: ${o.error}`, lvl: "crit" }]; render(); return false; }
   design = o.design; result = sizeDesign(design);
@@ -45,11 +52,12 @@ function replace(d: Design, notes: string[]) {
 }
 
 // ---------- routing: #/start, #/step/<id>, #/expert ----------
-type Route = { view: "start" } | { view: "step"; id: string } | { view: "expert" };
+type Route = { view: "start" } | { view: "step"; id: string } | { view: "expert" } | { view: "easy" };
 function route(): Route {
   const h = location.hash.replace(/^#\/?/, "").split("/");
   if (h[0] === "step" && stepById(h[1] || "")) return h[1] === "start" ? { view: "start" } : { view: "step", id: h[1] };
   if (h[0] === "expert") return { view: "expert" };
+  if (h[0] === "easy") return { view: "easy" };
   return { view: "start" };
 }
 const go = (hash: string) => { if (location.hash === hash) render(); else location.hash = hash; };
@@ -65,6 +73,7 @@ function railHtml(r: Route) {
     const inner = `<span class="n">${s.n}</span><span class="t">${esc(s.title)}</span>${badge}`;
     return `<li class="${s.id === cur ? "on" : ""} ${coming ? "coming" : ""}">${coming ? `<span class="item" aria-disabled="true">${inner}</span>` : `<a class="item" href="#/step/${s.id}" ${s.id === cur ? 'aria-current="step"' : ""}>${inner}</a>`}</li>`;
   }).join("")}</ol>
+  <a class="expert ${r.view === "easy" ? "on" : ""}" href="#/easy">Easy button <span class="hint">three complete options</span></a>
   <a class="expert ${r.view === "expert" ? "on" : ""}" href="#/expert">Expert view <span class="hint">all settings on one page</span></a>`;
 }
 
@@ -113,7 +122,8 @@ function render() {
   const caret = document.activeElement instanceof HTMLInputElement && document.activeElement.type === "text" ? document.activeElement.selectionStart : null;
   $("rail").innerHTML = railHtml(r);
   $("main").innerHTML = (flash.length ? `<ul class="warns flash">${flash.map(f => `<li class="${f.lvl}">${esc(f.text)}</li>`).join("")}</ul>` : "")
-    + (r.view === "start" ? startHtml() : r.view === "expert" ? expertHtml(design, result, ui) : stepHtml(design, result, ui, r.id));
+    + (undoEasy ? `<p class="flash-undo">Easy button applied. <button type="button" class="link" data-undo-easy="1">Undo</button></p>` : "")
+    + (r.view === "start" ? startHtml() : r.view === "expert" ? expertHtml(design, result, ui) : r.view === "easy" ? easyHtml(design, easyIn, easyOpts()) : stepHtml(design, result, ui, r.id));
   $("summary").innerHTML = summaryHtml();
   if (fk) {
     const el = [...document.querySelectorAll<HTMLElement>("[data-edit],[data-xact],[data-sel]")].find(x => focusKey(x) === fk);
@@ -253,8 +263,6 @@ $("file").addEventListener("change", async e => {
 window.addEventListener("hashchange", () => { flash = []; render(); window.scrollTo({ top: 0 }); });
 window.addEventListener("storage", e => { if (e.key === "vcfStudio.design") $("main").insertAdjacentHTML("afterbegin", `<ul class="warns flash"><li class="warn">This design was changed in another tab. Reload to see it.</li></ul>`); });
 
-$("ver").textContent = `design format ${FORMAT_VERSION}`;
-render();
 
 // ---------- IP / VLAN plan: the proposer fills empty rows; Clear removes everything entered ----------
 document.addEventListener("click", ev => {
@@ -264,3 +272,29 @@ document.addEventListener("click", ev => {
     else if (confirm("Clear every VLAN, subnet and gateway in the plan?")) commit({ source: "expert", ops: [{ op: "set", path: ["plan", "rows"], value: {} }] });
   } catch (err) { flash = [{ text: (err as Error).message, lvl: "crit" }]; render(); }
 });
+
+// ---------- easy button: inputs for this visit, options cached per design and inputs, one-step undo ----------
+function easyOpts(): EasyOption[] | null {
+  if (easyIn.source === "custom" && !design.hostTypes.length) easyIn.source = "generic";
+  const key = snapOf([design.workload, design.project.version, design.hostTypes, easyIn]);
+  if (!easyCache || easyCache.key !== key) easyCache = { key, opts: easyOptions(design, easyIn) };
+  return easyCache.opts;
+}
+document.addEventListener("change", ev => {
+  const el = ev.target as HTMLInputElement; if (!el.dataset || !el.dataset.easyin) return;
+  (easyIn as unknown as Record<string, string>)[el.dataset.easyin] = el.value; render();
+});
+document.addEventListener("click", ev => {
+  const t = ev.target as HTMLElement, b = t.closest<HTMLElement>("[data-easy]"), u = t.closest<HTMLElement>("[data-undo-easy]");
+  if (u && undoEasy) { const prev = undoEasy; undoEasy = null; replace(prev, ["Easy button undone: the design is as it was before."]); render(); return; }
+  if (!b) return;
+  const o = (easyOpts() || []).find(x => x.key === b.dataset.easy); if (!o) return;
+  const has = design.hostTypes.length > 0 || design.topology.instances.some(i => i.mgmt.clusters.length || i.wlds.length);
+  const many = design.topology.instances.length > 1 ? ` The design's ${design.topology.instances.length} instances become one.` : "";
+  if (has && !confirm(`Replace the host types and topology with the "${o.label}" option, and set the other steps to their recommended values?${many} You can undo this right after.`)) return;
+  const before = design;
+  if (commit({ source: "easy-button", ops: applyOptionOps(design, easyIn, o) })) { undoEasy = before; go("#/step/review"); }
+});
+
+$("ver").textContent = `design format ${FORMAT_VERSION}`;
+render();

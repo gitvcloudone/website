@@ -5,7 +5,7 @@ import { DEFAULTS } from "../knowledge.ts";
 import type { Settings, HostType, Topology, Group } from "../types.ts";
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 8;
+export const FORMAT_VERSION = 9;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -28,7 +28,13 @@ export type StepChoice = "recommended" | "skipped";
 export const STEP_CHOICES: readonly StepChoice[] = ["recommended", "skipped"];
 /** A best-practice deviation accepted with a reason, keyed "<rule id>@<target>" (format 8+). */
 export interface Deviation { reason: string }
-export interface Decisions { steps: Record<string, StepChoice>; deviations: Record<string, Deviation> }
+/** What the easy button chose (format 9+): its inputs, the option, a reason per step, and a fingerprint of the host types and
+ *  topology it set, so the decision register can tell when they've been changed since. null when it hasn't been used. */
+export interface AutoChoice {
+  option: "fewest" | "licensing" | "balanced"; source: "generic" | "custom"; vendor: "either" | "intel" | "amd"; layout: "standard" | "consolidated";
+  reasons: Record<string, string>; snap: { hostTypes: string; topology: string };
+}
+export interface Decisions { steps: Record<string, StepChoice>; deviations: Record<string, Deviation>; auto: AutoChoice | null }
 
 /** Identity & access (format 4+). "" = not decided yet. A role's scope is "fleet" or an instance / domain id; "" when that was removed. */
 export type Access = "admin" | "operator" | "readonly";
@@ -100,7 +106,7 @@ export function newDesign(): Design {
     identity: newIdentity(),
     network: newNetwork(),
     plan: newPlan(),
-    decisions: { steps: {}, deviations: {} },
+    decisions: { steps: {}, deviations: {}, auto: null },
   } as Design;
 }
 

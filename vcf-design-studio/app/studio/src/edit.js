@@ -82,7 +82,7 @@ export function moveTo91(d        , size                                        
 }
 
 // ---------- structural changes: computed on a copy, sent as whole sections ----------
-const newDomain = (id        , name        , kind        , o                  = {})         =>
+export const newDomain = (id        , name        , kind        , o                  = {})         =>
   ({ id, name, kind, vcSize: "medium", nsx: "shared", nsxSize: "large", nsxNodes: 3, clusters: [], edges: [], ...o });
 
                     

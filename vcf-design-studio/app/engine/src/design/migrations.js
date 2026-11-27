@@ -8,6 +8,8 @@ import { FORMAT_VERSION } from "./document.js";
                                         
 
 export const MIGRATIONS                            = {
+  // 8 → 9: the easy button's record; not used yet.
+  8: d => ({ ...d, decisions: { ...d.decisions, auto: null } }),
   // 7 → 8: accepted best-practice deviations, none yet.
   7: d => ({ ...d, decisions: { ...d.decisions, deviations: {} } }),
   // 6 → 7: the IP / VLAN plan, nothing entered yet.

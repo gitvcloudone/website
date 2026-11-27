@@ -2,12 +2,13 @@
 // Guided steps: one decision area per screen, built from the same pieces as the Expert view.
 // Skippable steps offer Use recommended / Skip for now; Review lists every step, what changed from the
 // recommendation and what is still open. A pure function of the design → HTML (no DOM); tested.
-import { maxFor, tierMax } from "../../engine/src/index.js";
+import { maxFor, tierMax, hwText, clusterReason as clusterReasonText } from "../../engine/src/index.js";
                                                                       
 import { STEPS, stepById } from "./flow.js";
 import { policyFields, fleetFields, clusterFields } from "./fields.js";
 import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml, nsxHtml, planHtml, rulesBox } from "./expert.js";
 import { evaluate, scorecard, decisionRegister, riskRegister } from "./rules.js";
+                                                        
                                             
 import { stepState, changes, STORAGE_KEYS } from "./steps.js";
                                             
@@ -45,7 +46,7 @@ function choiceBar(d        , id        ) {
 function body(d        , r              , ui          , id        )         {
   switch (id) {
     case "project": return projectHtml(d);
-    case "workload": return workloadHtml(d, ui);
+    case "workload": return workloadHtml(d, ui) + `<section class="card"><div class="choice"><div><h3>Easy button</h3><p class="hint">Three complete designs from this workload (fewest hosts, lowest licensing, and the sweet spot between them), with recommended values for every step. Pick one and go straight to Review.</p></div><div class="row"><a class="btn" href="#/easy">Easy button</a></div></div></section>`;
     case "policy": return `<div class="grid">${fields(policyFields(), d.policy                                      , { t: "sec", sec: "policy" })}</div>`;
     case "fleet": return `<div class="grid">${fields(fleetFields(d.fleet), d.fleet                                      , { t: "sec", sec: "fleet" })}</div>`;
     case "identity": return identityHtml(d) + rulesBox(d, r, ["identity"]);
@@ -70,7 +71,7 @@ function reviewHtml(d        , r              ) {
     return [...(["todo", "skipped", "open"].includes(st.state) ? [{ s, t: st.note }] : []), ...(st.open || []).map(t => ({ s, t }))]; });
   const ruleOpen = res.filter(x => x.status === "open").flatMap(x => x.findings.filter(f => !f.reason).map(f => ({ x, f })));
   const stepLink = (id        ) => id === "plan" ? `<a href="#plan">IP / VLAN / DNS plan</a>` : `<a href="#/step/${id}">${esc(stepById(id)?.title || id)}</a>`;
-  const KIND                         = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", deviation: "Deviation accepted" };
+  const KIND                         = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", auto: "Auto-selected", deviation: "Deviation accepted" };
   const crit = r.warnings.filter(w => w.lvl === "crit"), warn = r.warnings.filter(w => w.lvl === "warn");
   return `<div class="tablewrap"><table class="review"><thead><tr><th>#</th><th>Step</th><th>Status</th><th>Decisions and open items</th></tr></thead><tbody>${rows}</tbody></table></div>
     <h4>Open items</h4>
@@ -109,5 +110,36 @@ export function stepHtml(d        , r              , ui          , id        )  
     ${s.kind === "skippable" ? choiceBar(d, id) : ""}
     <div class="xbody">${content}</div>
     <div class="row nav">${prev ? `<a class="btn ghost" href="#/step/${prev.id}">← ${esc(prev.title)}</a>` : ""}${next ? `<a class="btn" href="#/step/${next.id}">${esc(next.title)} →</a>` : ""}</div>
+  </section>`;
+}
+
+// ---------- easy button ----------
+const _nf = (n        ) => (Number.isFinite(n) ? n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "–");
+const radio = (name        , v        , cur        , label        , dis = false) => `<label class="radio${dis ? " dim" : ""}"><input type="radio" name="${name}" value="${v}" data-easyin="${name}" ${v === cur ? "checked" : ""} ${dis ? "disabled" : ""}> ${esc(label)}</label>`;
+/** The easy button: inputs, then three option cards to pick from. */
+export function easyHtml(d        , inp            , opts                     ) {
+  const hasWork = d.workload.groups.some(g => g.include && ((Number(g.values.vcpu) || 0) > 0 || (Number(g.values.vramGiB) || 0) > 0));
+  const custom = inp.source === "custom";
+  const card = (o            ) => {
+    const res = evaluate(o.design, o.r), sc = scorecard(o.design, res), open = sc.reduce((a, p) => a + p.open, 0), risk = sc.filter(p => p.atRisk).map(p => p.label);
+    const tiles = [["Hosts", _nf(o.hosts)], ["Licensed cores", _nf(o.licCores)], ["vSAN add-on", `${_nf(o.addOnTiB)} TiB`]];
+    return `<div class="option"><h3>${esc(o.label)}</h3><p class="hint">${esc(o.why)}.${o.same.length ? ` Same design as ${esc(o.same.join(" and "))}.` : ""}</p>
+      <p><b>${esc(custom ? o.hw.name + ": " : "")}${esc(hwText(o.hw))}</b>${o.tier ? `<br><span class="hint">NVMe memory tiering on where workloads run</span>` : ""}</p>
+      <div class="tiles">${tiles.map(([k, v]) => `<div class="tile"><span class="k">${k}</span><span class="big num">${v}</span></div>`).join("")}</div>
+      <ul class="reasons">${o.r.clusters.map(c => `<li><b>${esc(c.c.name)}</b> ${esc(clusterReasonText(c))}</li>`).join("")}</ul>
+      <p class="hint">Best practices: ${open} not met${risk.length ? `, <span class="pill crit">at risk: ${esc(risk.join(", "))}</span>` : ""} (customer details such as DNS and ASNs are still to enter).</p>
+      <div class="row"><button type="button" data-easy="${esc(o.key)}">Use this option</button></div></div>`;
+  };
+  return `<section class="card step">
+    <header><h2>Easy button</h2></header>
+    <p>Three complete designs from your workload. Every automatic choice is recorded with its reason and can be changed afterwards like any other value. Customer details (DNS and NTP, identity provider and roles, break-glass, BGP ASNs, the IP plan) are left for you.</p>
+    ${hasWork ? "" : `<p class="need">Add the workload first: RVTools exports or a manual group with vCPU or vRAM.</p>`}
+    <div class="grid easyin">
+      <fieldset><legend>Host types</legend>${radio("source", "generic", inp.source, "Generic, from the hardware catalogue")}${radio("source", "custom", inp.source, `My host types (${d.hostTypes.length})`, !d.hostTypes.length)}</fieldset>
+      <fieldset><legend>CPU vendor</legend>${radio("vendor", "either", inp.vendor, "Either", custom)}${radio("vendor", "intel", inp.vendor, "Intel Xeon", custom)}${radio("vendor", "amd", inp.vendor, "AMD EPYC", custom)}</fieldset>
+      <fieldset><legend>Layout</legend>${radio("layout", "standard", inp.layout, "Management domain + workload domain")}${radio("layout", "consolidated", inp.layout, "Consolidated (workloads in the management domain)")}</fieldset>
+    </div>
+    ${hasWork && opts ? (opts.length ? `<div class="options">${opts.map(card).join("")}</div>` : `<p class="need">No configuration fits this workload.</p>`) : ""}
+    <p class="hint">Generic hosts: 2 sockets, every core count and balanced memory configuration in the catalogue, with the fewest 7.68 TB NVMe drives that keep the lowest host count. One instance; a 2-node large edge cluster where workloads run. Applying an option replaces the host types and topology.</p>
   </section>`;
 }

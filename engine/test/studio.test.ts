@@ -189,7 +189,7 @@ test("a format 1 design opens in the current format with nothing changed: RVTool
   assert.equal(raw.formatVersion, 1);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
   assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
-  assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {} });
+  assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null });
   assert.deepStrictEqual(r.design.workload.groups.map(g => [g.source, g.parsed]), [["rvtools", null], ["rvtools", null], ["manual", null]]);
   assert.deepStrictEqual(r.design.workload.groups.map(g => g.values), raw.workload.groups.map((g: { values: unknown }) => g.values));
   assert.ok(r.design.workload.groups.every(g => rvi.overridden(g).length === 0));
@@ -262,7 +262,7 @@ test("a format 2 design opens in the current format with no step choices", () =>
   const raw = JSON.parse(readText(new URL("../fixtures/designs/format-2.vcf-design.json", import.meta.url), "utf8"));
   assert.equal(raw.formatVersion, 2);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
-  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION); assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {} });
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION); assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null });
   assert.equal(r.design.workload.groups[1].values.vms, raw.workload.groups[1].values.vms);
   assert.deepStrictEqual(rvi.overridden(r.design.workload.groups[1]), ["vms"], "format 2 parsed values kept");
   assert.equal(steps.stepState(r.design, "policy").state, "decided", "cpuRatio 5 is a decision");
@@ -762,4 +762,55 @@ test("rules: the plan rules read the plan checks; deviations in a saved file nee
   raw.decisions.deviations = { "AV-BFD@w1": { reason: "Switches lack BFD" }, "AV-BFD@w2": { reason: "  " }, "bad key": { reason: "x" }, "AV-T0-AA@w1": "no" };
   const l = engine.loadDesign(raw); if (l.kind !== "design") throw new Error();
   assert.deepStrictEqual(l.design.decisions.deviations, { "AV-BFD@w1": { reason: "Switches lack BFD" } });
+});
+
+// ---------- easy button (6) ----------
+import * as easy from "../../studio/src/easy.ts";
+const GEN: easy.EasyInputs = { source: "generic", vendor: "either", layout: "standard" };
+test("a format 8 design opens with no easy-button record and its deviations kept; a broken record is dropped", () => {
+  const raw = JSON.parse(readText(new URL("../fixtures/designs/format-8.vcf-design.json", import.meta.url), "utf8"));
+  assert.equal(raw.formatVersion, 8);
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.equal(r.design.decisions.auto, null); assert.deepStrictEqual(r.design.decisions.deviations, raw.decisions.deviations);
+  const bad = engine.loadDesign({ ...JSON.parse(engine.serializeDesign(r.design)), decisions: { ...raw.decisions, auto: { option: "cheapest" } } });
+  if (bad.kind !== "design") throw new Error(); assert.equal(bad.design.decisions.auto, null);
+});
+
+test("easy button: fewest hosts, lowest licensing and the sweet spot are what they say, on real catalogue hardware", () => {
+  for (const name of ["simple-basic", "vdefend-atp"]) for (const layout of ["standard", "consolidated"] as const) {
+    const d = caseDesign(name), inp = { ...GEN, layout }, pool = easy.candidates(d, inp, true), o = easy.easyOptions(d, inp);
+    assert.deepStrictEqual(o.map(x => x.key), ["fewest", "licensing", "balanced"]);
+    const [few, lic, bal] = o;
+    assert.ok(pool.every(c => few.hosts <= c.hosts), `${name} ${layout}: fewest`);
+    assert.ok(pool.every(c => lic.licCores <= c.licCores), `${name} ${layout}: licensing`);
+    assert.ok(!pool.some(c => c.hosts <= bal.hosts && c.licCores <= bal.licCores && (c.hosts < bal.hosts || c.licCores < bal.licCores)), `${name} ${layout}: balanced is on the trade-off curve`);
+    for (const x of o) assert.deepStrictEqual(engine.fixHw(x.hw), x.hw, "a configuration that exists");
+  }
+  const amd = easy.easyOptions(caseDesign("simple-basic"), { ...GEN, vendor: "amd" });
+  assert.ok(amd.every(x => x.hw.vendor === "amd"));
+  const d = caseDesign("simple-basic"), cu = easy.easyOptions(d, { ...GEN, source: "custom" });
+  assert.ok(cu.every(x => d.hostTypes.some(h => h.id === x.hw.id && h.cores === x.hw.cores && h.ramGB === x.hw.ramGB)), "custom: only the design's host types");
+});
+
+test("easy button: applying an option gives exactly the numbers on its card, records why, and leaves customer facts alone", () => {
+  let d = caseDesign("vdefend-atp");
+  d = must(d, [{ op: "set", path: ["network", "dns"], value: "10.0.0.53" }, { op: "set", path: ["identity", "idp"], value: d.identity.idp || "entra" }]);
+  for (const layout of ["standard", "consolidated"] as const) for (const o of easy.easyOptions(d, { ...GEN, layout })) {
+    const x = must(d, easy.applyOptionOps(d, { ...GEN, layout }, o)), r = store.sizeDesign(x);
+    assert.equal(r.hosts, o.hosts, `${layout} ${o.key}: hosts`); assert.equal(r.licCores, o.licCores, `${layout} ${o.key}: licensed cores`);
+    assert.equal(x.topology.instances.length, 1); assert.equal(x.topology.instances[0].wlds.length, layout === "standard" ? 1 : 0);
+    assert.equal(x.network.dns, "10.0.0.53"); assert.equal(x.identity.idp, d.identity.idp);
+    assert.equal(x.decisions.auto!.option, o.key);
+    for (const s of easy.AUTO_STEPS) assert.equal(x.decisions.steps[s], "recommended", s);
+    const reg = rules.decisionRegister(x, rules.evaluate(x, r));
+    assert.ok(reg.some(e => e.step === "Host types" && e.kind === "auto" && /licensed cores/.test(e.reason || "")));
+    assert.ok(reg.some(e => e.step === "Topology" && e.kind === "auto"));
+    const back = engine.loadDesign(engine.serializeDesign(x)); if (back.kind !== "design") throw new Error();
+    assert.deepStrictEqual(back.design.decisions.auto, x.decisions.auto, "the record survives a save");
+  }
+  const o = easy.easyOptions(d, GEN)[2], x = must(d, easy.applyOptionOps(d, GEN, o));
+  const y = must(x, [{ op: "set", path: ["hostTypes", 0, "ramGB"], value: x.hostTypes[0].ramGB === 1024 ? 2048 : 1024 }]);
+  const reg = rules.decisionRegister(y, rules.evaluate(y, store.sizeDesign(y)));
+  assert.ok(reg.some(e => e.step === "Host types" && e.kind === "changed" && /after the easy button/.test(e.text)), "an override shows as your decision");
+  assert.ok(reg.some(e => e.step === "Topology" && e.kind === "auto"));
 });

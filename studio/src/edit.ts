@@ -81,7 +81,7 @@ export function moveTo91(d: Design, size: (d: Design) => { hosts: number; licCor
 }
 
 // ---------- structural changes: computed on a copy, sent as whole sections ----------
-const newDomain = (id: string, name: string, kind: string, o: Partial<Domain> = {}): Domain =>
+export const newDomain = (id: string, name: string, kind: string, o: Partial<Domain> = {}): Domain =>
   ({ id, name, kind, vcSize: "medium", nsx: "shared", nsxSize: "large", nsxNodes: 3, clusters: [], edges: [], ...o });
 
 export type Action =

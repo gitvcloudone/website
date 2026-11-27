@@ -9,6 +9,7 @@ import { planIssues } from "./ip.ts";
 import { STEPS } from "./flow.ts";
 import { changes } from "./steps.ts";
 import type { Op } from "./store.ts";
+import { snapOf } from "./snap.ts";
 
 /** Where a rule isn't met. `target` names the object (with the rule id it keys an accepted deviation). */
 export interface Finding { target: string; where: string; reason?: string }
@@ -99,13 +100,20 @@ export function deviationOps(d: Design, key: string, reason: unknown): Op[] {
   return [{ op: "set", path: ["decisions", "deviations"], value: all }];
 }
 
-export interface DecisionEntry { step: string; kind: "changed" | "recommended" | "deviation"; text: string; reason?: string }
+export interface DecisionEntry { step: string; kind: "changed" | "recommended" | "auto" | "deviation"; text: string; reason?: string }
 /** The design decisions: values changed from the recommendation, recommendations accepted, deviations accepted with their reasons. */
 export function decisionRegister(d: Design, res: RuleResult[]): DecisionEntry[] {
-  const out: DecisionEntry[] = [];
+  const out: DecisionEntry[] = [], a = d.decisions.auto;
+  if (a) {   // the easy button's host type and topology, until they're changed
+    const still = { hostTypes: snapOf(d.hostTypes) === a.snap.hostTypes, topology: snapOf(d.topology) === a.snap.topology };
+    for (const [k, step] of [["hostTypes", "Host types"], ["topology", "Topology"]] as const) out.push(still[k]
+      ? { step, kind: "auto", text: "Auto-selected by the easy button", reason: a.reasons[k === "hostTypes" ? "hosts" : "topology"] }
+      : { step, kind: "changed", text: "Changed after the easy button set it" });
+  }
   for (const s of STEPS) {
     for (const c of changes(d, s.id)) out.push({ step: s.title, kind: "changed", text: `${c.where ? c.where + ": " : ""}${c.label}: ${c.value} (recommended ${c.def})` });
-    if (d.decisions.steps[s.id] === "recommended") out.push({ step: s.title, kind: "recommended", text: "Recommended values accepted" });
+    if (d.decisions.steps[s.id] === "recommended") out.push(a && a.reasons[s.id]
+      ? { step: s.title, kind: "auto", text: "Recommended values, auto-selected by the easy button" } : { step: s.title, kind: "recommended", text: "Recommended values accepted" });
   }
   for (const x of res) for (const f of x.findings) if (f.reason) out.push({ step: STEPS.find(s => s.id === x.rule.step)?.title || "IP / VLAN / DNS plan", kind: "deviation", text: `${x.rule.title}: ${f.where}`, reason: f.reason });
   return out;

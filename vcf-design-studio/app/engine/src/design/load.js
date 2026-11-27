@@ -9,7 +9,7 @@ import { fixHw } from "../hardware.js";
 import { FORMAT, FORMAT_VERSION, DEFAULT_SCOPE, sectionsFromSettings, settingsFromDesign } from "./document.js";
                                                                                    
 import { STEP_CHOICES, newIdentity, newNetwork, newPlan } from "./document.js";
-                                                                                                     
+                                                                                                                 
 import { migrateDesign } from "./migrations.js";
 
                                
@@ -93,7 +93,8 @@ function normalize(o     , opt                                       )          
     decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v              )))                              ,
       // accepted deviations: a reason is required; kept as saved (a deviation whose finding has gone simply no longer shows)
       deviations: Object.fromEntries(Object.entries((o.decisions && o.decisions.deviations) || {}).filter(([k, v]) => /^[A-Z][A-Z0-9-]*@.+$/.test(k) && v && typeof (v       ).reason === "string" && (v       ).reason.trim())
-        .map(([k, v]) => [k, { reason: ((v       ).reason          ).trim() }])) } }          ;
+        .map(([k, v]) => [k, { reason: ((v       ).reason          ).trim() }])),
+      auto: autoFrom(o.decisions && o.decisions.auto) } }          ;
   return { design, notes };
 }
 
@@ -140,6 +141,16 @@ function networkFrom(x                 , cluster                                
     if (Object.keys(n).length) out.domains[id] = n;
   }
   return out;
+}
+
+/** The easy button's record, only when every field is one it can have. */
+function autoFrom(x                 )                    {
+  if (!x || typeof x !== "object") return null;
+  const ok = ["fewest", "licensing", "balanced"].includes(x.option) && ["generic", "custom"].includes(x.source) && ["either", "intel", "amd"].includes(x.vendor)
+    && ["standard", "consolidated"].includes(x.layout) && x.snap && typeof x.snap.hostTypes === "string" && typeof x.snap.topology === "string";
+  if (!ok) return null;
+  const reasons = Object.fromEntries(Object.entries(x.reasons || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && typeof v === "string"))                          ;
+  return { option: x.option, source: x.source, vendor: x.vendor, layout: x.layout, reasons, snap: { hostTypes: x.snap.hostTypes, topology: x.snap.topology } };
 }
 
 /** The IP / VLAN plan: rows for instances, domains and clusters in the design; VLAN 1-4094; addresses kept as typed (checked by the plan, not here). */
