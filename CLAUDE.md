@@ -92,8 +92,10 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
 
 - TypeScript engine with unit tests per rule and **golden tests** (saved designs, including RVTools
   ones, with locked outputs). CI runs tests on every push; a failing test blocks deploy.
-- The built files in `vcf-design-studio/app/` are committed because the site has no build step. CI
-  runs the build and fails if the committed build differs from the source. Commit `package-lock.json`.
+- The built files in `vcf-design-studio/app/` are committed because the site has no build step. A test
+  rebuilds and fails if the committed build differs from the source; CI installs with `npm ci` from the
+  committed `package-lock.json`.
+- Feature flags and tiers live in `studio/src/flags.ts`; see `MAINTAINING.md` for where each kind of update goes.
 - Every fix comes with a test that would have caught it.
 - No internal jargon in the UI (e.g. "design format N"); that belongs in the design file, not on screen.
 - Static site; no backend, accounts, payments or AI yet. Mobile-friendly layouts and PWA-ready, so
@@ -115,7 +117,7 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
 4. Identity, host networking and NSX steps; IP/VLAN/DNS plan.
 5. Best-practice rules, scorecard, decisions and risks.
 6. Easy button with options.
-6b. Fixes from the 27 Nov review, before step 7: easy-button options meet the rules; no scores on an
+6b. (Done 27 Nov.) Fixes from the 27 Nov review, before step 7: easy-button options meet the rules; no scores on an
    empty design; drop "design format N" from the banner; add the feature-flags module; add
    MAINTAINING.md and package-lock.json; CI build check. A test for each.
 7. Exporters: HLD, diagrams, draw.io, prerequisite checklist.
