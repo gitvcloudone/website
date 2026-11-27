@@ -6,6 +6,10 @@ import { loadDesign, newDesign, serializeDesign, mergeHostTypes, clusterReason, 
 import { openSaved, save, forget, propose, sizeDesign } from "./store.js";
                                            
 import { STEPS, stepById } from "./flow.js";
+import { expertHtml } from "./expert.js";
+                                            
+import { fieldOps, hostTypeOps, actionOps } from "./edit.js";
+                                        
 
 const $ = (id        ) => document.getElementById(id) ;
 const esc = (s         ) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ));
@@ -23,7 +27,7 @@ function commit(p          ) {
   const o = propose(design, p);
   if (!o.ok) { flash = [{ text: `That change wasn't applied: ${o.error}`, lvl: "crit" }]; render(); return false; }
   design = o.design; result = sizeDesign(design);
-  if (o.notes.length) flash = o.notes.map(text => ({ text, lvl: "info" }));
+  flash = o.notes.map(text => ({ text, lvl: "info"          }));   // older notices no longer apply
   clearTimeout(saveTimer); saveTimer = window.setTimeout(() => { if (!save(localStorage, design)) flash = [{ text: "This browser isn't keeping your design (storage full or blocked). Use Save design file.", lvl: "warn" }]; }, 300);
   render();
   return true;
@@ -103,17 +107,21 @@ function stepHtml(id        ) {
   </section>`;
 }
 
-function expertHtml() {
-  return `<section class="card"><header><h2>Expert view</h2></header>
-    <p>Every setting on one page, on the same design as the guided flow. Being built (stage 3b).</p></section>`;
-}
+const ui           = { sel: "", closed: new Set() };
 
+// re-rendering replaces the form, so keep focus (and the caret) on the same control
+const focusKey = (el                ) => el instanceof HTMLElement ? el.dataset.edit || el.dataset.xact || el.dataset.sel || "" : "";
 function render() {
-  const r = route();
+  const r = route(), fk = focusKey(document.activeElement);
+  const caret = document.activeElement instanceof HTMLInputElement && document.activeElement.type === "text" ? document.activeElement.selectionStart : null;
   $("rail").innerHTML = railHtml(r);
   $("main").innerHTML = (flash.length ? `<ul class="warns flash">${flash.map(f => `<li class="${f.lvl}">${esc(f.text)}</li>`).join("")}</ul>` : "")
-    + (r.view === "start" ? startHtml() : r.view === "expert" ? expertHtml() : stepHtml(r.id));
+    + (r.view === "start" ? startHtml() : r.view === "expert" ? expertHtml(design, result, ui) : stepHtml(r.id));
   $("summary").innerHTML = summaryHtml();
+  if (fk) {
+    const el = [...document.querySelectorAll             ("[data-edit],[data-xact],[data-sel]")].find(x => focusKey(x) === fk);
+    if (el) { el.focus({ preventScroll: true }); if (caret !== null && el instanceof HTMLInputElement && el.type === "text") el.setSelectionRange(caret, caret); }
+  }
 }
 
 // ---------- actions ----------
@@ -149,6 +157,45 @@ document.addEventListener("click", e => {
     a.download = `${name}.vcf-design.json`; document.body.appendChild(a); a.click(); a.remove();
   }
 });
+// ---------- Expert view edits ----------
+                                                                                                                                                                                                      
+function editOps(e      , v         ) {
+  if (e.t === "sec") return [{ op: "set"         , path: [e.sec, e.key], value: v }];
+  if (e.t === "node") return fieldOps(design, e.id, e.key, v);
+  if (e.t === "ht") return hostTypeOps(design, e.id, e.key, v);
+  return [{ op: "set"         , path: ["workload", "groups", e.i, ...(e.sub ? [e.sub] : []), e.key], value: v }];
+}
+document.addEventListener("change", ev => {
+  const el = ev.target                                        ;
+  if (!(el instanceof HTMLElement) || !el.dataset.edit) return;
+  const e = JSON.parse(el.dataset.edit)        , type = el.dataset.type;
+  let v          = type === "bool" ? (el                    ).checked : el.value;
+  if (type === "number" || el.dataset.num) {
+    v = el.value === "" && el.dataset.blank !== undefined ? Number(el.dataset.blank) : parseFloat(el.value);
+    if (!Number.isFinite(v)) { render(); return; }
+  }
+  // after the event, so focus has already moved (Tab) and render() keeps it there
+  setTimeout(() => {
+    try { const ops = editOps(e, v); if (ops.length) commit({ source: "expert", ops }); else render(); }
+    catch (err) { flash = [{ text: (err         ).message, lvl: "crit" }]; render(); }
+  });
+});
+document.addEventListener("click", ev => {
+  const t = ev.target               ;
+  const x = t.closest             ("[data-xact]"), s = t.closest             ("[data-sel]");
+  if (s) { ui.sel = s.dataset.sel ; render(); return; }
+  if (!x) return;
+  try {
+    const { ops, select } = actionOps(design, JSON.parse(x.dataset.xact )          );
+    if (select) ui.sel = select;
+    if (ops.length) commit({ source: "expert", ops });
+  } catch (err) { flash = [{ text: (err         ).message, lvl: "crit" }]; render(); }
+});
+document.addEventListener("toggle", ev => {
+  const el = ev.target               ; if (!(el instanceof HTMLDetailsElement) || !el.dataset.sec) return;
+  if (el.open) ui.closed.delete(el.dataset.sec); else ui.closed.add(el.dataset.sec);
+}, true);
+
 $("file").addEventListener("change", async e => {
   const inp = e.target                    , f = inp.files && inp.files[0]; inp.value = "";
   if (f) openText(await f.text());

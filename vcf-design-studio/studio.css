@@ -144,3 +144,44 @@ a.btn.ghost { background: transparent; color: var(--accent); }
   .expert { margin-top: 6px; }
   .indep, header.top { padding-left: 16px; padding-right: 16px; }
 }
+
+/* ===== Expert view ===== */
+.xsec > summary { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; cursor: pointer; list-style: none; }
+.xsec > summary::-webkit-details-marker { display: none; }
+.xsec > summary::before { content: "▸"; color: var(--muted); font-size: 12px; transition: transform .15s; }
+.xsec[open] > summary::before { transform: rotate(90deg); }
+.xsec > summary h2 { margin: 0; }
+.xsec > summary .step { margin-left: auto; font-size: 12px; }
+.xbody { display: grid; gap: 12px; margin-top: 12px; min-width: 0; }
+.xhead header { flex-wrap: wrap; gap: 6px 12px; }
+.lbl { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.why { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--line); font: 600 10px var(--body); color: var(--muted); cursor: help; }
+.why:hover, .why:focus { color: var(--accent); border-color: var(--accent); outline: none; }
+.chg { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--accent); }
+label.changed > select, label.changed > input[type=number], label.changed > input[type=text] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.dim { opacity: .5; }
+.ht, .addon { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
+.ht:first-child, .addon:first-child { border-top: 0; padding-top: 0; }
+.dh { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ht p, .addon p, .panel p { margin: 0; }
+.addon h4, .panel h4 { margin: 6px 0 0; font: 600 13.5px var(--body); }
+.topo2 { display: grid; grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree ul { padding-left: 14px; border-left: 1px solid var(--line); margin-left: 8px; }
+.node { display: grid; width: 100%; text-align: left; gap: 0; padding: 5px 8px; margin: 1px 0; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font: 500 13.5px var(--body); cursor: pointer; }
+.node .hint { font-size: 11.5px; font-weight: 400; }
+.tree button.node { color: var(--ink); }   /* tree nodes are .ghost so theme-sizer.css leaves their text alone */
+.node:hover { background: var(--accent-soft); }
+.node.on { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); font-weight: 600; }
+.panel { display: grid; gap: 10px; min-width: 0; padding-left: 16px; border-left: 1px solid var(--line); }
+.panel h3 { margin: 0; font-family: var(--body); }
+.panel .reason { margin: 0; font-weight: 600; }
+table.groups input[type=number] { width: 84px; }
+table.groups input[type=text] { min-width: 140px; }
+table.groups select { max-width: 200px; }
+table.edges label.f { gap: 2px; }
+table.edges .lbl .why { display: none; }
+@media (max-width: 720px) {
+  .topo2 { grid-template-columns: minmax(0, 1fr); }
+  .panel { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+}
