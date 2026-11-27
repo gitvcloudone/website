@@ -8,7 +8,7 @@ export type Tier = "free" | "pro" | "broadcom";
 export const TIERS: Tier[] = ["free", "pro", "broadcom"];
 
 export type Feature = "easyButton" | "expertView" | "rvtoolsImport" | "designFile" | "designOutput"
-  | "exportWord" | "exportPdf" | "exportDiagrams" | "exportTables";
+  | "exportWord" | "exportPdf" | "exportDiagrams" | "exportTables" | "aiCopilot" | "aiWriter";
 
 interface FeatureInfo { label: string; tiers: Tier[] }
 const ALL: Tier[] = [...TIERS];
@@ -24,6 +24,8 @@ export const FEATURES: Record<Feature, FeatureInfo> = {
   exportPdf: { label: "HLD as PDF", tiers: ALL },
   exportDiagrams: { label: "Diagrams as SVG, PNG and draw.io", tiers: ALL },
   exportTables: { label: "Prerequisites and IP plan as Excel", tiers: ALL },
+  aiCopilot: { label: "AI design copilot (with the user's own key)", tiers: ALL },
+  aiWriter: { label: "AI drafts of HLD sections (with the user's own key)", tiers: ALL },
 };
 
 let current: Tier = "free";

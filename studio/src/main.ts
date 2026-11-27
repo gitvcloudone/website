@@ -25,6 +25,15 @@ import { stepHtml, stateTag } from "./guided.ts";
 import { stepState, recommendOps, skipOps, reopenOps } from "./steps.ts";
 import type { LoadedFile } from "./rvimport.ts";
 import type { Action } from "./edit.ts";
+import { aiView, copilotHtml } from "./ai/panel.ts";
+import { loadAi, saveAi, aiReady, connectorFor } from "./ai/connector.ts";
+import type { AiMessage } from "./ai/connector.ts";
+import { redactorFor } from "./ai/redact.ts";
+import { ask } from "./ai/copilot.ts";
+import { draft } from "./ai/writer.ts";
+import { designSummary, changesToOps } from "./ai/tools.ts";
+import { NARRATIVE_TARGETS } from "../../engine/src/index.ts";
+import type { NarrativeTarget } from "../../engine/src/index.ts";
 
 const $ = (id: string) => document.getElementById(id)!;
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
@@ -129,7 +138,10 @@ function render() {
   $("main").innerHTML = (flash.length ? `<ul class="warns flash">${flash.map(f => `<li class="${f.lvl}">${esc(f.text)}</li>`).join("")}</ul>` : "")
     + (undoEasy ? `<p class="flash-undo">Easy button applied. <button type="button" class="link" data-undo-easy="1">Undo</button></p>` : "")
     + (r.view === "start" ? startHtml() : r.view === "expert" ? expertHtml(design, result, ui) : r.view === "easy" ? easyHtml(design, easyIn, easyOpts()) : stepHtml(design, result, ui, r.id));
-  $("summary").innerHTML = summaryHtml();
+  const aiFocus = document.activeElement && (document.activeElement as HTMLElement).id === "ai-input";
+  $("summary").innerHTML = summaryHtml() + copilotHtml();
+  const log = document.getElementById("ai-log"); if (log) log.scrollTop = log.scrollHeight;
+  if (aiFocus) { const a = document.getElementById("ai-input") as HTMLTextAreaElement | null; if (a && !a.disabled) { a.focus({ preventScroll: true }); a.setSelectionRange(a.value.length, a.value.length); } }
   if (fk) {
     const el = [...document.querySelectorAll<HTMLElement>("[data-edit],[data-xact],[data-sel]")].find(x => focusKey(x) === fk);
     if (el) { el.focus({ preventScroll: true }); if (caret !== null && el instanceof HTMLInputElement && el.type === "text") el.setSelectionRange(caret, caret); }
@@ -338,6 +350,88 @@ document.addEventListener("click", ev => {
   if (has && !confirm(`Replace the host types and topology with the "${o.label}" option, and set the other steps to their recommended values?${many} You can undo this right after.`)) return;
   const before = design;
   if (commit({ source: "easy-button", ops: applyOptionOps(design, easyIn, o) })) { undoEasy = before; go("#/step/review"); }
+});
+
+// ---------- AI: the copilot and the HLD drafts (the logic is in studio/src/ai; this is the page side) ----------
+let aiHistory: AiMessage[] = [], aiAbort: AbortController | null = null, aiSeq = 0;
+const today = () => new Date().toISOString().slice(0, 10);
+const storage = (() => { try { return localStorage; } catch { return null; } })();
+aiView.settings = loadAi(storage); aiView.ready = aiReady(aiView.settings);
+const aiConn = () => connectorFor(aiView.settings);
+const redactor = () => redactorFor(design, aiView.settings.standIns);
+
+async function aiAsk(q: string) {
+  const conn = aiConn(); q = q.trim(); if (!conn || !q || aiView.busy) return;
+  aiView.turns.push({ role: "user", text: q }); aiView.input = ""; aiView.busy = "Thinking"; render();
+  aiAbort = new AbortController();
+  try {
+    const out = await ask(conn, aiView.settings.model, design, redactor(), aiHistory, q, aiView.suggestions, () => `s${++aiSeq}`, aiAbort.signal,
+      step => { aiView.busy = step; render(); });
+    aiHistory = out.history; aiView.turns.push({ role: "assistant", text: out.reply, steps: out.steps });
+  } catch (e) {
+    aiView.turns.push({ role: "error", text: (e as Error).name === "AbortError" ? "Stopped." : (e as Error).message });
+  } finally { aiView.busy = ""; aiAbort = null; render(); }
+}
+
+function aiApply(id: string) {
+  const s = aiView.suggestions.find(x => x.id === id); if (!s || s.status !== "pending") return;
+  // rebuilt against the design as it is now, through the same checks
+  const c = changesToOps(design, s.changes.map(x => ({ setting: x.setting, value: x.to })), redactorFor(design, false));
+  if (!c.ok) { aiView.turns.push({ role: "error", text: `That suggestion no longer fits the design: ${c.error}` }); render(); return; }
+  const rec = { summary: s.summary, reason: s.reason, at: today(), paths: s.changes.map(x => x.setting) };
+  if (commit({ source: "ai", ops: [...c.ops, { op: "set", path: ["decisions", "ai"], value: [...design.decisions.ai, rec] }] })) { s.status = "applied"; render(); }
+}
+
+async function aiDraft(t: NarrativeTarget) {
+  const conn = aiConn(); if (!conn || aiView.drafting) return;
+  aiView.drafting = t; render();
+  try {
+    const n = await draft(conn, aiView.settings.model, design, redactor(), t, today());
+    commit({ source: "ai-writer", ops: [{ op: "set", path: ["narrative"], value: { ...design.narrative, [t]: n } }] });
+  } catch (e) { flash = [{ text: (e as Error).message, lvl: "crit" }]; }
+  finally { aiView.drafting = ""; render(); }
+}
+
+function aiSaveSettings() {
+  const key = (document.getElementById("ai-key") as HTMLInputElement | null)?.value.trim() ?? aiView.settings.key;
+  aiView.settings = { ...aiView.settings, plug: key ? "key" : "off", key,
+    remember: (document.getElementById("ai-remember") as HTMLInputElement | null)?.checked ?? false,
+    model: (document.getElementById("ai-model") as HTMLSelectElement | null)?.value || aiView.settings.model,
+    standIns: (document.getElementById("ai-standins") as HTMLInputElement | null)?.checked ?? true };
+  saveAi(storage, aiView.settings); aiView.ready = aiReady(aiView.settings);
+  if (key && !aiView.ready) aiView.turns.push({ role: "error", text: "That doesn't look like a Claude API key (they start with sk-ant-)." });
+  aiView.showSettings = !aiView.ready; aiView.preview = ""; render();
+}
+
+document.addEventListener("click", ev => {
+  const b = (ev.target as HTMLElement).closest<HTMLElement>("[data-act^='ai-']"); if (!b) return;
+  const act = b.dataset.act;
+  if (act === "ai-toggle") { aiView.open = !aiView.open; aiView.showSettings = aiView.open && !aiView.ready; }
+  else if (act === "ai-settings") aiView.showSettings = !aiView.showSettings;
+  else if (act === "ai-save") { aiSaveSettings(); return; }
+  else if (act === "ai-forget") { aiView.settings = { ...aiView.settings, key: "", plug: "off", remember: false }; saveAi(storage, aiView.settings); aiView.ready = false; aiView.showSettings = true; }
+  else if (act === "ai-preview") { const red = redactorFor(design, (document.getElementById("ai-standins") as HTMLInputElement | null)?.checked ?? aiView.settings.standIns);
+    aiView.preview = red.out(JSON.stringify(designSummary(design, result), null, 1)); }
+  else if (act === "ai-clear") { aiHistory = []; aiView.turns = []; aiView.suggestions = []; }
+  else if (act === "ai-send") { void aiAsk(aiView.input); return; }
+  else if (act === "ai-example") { void aiAsk(b.textContent || ""); return; }
+  else if (act === "ai-stop") { aiAbort?.abort(); return; }
+  else if (act === "ai-apply") { aiApply(b.dataset.sid || ""); return; }
+  else if (act === "ai-dismiss") { const s = aiView.suggestions.find(x => x.id === b.dataset.sid); if (s) s.status = "dismissed"; }
+  else if (act === "ai-draft") { const t = b.dataset.target as NarrativeTarget; if (NARRATIVE_TARGETS.includes(t)) void aiDraft(t); return; }
+  else if (act === "ai-undraft") { const t = b.dataset.target as NarrativeTarget; const n = { ...design.narrative }; delete n[t]; commit({ source: "ai-writer", ops: [{ op: "set", path: ["narrative"], value: n }] }); return; }
+  render();
+});
+document.addEventListener("input", ev => { const el = ev.target as HTMLElement; if (el.id === "ai-input") aiView.input = (el as HTMLTextAreaElement).value; });
+document.addEventListener("keydown", ev => {
+  const el = ev.target as HTMLElement;
+  if (el.id === "ai-input" && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); void aiAsk(aiView.input); }
+});
+document.addEventListener("change", ev => {
+  const el = ev.target as HTMLTextAreaElement, t = el.dataset?.narr as NarrativeTarget | undefined;
+  if (!t || !design.narrative[t]) return;
+  if (el.value.trim() === design.narrative[t]!.text.trim()) return;
+  commit({ source: "edit", ops: [{ op: "set", path: ["narrative"], value: { ...design.narrative, [t]: { ...design.narrative[t]!, text: el.value, edited: true } } }] });
 });
 
 render();

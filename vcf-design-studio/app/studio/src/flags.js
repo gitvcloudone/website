@@ -9,7 +9,7 @@
 export const TIERS         = ["free", "pro", "broadcom"];
 
                                                                                                    
-                                                                   
+                                                                                              
 
                                                       
 const ALL         = [...TIERS];
@@ -25,6 +25,8 @@ export const FEATURES                               = {
   exportPdf: { label: "HLD as PDF", tiers: ALL },
   exportDiagrams: { label: "Diagrams as SVG, PNG and draw.io", tiers: ALL },
   exportTables: { label: "Prerequisites and IP plan as Excel", tiers: ALL },
+  aiCopilot: { label: "AI design copilot (with the user's own key)", tiers: ALL },
+  aiWriter: { label: "AI drafts of HLD sections (with the user's own key)", tiers: ALL },
 };
 
 let current       = "free";
