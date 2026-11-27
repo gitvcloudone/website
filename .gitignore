@@ -1,0 +1,5 @@
+node_modules/
+.DS_Store
+# Real RVTools exports: paths listed locally, outputs kept locally (customer data)
+engine/test/private.local.json
+engine/golden-private/

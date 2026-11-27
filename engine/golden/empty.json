@@ -1,0 +1,103 @@
+{
+ "rv": null,
+ "result": {
+  "clusters": [],
+  "hosts": 0,
+  "cores": 0,
+  "licCores": 0,
+  "lic": {
+   "physCores": 0,
+   "licCores": 0,
+   "rawVsan": 0,
+   "entitled": 0,
+   "addOnTiB": 0,
+   "vdefendCores": 0,
+   "gwfwCores": 0,
+   "aviSU": 0,
+   "vlrVms": 0,
+   "drVms": 0
+  },
+  "bom": {
+   "bmEdges": [],
+   "witnesses": []
+  },
+  "D": {
+   "vcpu": 0,
+   "vram": 0,
+   "stor": 0,
+   "vms": 0,
+   "mgmtVcpu": 0,
+   "mgmtRam": 0
+  },
+  "T": {
+   "vms": 0,
+   "vcpu": 0,
+   "vramGiB": 0,
+   "usedTiB": 0,
+   "allocTiB": 0,
+   "templTiB": 0
+  },
+  "extTiB": 0,
+  "nsxSets": [],
+  "types": [
+   {
+    "id": "h0",
+    "name": "Host type 1",
+    "vendor": "intel",
+    "sockets": 2,
+    "cores": 32,
+    "ramGB": 1024,
+    "ht": true,
+    "nvme": 6,
+    "nvmeTB": 7.68
+   }
+  ],
+  "drVms": 0,
+  "limiter": "–",
+  "warnings": [],
+  "prof": {
+   "ha": true,
+   "vc": "medium",
+   "nsx": [
+    3,
+    "medium"
+   ],
+   "first": [
+    184,
+    656,
+    11445
+   ],
+   "add": [
+    74,
+    244,
+    5813
+   ],
+   "auto": [
+    "3 × Medium",
+    72,
+    288,
+    2700
+   ],
+   "workers": [
+    3,
+    12,
+    24
+   ],
+   "logW": [
+    24,
+    48
+   ]
+  },
+  "domains": 0,
+  "instances": 0,
+  "fit": []
+ },
+ "totals": {
+  "vms": 0,
+  "vcpu": 0,
+  "vramGiB": 0,
+  "usedTiB": 0,
+  "allocTiB": 0,
+  "templTiB": 0
+ }
+}

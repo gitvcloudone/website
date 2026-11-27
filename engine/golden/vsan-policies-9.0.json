@@ -1,0 +1,505 @@
+{
+ "rv": null,
+ "result": {
+  "clusters": [
+   {
+    "c": {
+     "hostType": "h1",
+     "storage": "esa",
+     "topo": "standard",
+     "nPlus": 1,
+     "policy": "auto",
+     "local": "auto",
+     "comp": 1.25,
+     "dedupe": 1,
+     "opsRes": 10,
+     "rebuild": true,
+     "maxHosts": 16,
+     "fixedHosts": 0,
+     "auto": false,
+     "vdefend": false,
+     "tierOn": false,
+     "tierDrives": 1,
+     "tierPct": 100,
+     "supOn": false,
+     "supSize": "small",
+     "id": "m1",
+     "name": "m1",
+     "hw": {
+      "id": "h1",
+      "name": "Standard 2×32",
+      "vendor": "intel",
+      "sockets": 2,
+      "cores": 32,
+      "ramGB": 1024,
+      "ht": true,
+      "nvme": 6,
+      "nvmeTB": 7.68
+     }
+    },
+    "inst": "#i1",
+    "ii": 0,
+    "d": "#i1-m",
+    "di": 0,
+    "ci": 0,
+    "mgmtDefault": {
+     "ha": true,
+     "vc": "medium",
+     "nsx": [
+      3,
+      "medium"
+     ],
+     "first": [
+      184,
+      656,
+      11445
+     ],
+     "add": [
+      74,
+      244,
+      5813
+     ],
+     "auto": [
+      "3 × Medium",
+      72,
+      288,
+      2700
+     ],
+     "workers": [
+      3,
+      12,
+      24
+     ],
+     "logW": [
+      24,
+      48
+     ]
+    },
+    "total": 4,
+    "need": 4,
+    "short": false,
+    "fixed": 0,
+    "cpuH": 1.78125,
+    "ramH": 1.0104994545737884,
+    "base": 2,
+    "compute": 3,
+    "floor": 4,
+    "storH": 4,
+    "limiter": "Minimum",
+    "pol": {
+     "f": 1.5,
+     "label": "RAID-5 2+1 (FTT=1) (auto)",
+     "min": 3
+    },
+    "usable": 94.2964106798172,
+    "rawTiB": 167.63806343078613,
+    "ded": 1,
+    "h": {
+     "cores": 64,
+     "threads": 128,
+     "sockets": 2,
+     "coresPerSocket": 32,
+     "dram": 1024,
+     "rawTiB": 41.90951585769653,
+     "vsanNvme": 6,
+     "tiering": false,
+     "tierDrives": 0,
+     "tierMax": 2,
+     "tierGiB": 0,
+     "wantGiB": 0,
+     "tierShort": false,
+     "effCores": 64,
+     "ramUsable": 821.376,
+     "ramRatio": 1,
+     "licCores": 64,
+     "svmStorTiB": 0,
+     "ht": true
+    },
+    "cores": 114,
+    "ram": 830,
+    "stor": 12.076270650140941,
+    "noStorage": false,
+    "extTiB": 0,
+    "load": {
+     "wvcpu": 0,
+     "coresFixed": 114,
+     "wram": 0,
+     "ramFixed": 830,
+     "stor": 12.076270650140941,
+     "vms": 0,
+     "vcpu": 0,
+     "vramGiB": 0,
+     "activeGiB": 0
+    },
+    "items": [
+     {
+      "name": "VCF management, first instance (HA Medium)",
+      "vcpu": 184,
+      "ram": 656,
+      "disk": 11445,
+      "cat": "mgmt",
+      "ratio": 2
+     },
+     {
+      "name": "WLD-01: vCenter (medium)",
+      "vcpu": 8,
+      "ram": 30,
+      "disk": 933,
+      "cat": "mgmt",
+      "ratio": 2
+     },
+     {
+      "name": "WLD-01: NSX Manager (large) × 3",
+      "vcpu": 36,
+      "ram": 144,
+      "disk": 900,
+      "cat": "mgmt",
+      "ratio": 2
+     }
+    ],
+    "groups": [],
+    "max": 16,
+    "maxRaised": 0
+   },
+   {
+    "c": {
+     "hostType": "h1",
+     "storage": "esa",
+     "topo": "standard",
+     "nPlus": 1,
+     "policy": "r5",
+     "local": "auto",
+     "comp": 1.25,
+     "dedupe": 1.5,
+     "opsRes": 10,
+     "rebuild": true,
+     "maxHosts": 32,
+     "fixedHosts": 0,
+     "auto": false,
+     "vdefend": true,
+     "tierOn": false,
+     "tierDrives": 1,
+     "tierPct": 100,
+     "supOn": false,
+     "supSize": "small",
+     "id": "r5",
+     "name": "r5",
+     "hw": {
+      "id": "h1",
+      "name": "Standard 2×32",
+      "vendor": "intel",
+      "sockets": 2,
+      "cores": 32,
+      "ramGB": 1024,
+      "ht": true,
+      "nvme": 6,
+      "nvmeTB": 7.68
+     }
+    },
+    "inst": "#i1",
+    "ii": 0,
+    "d": "#w1",
+    "di": 1,
+    "ci": 0,
+    "mgmtDefault": false,
+    "total": 5,
+    "need": 5,
+    "short": false,
+    "fixed": 0,
+    "cpuH": 0.625,
+    "ramH": 0.8025557113916161,
+    "base": 1,
+    "compute": 2,
+    "floor": 3,
+    "storH": 5,
+    "limiter": "Storage",
+    "pol": {
+     "f": 1.5,
+     "label": "RAID-5 2+1 (FTT=1)",
+     "min": 3
+    },
+    "usable": 125.7285475730896,
+    "rawTiB": 209.54757928848267,
+    "ded": 1,
+    "h": {
+     "cores": 64,
+     "threads": 128,
+     "sockets": 2,
+     "coresPerSocket": 32,
+     "dram": 1024,
+     "rawTiB": 41.90951585769653,
+     "vsanNvme": 6,
+     "tiering": false,
+     "tierDrives": 0,
+     "tierMax": 2,
+     "tierGiB": 0,
+     "wantGiB": 0,
+     "tierShort": false,
+     "effCores": 64,
+     "ramUsable": 821.376,
+     "ramRatio": 1,
+     "licCores": 64,
+     "svmStorTiB": 0,
+     "ht": true
+    },
+    "cores": 40,
+    "ram": 659.2,
+    "stor": 120,
+    "noStorage": false,
+    "extTiB": 0,
+    "load": {
+     "wvcpu": 160,
+     "coresFixed": 0,
+     "wram": 659.2,
+     "ramFixed": 0,
+     "stor": 120,
+     "vms": 40,
+     "vcpu": 160,
+     "vramGiB": 659.2,
+     "activeGiB": 131.84
+    },
+    "items": [],
+    "groups": [
+     {
+      "g": "#g1",
+      "f": 1
+     }
+    ],
+    "max": 32,
+    "maxRaised": 0
+   },
+   {
+    "c": {
+     "hostType": "h1",
+     "storage": "esa",
+     "topo": "standard",
+     "nPlus": 1,
+     "policy": "auto",
+     "local": "auto",
+     "comp": 1.25,
+     "dedupe": 2,
+     "opsRes": 10,
+     "rebuild": true,
+     "maxHosts": 32,
+     "fixedHosts": 0,
+     "auto": true,
+     "vdefend": true,
+     "tierOn": false,
+     "tierDrives": 1,
+     "tierPct": 100,
+     "supOn": false,
+     "supSize": "small",
+     "id": "ded",
+     "name": "ded",
+     "hw": {
+      "id": "h1",
+      "name": "Standard 2×32",
+      "vendor": "intel",
+      "sockets": 2,
+      "cores": 32,
+      "ramGB": 1024,
+      "ht": true,
+      "nvme": 6,
+      "nvmeTB": 7.68
+     }
+    },
+    "inst": "#i1",
+    "ii": 0,
+    "d": "#w1",
+    "di": 1,
+    "ci": 1,
+    "mgmtDefault": false,
+    "autoShare": 1,
+    "total": 11,
+    "need": 11,
+    "short": false,
+    "fixed": 0,
+    "cpuH": 1.5625,
+    "ramH": 2.0063892784790403,
+    "base": 3,
+    "compute": 4,
+    "floor": 3,
+    "storH": 11,
+    "limiter": "Storage",
+    "pol": {
+     "f": 1.5,
+     "label": "RAID-6 4+2 (FTT=2) (auto)",
+     "min": 6
+    },
+    "usable": 314.321368932724,
+    "rawTiB": 461.00467443466187,
+    "ded": 1,
+    "h": {
+     "cores": 64,
+     "threads": 128,
+     "sockets": 2,
+     "coresPerSocket": 32,
+     "dram": 1024,
+     "rawTiB": 41.90951585769653,
+     "vsanNvme": 6,
+     "tiering": false,
+     "tierDrives": 0,
+     "tierMax": 2,
+     "tierGiB": 0,
+     "wantGiB": 0,
+     "tierShort": false,
+     "effCores": 64,
+     "ramUsable": 821.376,
+     "ramRatio": 1,
+     "licCores": 64,
+     "svmStorTiB": 0,
+     "ht": true
+    },
+    "cores": 100,
+    "ram": 1648,
+    "stor": 300,
+    "noStorage": false,
+    "extTiB": 0,
+    "load": {
+     "wvcpu": 400,
+     "coresFixed": 0,
+     "wram": 1648,
+     "ramFixed": 0,
+     "stor": 300,
+     "vms": 100,
+     "vcpu": 400,
+     "vramGiB": 1648,
+     "activeGiB": 329.6
+    },
+    "items": [],
+    "groups": [
+     {
+      "g": "#g2",
+      "f": 1,
+      "auto": true
+     }
+    ],
+    "max": 32,
+    "maxRaised": 0
+   }
+  ],
+  "hosts": 20,
+  "cores": 1280,
+  "licCores": 1280,
+  "lic": {
+   "physCores": 1280,
+   "licCores": 1280,
+   "rawVsan": 838.1903171539307,
+   "entitled": 1280,
+   "addOnTiB": 0,
+   "vdefendCores": 0,
+   "gwfwCores": 0,
+   "aviSU": 0,
+   "vlrVms": 0,
+   "drVms": 0
+  },
+  "bom": {
+   "bmEdges": [],
+   "witnesses": []
+  },
+  "D": {
+   "vcpu": 560,
+   "vram": 2307.2,
+   "stor": 432.07627065014094,
+   "vms": 140,
+   "mgmtVcpu": 228,
+   "mgmtRam": 830
+  },
+  "T": {
+   "vms": 140,
+   "vcpu": 560,
+   "vramGiB": 2240,
+   "usedTiB": 420,
+   "allocTiB": 630,
+   "templTiB": 0
+  },
+  "extTiB": 0,
+  "nsxSets": [
+   {
+    "name": "Instance i1 management NSX",
+    "size": "medium",
+    "inst": "#i1",
+    "domains": [
+     "#i1-m"
+    ]
+   },
+   {
+    "name": "WLD-01 NSX",
+    "size": "large",
+    "inst": "#i1",
+    "domains": [
+     "#w1"
+    ]
+   }
+  ],
+  "types": [
+   {
+    "id": "h1",
+    "name": "Standard 2×32",
+    "vendor": "intel",
+    "sockets": 2,
+    "cores": 32,
+    "ramGB": 1024,
+    "ht": true,
+    "nvme": 6,
+    "nvmeTB": 7.68
+   }
+  ],
+  "drVms": 0,
+  "limiter": "Storage",
+  "warnings": [
+   {
+    "lvl": "info",
+    "t": "WLD-01 / r5: deduplication not applied: global dedupe needs vSAN ESA, VCF 9.1, 3–64 hosts and no stretched cluster."
+   },
+   {
+    "lvl": "info",
+    "t": "WLD-01 / ded: deduplication not applied: global dedupe needs vSAN ESA, VCF 9.1, 3–64 hosts and no stretched cluster."
+   }
+  ],
+  "prof": {
+   "ha": true,
+   "vc": "medium",
+   "nsx": [
+    3,
+    "medium"
+   ],
+   "first": [
+    184,
+    656,
+    11445
+   ],
+   "add": [
+    74,
+    244,
+    5813
+   ],
+   "auto": [
+    "3 × Medium",
+    72,
+    288,
+    2700
+   ],
+   "workers": [
+    3,
+    12,
+    24
+   ],
+   "logW": [
+    24,
+    48
+   ]
+  },
+  "domains": 2,
+  "instances": 1,
+  "fit": []
+ },
+ "totals": {
+  "vms": 140,
+  "vcpu": 560,
+  "vramGiB": 2240,
+  "usedTiB": 420,
+  "allocTiB": 630,
+  "templTiB": 0
+ }
+}
