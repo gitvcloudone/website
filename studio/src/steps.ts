@@ -17,7 +17,7 @@ const STORAGE_LABELS: Record<string, string> = { policy: "vSAN policy", local: "
 
 export interface Change { path: Path; where: string; label: string; value: unknown; def: unknown }
 
-const show = (f: Pick<Field, "choices">, v: unknown) => {
+export const show = (f: Pick<Field, "choices">, v: unknown) => {
   const c = (f.choices || []).find(x => String(x[0]) === String(v));
   return c ? c[1] : typeof v === "boolean" ? (v ? "on" : "off") : v === "" ? "none" : String(v);
 };

@@ -101,4 +101,10 @@ export const IPPLAN = {
 /** `input: "customer"`: only the customer can supply what the rule checks (DNS, identity, ASNs, the IP plan), so the easy button never fills it. */
                                                                                                                                                                                                                                       
 export const RULES = rules.rules          ;
+
+/** Every knowledge table with its source, link and last-verified date (the HLD appendix lists them). */
+                                                                                                                  
+                                                                                                      
+export const SOURCES                = Object.entries({ hardware, management, addons, vsan, defaults, identity, network, nsx, ipplan }                                     )
+  .flatMap(([file, j]) => Object.entries(j.tables).filter(([, t]) => t.source).map(([table, t]) => ({ file, table, source: t.source , url: t.url ?? null, verified: t.verified || "" })));
 export const PILLARS = rules.pillars                          ;

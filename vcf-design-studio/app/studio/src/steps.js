@@ -18,7 +18,7 @@ const STORAGE_LABELS                         = { policy: "vSAN policy", local: "
 
                                                                                                   
 
-const show = (f                        , v         ) => {
+export const show = (f                        , v         ) => {
   const c = (f.choices || []).find(x => String(x[0]) === String(v));
   return c ? c[1] : typeof v === "boolean" ? (v ? "on" : "off") : v === "" ? "none" : String(v);
 };

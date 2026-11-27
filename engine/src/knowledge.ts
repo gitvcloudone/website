@@ -100,4 +100,10 @@ export type Pillar = "availability" | "manageability" | "performance" | "recover
 /** `input: "customer"`: only the customer can supply what the rule checks (DNS, identity, ASNs, the IP plan), so the easy button never fills it. */
 export interface Rule { id: string; pillar: Pillar; level: "required" | "recommended" | "consider"; step: string; input?: "customer"; title: string; why: string; risk: string; source: string; url: string | null; verified: string }
 export const RULES = rules.rules as Rule[];
+
+/** Every knowledge table with its source, link and last-verified date (the HLD appendix lists them). */
+export interface SourceEntry { file: string; table: string; source: string; url: string | null; verified: string }
+type Tables = { tables: Record<string, { source?: string; url?: string | null; verified?: string }> };
+export const SOURCES: SourceEntry[] = Object.entries({ hardware, management, addons, vsan, defaults, identity, network, nsx, ipplan } as unknown as Record<string, Tables>)
+  .flatMap(([file, j]) => Object.entries(j.tables).filter(([, t]) => t.source).map(([table, t]) => ({ file, table, source: t.source!, url: t.url ?? null, verified: t.verified || "" })));
 export const PILLARS = rules.pillars as Record<Pillar, string>;
