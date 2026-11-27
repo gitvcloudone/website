@@ -4,12 +4,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { loadLegacy } from "../baseline/legacy.mjs";
-import * as engine from "../src/knowledge.ts";
+import * as engine from "../src/index.ts";
 
 const legacy = loadLegacy();
 const plain = (x: unknown) => JSON.parse(JSON.stringify(x));
 for (const k of ["TIB", "GIB", "TB", "VENDORS", "DIMMS", "NVME_TB", "TIER_MAX_GIB", "HOST_RAM_MAX_GB", "HOST_LCPU_MAX", "PROFILES", "VCENTER", "NSXMGR",
-  "EDGE", "WITNESS", "OPSNET", "SUPERVISOR", "ADDON", "DEFAULTS", "CLUSTER_DEFAULTS", "POL"])
+  "EDGE", "WITNESS", "OPSNET", "SUPERVISOR", "ADDON", "DEFAULTS", "CLUSTER_DEFAULTS", "POL", "COLS", "HCOLS"])
   test(`knowledge matches the page: ${k}`, () => assert.deepStrictEqual(plain((engine as Record<string, unknown>)[k]), plain(legacy[k])));
 
 const dir = new URL("../knowledge/", import.meta.url);
