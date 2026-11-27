@@ -1,0 +1,36 @@
+{
+  "about": "NSX workload connectivity for VCF 9.1 and later, per domain: connectivity model, Tier-0 and transit gateway HA, BGP peering, edge TEPs and VPC IP blocks. Design level: VLAN IDs and subnets come with the IP plan.",
+  "tables": {
+    "models": {
+      "source": "Broadcom TechDocs, VCF 9.1: Workload Connectivity Detailed Design",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/workload-connectivity-designs.html",
+      "verified": "2026-11-26",
+      "notes": "Other 9.1 models (Distributed VXLAN, NSX segment, VLAN-backed VPC, VLAN networking) are not offered yet.",
+      "data": {
+        "centralized": { "label": "Centralized (NSX Edge cluster, Tier-0 gateway)", "edges": "required", "use": "Supports VCF Automation All Apps orgs, vSphere Supervisor, and all VPC network and stateful services." },
+        "distributed": { "label": "Distributed VLAN (no edges required)", "edges": "optional", "use": "Supports VCF Automation All Apps orgs, vSphere Supervisor, and most VPC network and stateful services, without deploying NSX Edges. Edges (or a virtual network appliance) are needed only for stateful north/south services such as NAT." }
+      }
+    },
+    "centralized": {
+      "source": "Broadcom TechDocs, VCF 9.1: Centralized Connectivity Model (VCF-WLDCON-CTGW-RCMD-CFG-001, -002, -003, -004, -008, -009, -013, -014; REQD-CFG-004)",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/workload-connectivity-designs/centralized-connectivity-model.html",
+      "verified": "2026-11-26",
+      "notes": "Tier-0 active/active is recommended (RCMD-CFG-001) and scales to 8 edge nodes; only active/standby supports stateful services, and then the Tier-0 is limited to 2 edge nodes. Transit gateway active/standby is required for VCF Automation All Apps orgs and vSphere Supervisor (no default stated). A unique private BGP ASN for the Tier-0 (RCMD-CFG-002). Each edge node peers with two physical devices (RCMD-CFG-003), which must be BGP capable (RCMD-CFG-004), over two peering VLANs (RCMD-CFG-008) of /28 or larger (RCMD-CFG-009). BFD on (RCMD-CFG-013), default BGP timers 60/180 (RCMD-CFG-014). External IP block: enterprise routable, /24 or larger preferred (REQD-CFG-004).",
+      "data": { "aaMaxNodes": 8, "asMaxNodes": 2, "peeringVlans": 2, "peeringPrefix": 28, "externalPrefix": 24 }
+    },
+    "distributed": {
+      "source": "Broadcom TechDocs, VCF 9.1: Distributed VLAN Connectivity Model (VCF-WLDCON-DTGWVLAN-REQD-CFG-004, -006, -012)",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/workload-connectivity-designs/distributed-vlan-connectivity-model.html",
+      "verified": "2026-11-26",
+      "notes": "External IP block: routable, from the external VLAN CIDR (REQD-CFG-004). Private transit gateway IP block: non-routable, /23 or larger preferred (REQD-CFG-012). Stateful services with a distributed transit gateway need an edge or virtual network appliance cluster (REQD-CFG-006).",
+      "data": { "privatePrefix": 23 }
+    },
+    "edgeNodes": {
+      "source": "Broadcom TechDocs, VCF 9.1: Host Fault Tolerant NSX Edge Cluster Design (VCF-NSX-EDGE-REQD-HFTSR-001, REQD-COMSAZ-001, RCMD-COMSAZ-017, RCMD-COMSAZ-018)",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/design-library-nsx-edge-cluster/nsx-edge-cluster-models-for-single-availability-zone/host-fault-tolerant-nsx-edge-cluster-design.html",
+      "verified": "2026-11-26",
+      "notes": "Two or more edge nodes per edge cluster. Edge TEP MTU must match the distributed switch MTU. Separate TEP VLANs for edges and ESX hosts are recommended. TEP addresses from an IP pool, one per fast-path interface (two per edge node).",
+      "data": { "minNodes": 2, "tepPerNode": 2 }
+    }
+  }
+}

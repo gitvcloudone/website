@@ -1,0 +1,38 @@
+{
+  "about": "ESX host networking for VCF 9.1 and later: distributed switch models, VMkernel networks, MTU and addressing. Design level (no VLAN IDs or subnets; those come with the IP / VLAN / DNS plan).",
+  "tables": {
+    "vdsModels": {
+      "source": "Broadcom TechDocs, VCF 9.1: Single Distributed Switch Model; Storage Separation Distributed Switch Model (VCF-VDS-SDS-REQD-CFG-001, VCF-VDS-SS-REQD-CFG-001)",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/network-designs/vsphere-cluster-network-models.html",
+      "verified": "2026-11-26",
+      "notes": "The design library has six models; the studio offers these two. Workload separation, dedicated edge cluster and vSAN storage cluster separation models are not offered yet.",
+      "data": {
+        "single": { "label": "Single distributed switch (2 NICs)", "vds": 1, "nics": 2, "storageVds": 1 },
+        "storage": { "label": "Storage separation: two distributed switches (4 NICs)", "vds": 2, "nics": 4, "storageVds": 2 }
+      }
+    },
+    "mtu": {
+      "source": "Broadcom TechDocs, VCF 9.1: VMkernel Detailed Design (recommended MTU); Physical Data Center Network Design (VCF-NET-REQD-SWT-002, VCF-VDS-COM-RCMD-CFG-002)",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/network-designs/vmkernel-design.html",
+      "verified": "2026-11-26",
+      "notes": "ESX management 1500; vMotion, vSAN and host TEPs 9000 recommended. Overlay: 1600 is the minimum required, 1700 recommended for future Geneve header growth.",
+      "data": { "management": 1500, "recommended": 9000, "overlayMin": 1600, "overlayRecommendedMin": 1700, "max": 9216 }
+    },
+    "addressing": {
+      "source": "Broadcom TechDocs, VCF 9.1: IPv4 Addressing Model",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/datacenter-network-requirements/infrastucture-ip-addressing-models/ipv4-addressing-model.html",
+      "verified": "2026-11-26",
+      "notes": "Management VMkernel: static. vMotion and storage VMkernels: network pool or DHCPv4. Host TEPs: static IP list, network pool or DHCPv4, one address per active uplink of the NSX switch per host (typically 2). Infrastructure networks must be IPv4. Subnet masks of infrastructure networks can't be changed later, so size subnets for expansion (VCF-NET-RCMD-IPA-001).",
+      "data": {
+        "methods": { "static": "Static", "pool": "Network pool", "list": "Static IP list", "dhcp": "DHCPv4" },
+        "tepPerHost": 2
+      }
+    },
+    "studioDefaults": {
+      "source": "VCF Design Studio defaults (agreed design choices, not Broadcom requirements): 25 GbE NICs; host TEPs from a network pool (no DHCP dependency). VCF requires switch ports to match the NIC speed (VCF-NET-REQD-SWT-001).",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/datacenter-network-requirements/physical-datacenter-design-9-x.html",
+      "verified": "2026-11-26",
+      "data": { "nicGbps": 25, "nicSpeeds": [10, 25, 40, 50, 100], "tep": "pool", "nicsPerHost": 2 }
+    }
+  }
+}

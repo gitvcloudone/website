@@ -1,0 +1,21 @@
+name: Engine tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: Install (exact versions from package-lock.json)
+        run: npm ci --no-audit --no-fund
+      - name: Golden, knowledge and studio tests (includes "vcf-design-studio/app is up to date with the source")
+        run: npm test
+      - name: Type check
+        run: npm run typecheck

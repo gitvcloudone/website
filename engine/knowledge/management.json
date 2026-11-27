@@ -1,0 +1,327 @@
+{
+  "about": "Management appliance footprints. Specs are per appliance: vCPU, RAM GB, disk GB.",
+  "tables": {
+    "profiles": {
+      "source": "Broadcom \"VCF Fleet Sizing Models\" (VCF 9.1 techdocs); the same models are used for VCF 9.0",
+      "url": null,
+      "verified": "2026-11-23",
+      "notes": "firstInstance includes the fleet components (VCF Management Services, SDDC Manager, vCenter, NSX, VCF Operations, License Server, Cloud Proxy, VCF Automation). Without VCF Automation its nodes are taken off. Log Management resizes the management-services workers and adds one worker plus 500 GB per replica (estimate).",
+      "data": {
+        "Simple": {
+          "ha": false,
+          "mgmtVcenterSize": "small",
+          "mgmtNsx": {
+            "nodes": 1,
+            "size": "medium"
+          },
+          "firstInstance": {
+            "vcpu": 76,
+            "ramGB": 251,
+            "diskGB": 7448
+          },
+          "additionalInstance": {
+            "vcpu": 34,
+            "ramGB": 111,
+            "diskGB": 4562
+          },
+          "automation": {
+            "label": "1 × Small",
+            "vcpu": 24,
+            "ramGB": 96,
+            "diskGB": 600
+          },
+          "mgmtServicesWorkers": {
+            "count": 2,
+            "vcpu": 12,
+            "ramGB": 24
+          },
+          "logManagementWorker": {
+            "vcpu": 16,
+            "ramGB": 32
+          }
+        },
+        "HA Small": {
+          "ha": true,
+          "mgmtVcenterSize": "small",
+          "mgmtNsx": {
+            "nodes": 3,
+            "size": "medium"
+          },
+          "firstInstance": {
+            "vcpu": 106,
+            "ramGB": 335,
+            "diskGB": 8422
+          },
+          "additionalInstance": {
+            "vcpu": 62,
+            "ramGB": 187,
+            "diskGB": 5462
+          },
+          "automation": {
+            "label": "1 × Medium",
+            "vcpu": 24,
+            "ramGB": 96,
+            "diskGB": 900
+          },
+          "mgmtServicesWorkers": {
+            "count": 3,
+            "vcpu": 10,
+            "ramGB": 16
+          },
+          "logManagementWorker": {
+            "vcpu": 16,
+            "ramGB": 32
+          }
+        },
+        "HA Medium": {
+          "ha": true,
+          "mgmtVcenterSize": "medium",
+          "mgmtNsx": {
+            "nodes": 3,
+            "size": "medium"
+          },
+          "firstInstance": {
+            "vcpu": 184,
+            "ramGB": 656,
+            "diskGB": 11445
+          },
+          "additionalInstance": {
+            "vcpu": 74,
+            "ramGB": 244,
+            "diskGB": 5813
+          },
+          "automation": {
+            "label": "3 × Medium",
+            "vcpu": 72,
+            "ramGB": 288,
+            "diskGB": 2700
+          },
+          "mgmtServicesWorkers": {
+            "count": 3,
+            "vcpu": 12,
+            "ramGB": 24
+          },
+          "logManagementWorker": {
+            "vcpu": 24,
+            "ramGB": 48
+          }
+        },
+        "HA Large": {
+          "ha": true,
+          "mgmtVcenterSize": "large",
+          "mgmtNsx": {
+            "nodes": 3,
+            "size": "large"
+          },
+          "firstInstance": {
+            "vcpu": 298,
+            "ramGB": 949,
+            "diskGB": 15357
+          },
+          "additionalInstance": {
+            "vcpu": 120,
+            "ramGB": 353,
+            "diskGB": 8321
+          },
+          "automation": {
+            "label": "3 × Large",
+            "vcpu": 96,
+            "ramGB": 384,
+            "diskGB": 3600
+          },
+          "mgmtServicesWorkers": {
+            "count": 4,
+            "vcpu": 16,
+            "ramGB": 32
+          },
+          "logManagementWorker": {
+            "vcpu": 24,
+            "ramGB": 48
+          }
+        }
+      }
+    },
+    "vcenter": {
+      "source": "vCenter appliance sizes",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "small": {
+          "vcpu": 4,
+          "ramGB": 21,
+          "diskGB": 734,
+          "maxHosts": 100,
+          "maxVms": 1000
+        },
+        "medium": {
+          "vcpu": 8,
+          "ramGB": 30,
+          "diskGB": 933,
+          "maxHosts": 400,
+          "maxVms": 4000
+        },
+        "large": {
+          "vcpu": 16,
+          "ramGB": 39,
+          "diskGB": 1383,
+          "maxHosts": 1000,
+          "maxVms": 10000
+        },
+        "xlarge": {
+          "vcpu": 24,
+          "ramGB": 58,
+          "diskGB": 2308,
+          "maxHosts": 2000,
+          "maxVms": 35000
+        }
+      }
+    },
+    "nsxManager": {
+      "source": "NSX Manager appliance sizes (per node)",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "medium": {
+          "vcpu": 6,
+          "ramGB": 24,
+          "diskGB": 300,
+          "maxHosts": 128,
+          "maxClusters": 5
+        },
+        "large": {
+          "vcpu": 12,
+          "ramGB": 48,
+          "diskGB": 300,
+          "maxHosts": 1024,
+          "maxClusters": 256
+        },
+        "xlarge": {
+          "vcpu": 24,
+          "ramGB": 96,
+          "diskGB": 400,
+          "maxHosts": 2048,
+          "maxClusters": 512
+        }
+      }
+    },
+    "edge": {
+      "source": "NSX Edge VM sizes",
+      "url": null,
+      "verified": "2026-11-23",
+      "notes": "Bare-metal edges are servers in the bill of materials, not ESX hosts, so they carry no VCF core licences.",
+      "data": {
+        "small": {
+          "vcpu": 2,
+          "ramGB": 4,
+          "diskGB": 200
+        },
+        "medium": {
+          "vcpu": 4,
+          "ramGB": 8,
+          "diskGB": 200
+        },
+        "large": {
+          "vcpu": 8,
+          "ramGB": 32,
+          "diskGB": 200
+        },
+        "xlarge": {
+          "vcpu": 16,
+          "ramGB": 64,
+          "diskGB": 200
+        }
+      }
+    },
+    "witness": {
+      "source": "vSAN witness appliance (VCF 9.1)",
+      "url": null,
+      "verified": "2026-11-23",
+      "notes": "maxVms 0 = no stated limit. The engine picks Medium up to 500 VMs, else Large.",
+      "data": {
+        "medium": {
+          "vcpu": 4,
+          "ramGB": 16,
+          "maxVms": 500
+        },
+        "large": {
+          "vcpu": 4,
+          "ramGB": 32,
+          "maxVms": 0
+        },
+        "xlarge": {
+          "vcpu": 8,
+          "ramGB": 64,
+          "maxVms": 0
+        }
+      }
+    },
+    "opsNetworks": {
+      "source": "VCF Operations for Networks platform and collector sizes",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "platform": {
+          "medium": {
+            "vcpu": 8,
+            "ramGB": 32,
+            "diskGB": 1024
+          },
+          "large": {
+            "vcpu": 12,
+            "ramGB": 48,
+            "diskGB": 1024
+          },
+          "xlarge": {
+            "vcpu": 16,
+            "ramGB": 64,
+            "diskGB": 2048
+          }
+        },
+        "collector": {
+          "medium": {
+            "vcpu": 4,
+            "ramGB": 12,
+            "diskGB": 200
+          },
+          "large": {
+            "vcpu": 8,
+            "ramGB": 16,
+            "diskGB": 200
+          },
+          "xlarge": {
+            "vcpu": 8,
+            "ramGB": 24,
+            "diskGB": 200
+          }
+        }
+      }
+    },
+    "supervisor": {
+      "source": "vSphere Supervisor (vSphere Kubernetes Service) control-plane VM sizes; 3 VMs per Supervisor",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "tiny": {
+          "vcpu": 2,
+          "ramGB": 8,
+          "diskGB": 32
+        },
+        "small": {
+          "vcpu": 4,
+          "ramGB": 16,
+          "diskGB": 32
+        },
+        "medium": {
+          "vcpu": 8,
+          "ramGB": 16,
+          "diskGB": 32
+        },
+        "large": {
+          "vcpu": 16,
+          "ramGB": 32,
+          "diskGB": 32
+        }
+      }
+    }
+  }
+}

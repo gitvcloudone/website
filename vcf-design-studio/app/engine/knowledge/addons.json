@@ -1,0 +1,148 @@
+{
+  "about": "Add-on appliance footprints. Specs are per appliance: vCPU, RAM GB, disk GB.",
+  "tables": {
+    "hcx": {
+      "source": "HCX (included in VCF)",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "manager": {
+          "vcpu": 4,
+          "ramGB": 12,
+          "diskGB": 64
+        },
+        "interconnect": {
+          "vcpu": 8,
+          "ramGB": 6,
+          "diskGB": 2
+        },
+        "networkExtension": {
+          "vcpu": 8,
+          "ramGB": 3,
+          "diskGB": 2
+        }
+      }
+    },
+    "liveRecovery": {
+      "source": "VMware Live Recovery (Advanced Cyber Compliance)",
+      "url": null,
+      "verified": "2026-11-23",
+      "notes": "Site Recovery light below 1,000 protected VMs, standard at 1,000+. One extra replication server per 400 VMs beyond the first, up to 9.",
+      "data": {
+        "siteRecoveryLight": {
+          "vcpu": 2,
+          "ramGB": 8,
+          "diskGB": 20
+        },
+        "siteRecoveryStandard": {
+          "vcpu": 4,
+          "ramGB": 12,
+          "diskGB": 20
+        },
+        "vsphereReplication": {
+          "vcpu": 4,
+          "ramGB": 8,
+          "diskGB": 33
+        },
+        "replicationServer": {
+          "vcpu": 2,
+          "ramGB": 1,
+          "diskGB": 2
+        }
+      }
+    },
+    "vdefend": {
+      "source": "vDefend Firewall / ATP and the Security Services Platform",
+      "url": null,
+      "verified": "2026-11-23",
+      "notes": "SSP: 3 controllers + workers + 1 reserved worker + installer, one per NSX Manager instance. Large is needed for all ATP features.",
+      "data": {
+        "sspController": {
+          "vcpu": 4,
+          "ramGB": 8,
+          "diskGB": 75
+        },
+        "sspWorker": {
+          "vcpu": 16,
+          "ramGB": 64,
+          "diskGB": 155
+        },
+        "sspInstaller": {
+          "vcpu": 4,
+          "ramGB": 6,
+          "diskGB": 400
+        },
+        "sspWorkersBySize": {
+          "medium": 2,
+          "large": 4,
+          "xlarge": 8
+        },
+        "malwarePreventionSvm": {
+          "vcpu": 4,
+          "ramGB": 6,
+          "diskGB": 80
+        },
+        "idsRamGiBPerHost": 2
+      }
+    },
+    "avi": {
+      "source": "Avi Load Balancer",
+      "url": null,
+      "verified": "2026-11-23",
+      "notes": "3-node controller cluster per instance; Service Engines reserved 1:1.",
+      "data": {
+        "controller": {
+          "small": {
+            "vcpu": 6,
+            "ramGB": 32,
+            "diskGB": 128
+          },
+          "medium": {
+            "vcpu": 10,
+            "ramGB": 32,
+            "diskGB": 128
+          },
+          "large": {
+            "vcpu": 16,
+            "ramGB": 48,
+            "diskGB": 128
+          }
+        },
+        "serviceEngineByVcpu": {
+          "1": {
+            "vcpu": 1,
+            "ramGB": 2,
+            "diskGB": 15
+          },
+          "2": {
+            "vcpu": 2,
+            "ramGB": 4,
+            "diskGB": 20
+          },
+          "4": {
+            "vcpu": 4,
+            "ramGB": 8,
+            "diskGB": 30
+          },
+          "8": {
+            "vcpu": 8,
+            "ramGB": 16,
+            "diskGB": 50
+          }
+        }
+      }
+    },
+    "dataServicesManager": {
+      "source": "Data Services Manager",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "provider": {
+          "vcpu": 8,
+          "ramGB": 16,
+          "diskGB": 736
+        }
+      }
+    }
+  }
+}

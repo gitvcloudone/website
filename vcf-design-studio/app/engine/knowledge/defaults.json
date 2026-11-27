@@ -1,0 +1,73 @@
+{
+  "about": "Starting values for a new design. Changing one changes every new sizing.",
+  "tables": {
+    "settings": {
+      "source": "VCF Sizing page defaults (planning assumptions; see the page's policy tips for the reasoning)",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "version": "9.1",
+        "profile": "HA Medium",
+        "automation": true,
+        "logs": false,
+        "logReplicas": 3,
+        "opsNet": "off",
+        "opsNetNodes": 1,
+        "opsNetCollectors": 1,
+        "hcxOn": false,
+        "hcxNe": 1,
+        "hcxNeHa": false,
+        "vdefend": "off",
+        "ids": true,
+        "mps": false,
+        "ssp": "large",
+        "gwfw": false,
+        "vlrOn": false,
+        "vlrVms": 500,
+        "aviOn": false,
+        "aviCtl": "small",
+        "aviSe": 2,
+        "aviSeSize": 2,
+        "aviSeOn": "",
+        "dsmOn": false,
+        "cpuRatio": 4,
+        "mgmtRatio": 2,
+        "ramRatio": 1,
+        "memReserve": 8,
+        "vsanMem": 32,
+        "memFill": 90,
+        "vmOverhead": 3,
+        "growth": 0,
+        "uplift": 0,
+        "activePct": 20,
+        "storageBasis": "used"
+      }
+    },
+    "cluster": {
+      "source": "VCF Sizing page defaults for a new cluster",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "hostType": "",
+        "storage": "esa",
+        "topo": "standard",
+        "nPlus": 1,
+        "policy": "auto",
+        "local": "auto",
+        "comp": 1.25,
+        "dedupe": 1,
+        "opsRes": 10,
+        "rebuild": true,
+        "maxHosts": 32,
+        "fixedHosts": 0,
+        "auto": true,
+        "vdefend": true,
+        "tierOn": false,
+        "tierDrives": 1,
+        "tierPct": 100,
+        "supOn": false,
+        "supSize": "small"
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "about": "vSAN storage policies. capacityFactor = raw TiB per usable TiB; minHosts = hosts the policy needs.",
+  "tables": {
+    "policies": {
+      "source": "vSAN ESA storage policies and ESA Auto-RAID (RAID-5 2+1 at 3–5 hosts, 4+1 / RAID-6 4+2 at 6+)",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "esa": {
+          "r1": {
+            "capacityFactor": 2,
+            "label": "RAID-1 (FTT=1)",
+            "minHosts": 3
+          },
+          "r5": {
+            "capacityFactor": 1.5,
+            "label": "RAID-5 2+1 (FTT=1)",
+            "minHosts": 3
+          },
+          "r6": {
+            "capacityFactor": 1.5,
+            "label": "RAID-6 4+2 (FTT=2)",
+            "minHosts": 6
+          },
+          "r1f2": {
+            "capacityFactor": 3,
+            "label": "RAID-1 (FTT=2)",
+            "minHosts": 5
+          }
+        }
+      }
+    }
+  }
+}
