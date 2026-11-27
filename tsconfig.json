@@ -12,7 +12,18 @@
     "allowJs": true,
     "checkJs": false,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ]
   },
-  "include": ["engine/src", "engine/test"]
+  "include": [
+    "engine/src",
+    "engine/test",
+    "studio/src"
+  ]
 }

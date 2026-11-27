@@ -74,7 +74,7 @@ test("sizing a design in the studio gives the golden results", () => {
   const fake = fakeFiles();
   for (const name of ["multi-instance", "addons", "auto-spill"]) {
     const c = CASES.find(x => x.name === name)!, i = buildInputs(engine, c, fake);
-    const r = engine.loadDesign({ v: 1, tool: "vcf", settings: i.S, hostTypes: i.hostTypes, topo: i.topo, scope: i.scope, groups: i.groups });
+    const r = engine.loadDesign({ v: 1, tool: "vcf", settings: i.S, hostTypes: i.hostTypes, topo: i.topo, groups: i.groups });
     if (r.kind !== "design") throw new Error();
     assert.equal(store.sizeDesign(r.design).hosts, engine.size(i.S, i.topo, i.groups, i.hostTypes).hosts, name);
   }
