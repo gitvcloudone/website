@@ -6,7 +6,7 @@ import { DEFAULTS } from "../knowledge.js";
                                                                        
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 4;
+export const FORMAT_VERSION = 5;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -38,6 +38,16 @@ export const STEP_CHOICES                        = ["recommended", "skipped"];
  
 export const newIdentity = ()           => ({ mode: "", idp: "", provisioning: "", roles: [], breakGlass: { holder: "", vault: "", rotationDays: 0, notes: "" } });
 
+/** Host networking (format 5+). Per-cluster values are stored only where they differ from the recommendation. */
+                                                                                          
+                          
+                                           
+                                                                                 
+                                   
+                                       
+ 
+export const newNetwork = ()          => ({ domain: "", dns: "", ntp: "", hostNics: {}, clusters: {} });
+
                          
                         
                         
@@ -49,6 +59,7 @@ export const newIdentity = ()           => ({ mode: "", idp: "", provisioning: "
                      
                             
                      
+                   
                        
  
 
@@ -73,6 +84,7 @@ export function newDesign()         {
     workload: { groups: [], rvtoolsScope: { ...DEFAULT_SCOPE } },
     hostTypes: [], topology: { instances: [] },
     identity: newIdentity(),
+    network: newNetwork(),
     decisions: { steps: {} },
   }          ;
 }

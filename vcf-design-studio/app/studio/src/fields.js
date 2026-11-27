@@ -2,7 +2,7 @@
 // Field definitions: label, input type, choices, and a one-line "why" for each setting. The Expert view
 // renders from these, and the guided steps (3c) will reuse them. No DOM here.
 // The "why" texts are the VCF Sizing page's own tips (POLICY_TIPS and the cluster tips), shortened where they were long.
-import { DEFAULTS, CLUSTER_DEFAULTS, IDENTITY, PROFILES, VCENTER, NSXMGR, EDGE, SUPERVISOR, POL, VENDORS, NVME_TB, ramOptions } from "../../engine/src/index.js";
+import { DEFAULTS, CLUSTER_DEFAULTS, IDENTITY, NETWORK, PROFILES, VCENTER, NSXMGR, EDGE, SUPERVISOR, POL, VENDORS, NVME_TB, ramOptions } from "../../engine/src/index.js";
                                                                                      
 
                                                                                  
@@ -189,5 +189,28 @@ export function breakGlassFields()          {
     { key: "vault", label: "Where they're kept", type: "text", placeholder: "e.g. the corporate password vault" },
     { key: "rotationDays", label: "Password rotation (days, 0 = not set)", type: "number", min: 0, max: 3650, step: 1, why: "The customer's policy for rotating these passwords. No VCF default is assumed." },
     { key: "notes", label: "Notes", type: "textarea", placeholder: "Access procedure, approvals, audit" },
+  ];
+}
+
+// ---------- host networking (VCF 9.1+) ----------
+export function fleetNetFields()          {
+  return [
+    { key: "domain", label: "DNS domain", type: "text", placeholder: "e.g. vcf.example.com", why: "Every VCF component and ESX host needs forward and reverse DNS records in this domain before deployment." },
+    { key: "dns", label: "DNS servers", type: "text", placeholder: "e.g. 10.0.0.10, 10.0.0.11" },
+    { key: "ntp", label: "NTP servers", type: "text", placeholder: "e.g. 10.0.0.10, 10.0.0.11" },
+  ];
+}
+export const NIC_COUNTS           = [2, 4, 6, 8].map(n => [n, `${n} NICs`]);
+export function clusterNetFields(rec                                                            )          {
+  const r = (v        ) => ` (recommended: ${v})`;
+  return [
+    { key: "vds", label: "Distributed switch model", type: "select", choices: Object.entries(NETWORK.vdsModels).map(([k, m]) => [k, m.label]          ),
+      why: `One switch carries all traffic on 2 NICs; storage separation puts vSAN on a second switch with its own 2 NICs. Recommended here: ${NETWORK.vdsModels[rec.vds].label.toLowerCase()}, from the host type's NIC count and whether the cluster runs vSAN.` },
+    { key: "nicGbps", label: "NIC speed", type: "select", choices: NETWORK.defaults.nicSpeeds.map(n => [n, `${n} GbE`]          ),
+      why: `Use the same speed and model for every uplink on a switch (VCF-VDS-COM-RCMD-CFG-004); switch ports must match it.${r(`${rec.nicGbps} GbE, the studio default`)}` },
+    { key: "mtu", label: "MTU", type: "number", min: NETWORK.mtu.overlayMin, max: NETWORK.mtu.max, step: 1,
+      why: `For vMotion, vSAN and host TEPs. Broadcom recommends 9000. NSX overlay needs at least 1600, and 1700 is recommended to allow for Geneve header growth; physical switch ports must be at least this. ESX management stays at 1500.` },
+    { key: "tep", label: "Host TEP addressing", type: "select", choices: (["pool", "list", "dhcp"]         ).map(k => [k, NETWORK.methods[k]]          ),
+      why: `One TEP address per active uplink of the NSX switch per host (${NETWORK.tepPerHost} here).${r(`${NETWORK.methods[rec.tep].toLowerCase()}, which avoids depending on a DHCP server`)}` },
   ];
 }

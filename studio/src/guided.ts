@@ -5,7 +5,7 @@ import { maxFor, tierMax } from "../../engine/src/index.ts";
 import type { Design, SizingResult } from "../../engine/src/index.ts";
 import { STEPS, stepById } from "./flow.ts";
 import { policyFields, fleetFields, clusterFields } from "./fields.ts";
-import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml } from "./expert.ts";
+import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml } from "./expert.ts";
 import type { ExpertUi } from "./expert.ts";
 import { stepState, changes, STORAGE_KEYS } from "./steps.ts";
 import type { StepState } from "./steps.ts";
@@ -50,6 +50,7 @@ function body(d: Design, r: SizingResult, ui: ExpertUi, id: string): string {
     case "hosts": return hostTypesHtml(d);
     case "topology": return topologyHtml(d, r, ui, STORAGE_KEYS) + `<p class="hint">vSAN policy, reserves and memory tiering for each cluster are in the next step, Cluster storage.</p>`;
     case "storage": return storageHtml(d);
+    case "hostnet": return hostnetHtml(d, r);
     case "addons": return addonsHtml(d);
     default: return "";
   }
@@ -62,7 +63,7 @@ function reviewHtml(d: Design, r: SizingResult) {
     return `<tr><td>${s.n}</td><td>${s.kind === "coming" ? esc(s.title) : `<a href="#/step/${s.id}">${esc(s.title)}</a>`}</td><td>${stateTag(st.state)}</td><td>${detail}</td></tr>`;
   }).join("");
   const open = STEPS.flatMap(s => { const st = stepState(d, s.id);
-    return ["todo", "skipped", "open"].includes(st.state) ? [{ s, t: st.note }] : (st.open || []).map(t => ({ s, t })); });
+    return [...(["todo", "skipped", "open"].includes(st.state) ? [{ s, t: st.note }] : []), ...(st.open || []).map(t => ({ s, t }))]; });
   const crit = r.warnings.filter(w => w.lvl === "crit"), warn = r.warnings.filter(w => w.lvl === "warn");
   return `<div class="tablewrap"><table class="review"><thead><tr><th>#</th><th>Step</th><th>Status</th><th>Decisions and open items</th></tr></thead><tbody>${rows}</tbody></table></div>
     <h4>Open items</h4>

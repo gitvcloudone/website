@@ -3,13 +3,13 @@
 // VCF Sizing page (v1, also what its autosave keeps in localStorage "vcfSizer.session"), and
 // host-types files. Settings are normalised exactly as the page's applySettings/loadTopo do, except
 // that ids from the file are kept (a new id is given only when one is missing or already used).
-import { DEFAULTS, CLUSTER_DEFAULTS, PROFILES, IDENTITY } from "../knowledge.js";
+import { DEFAULTS, CLUSTER_DEFAULTS, PROFILES, IDENTITY, NETWORK } from "../knowledge.js";
 import { fixHw } from "../hardware.js";
                                                                                        
 import { FORMAT, FORMAT_VERSION, DEFAULT_SCOPE, sectionsFromSettings, settingsFromDesign } from "./document.js";
                                                                                    
-import { STEP_CHOICES, newIdentity } from "./document.js";
-                                                      
+import { STEP_CHOICES, newIdentity, newNetwork } from "./document.js";
+                                                                           
 import { migrateDesign } from "./migrations.js";
 
                                
@@ -77,6 +77,7 @@ function normalize(o     , opt                                       )          
     parsed: opt.keepSource && g.source === "rvtools" && g.parsed && typeof g.parsed === "object" ? { ...g.parsed } : null,
     opts: { ...newOpts(), ...(g.opts || {}), place: (g.opts && g.opts.place && tid.remap.get(g.opts.place)) || "auto", drTo: (g.opts && g.opts.drTo && tid.remap.get(g.opts.drTo)) || "" }, meta: g.meta || null }));
 
+  const clusterIds = new Set(instances.flatMap(i => [i.mgmt, ...i.wlds].flatMap(d => d.clusters.map(c => c.id))));
   const scopes = new Set(instances.flatMap(i => [i.id, i.mgmt.id, ...i.wlds.map(w => w.id)]));
   const notes           = [];
   if (osa) notes.push(`${osa} vSAN OSA cluster${osa > 1 ? "s were" : " was"} switched to vSAN ESA.`);
@@ -84,6 +85,7 @@ function normalize(o     , opt                                       )          
   const design         = { format: FORMAT, formatVersion: FORMAT_VERSION, ...sectionsFromSettings(S),
     workload: { groups, rvtoolsScope }, hostTypes, topology: { instances },
     identity: identityFrom(o.identity, (id         ) => { const n = tid.remap.get(id); return n && scopes.has(n) ? n : undefined; }),
+    network: networkFrom(o.network, id => { const n = tid.remap.get(id); return n && clusterIds.has(n) ? n : undefined; }, id => { const n = hid.remap.get(id); return n && hostTypes.some(h => h.id === n) ? n : undefined; }),
     // only known choices, keyed by step id (a design from a newer build may know more steps: keep those too)
     decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v              )))                               } }          ;
   return { design, notes };
@@ -102,6 +104,24 @@ function identityFrom(x                 , remap                                 
     access: (["admin", "operator", "readonly"].includes(r.access) ? r.access : "readonly")           }));
   const b = x.breakGlass || {};
   out.breakGlass = { holder: str(b.holder), vault: str(b.vault), rotationDays: Number.isFinite(b.rotationDays) && b.rotationDays > 0 ? Math.round(b.rotationDays) : 0, notes: str(b.notes) };
+  return out;
+}
+
+const int = (v         , lo        , hi        ) => (typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi ? v : undefined);
+/** Host networking, keeping only known choices and values in range, for clusters and host types that are in the design. */
+function networkFrom(x                 , cluster                                     , ht                                     )          {
+  const out = newNetwork(); if (!x || typeof x !== "object") return out;
+  out.domain = str(x.domain); out.dns = str(x.dns); out.ntp = str(x.ntp);
+  for (const [k, v] of Object.entries(x.hostNics || {})) { const id = ht(k), n = int(v, 2, 8); if (id && n) out.hostNics[id] = n; }
+  for (const [k, v] of Object.entries(x.clusters || {})) {
+    const id = cluster(k); if (!id || !v || typeof v !== "object") continue;
+    const c = v       , n             = {};
+    if (c.vds in NETWORK.vdsModels) n.vds = c.vds;
+    if (NETWORK.defaults.nicSpeeds.includes(c.nicGbps)) n.nicGbps = c.nicGbps;
+    const m = int(c.mtu, NETWORK.mtu.overlayMin, NETWORK.mtu.max); if (m) n.mtu = m;
+    if (["pool", "list", "dhcp"].includes(c.tep)) n.tep = c.tep;
+    if (Object.keys(n).length) out.clusters[id] = n;
+  }
   return out;
 }
 
@@ -135,7 +155,7 @@ export function loadDesign(input         , opt              = {})             {
   if (Array.isArray(x) || x.tool === "vcf-host-types" || (Array.isArray(x.presets) && !x.settings && !x.topo)) return { kind: "hostTypes", hostTypes: parseHostTypesFile(x) };
   if (x.format === FORMAT) {
     const d = migrateDesign(x);
-    const flat = { settings: settingsFromDesign(d          ), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups, decisions: d.decisions, identity: d.identity };
+    const flat = { settings: settingsFromDesign(d          ), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups, decisions: d.decisions, identity: d.identity, network: d.network };
     return { kind: "design", from: "design", ...normalize(flat, { ...opt, browserHostTypes: [], keepSource: true }) };
   }
   if (x.tool !== undefined && x.tool !== "vcf") throw new Error(`This is a ${String(x.tool).toUpperCase()} file, not a VCF design.`);

@@ -5,7 +5,7 @@ import { DEFAULTS } from "../knowledge.ts";
 import type { Settings, HostType, Topology, Group } from "../types.ts";
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 4;
+export const FORMAT_VERSION = 5;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -37,6 +37,16 @@ export interface Identity {
 }
 export const newIdentity = (): Identity => ({ mode: "", idp: "", provisioning: "", roles: [], breakGlass: { holder: "", vault: "", rotationDays: 0, notes: "" } });
 
+/** Host networking (format 5+). Per-cluster values are stored only where they differ from the recommendation. */
+export interface ClusterNet { vds?: string; nicGbps?: number; mtu?: number; tep?: string }
+export interface Network {
+  domain: string; dns: string; ntp: string;
+  /** physical NICs per host for VCF traffic, by host type id (2 when not set) */
+  hostNics: Record<string, number>;
+  clusters: Record<string, ClusterNet>;
+}
+export const newNetwork = (): Network => ({ domain: "", dns: "", ntp: "", hostNics: {}, clusters: {} });
+
 export interface Design {
   format: typeof FORMAT;
   formatVersion: number;
@@ -48,6 +58,7 @@ export interface Design {
   topology: Topology;
   addons: Section<"addons">;
   identity: Identity;
+  network: Network;
   decisions: Decisions;
 }
 
@@ -72,6 +83,7 @@ export function newDesign(): Design {
     workload: { groups: [], rvtoolsScope: { ...DEFAULT_SCOPE } },
     hostTypes: [], topology: { instances: [] },
     identity: newIdentity(),
+    network: newNetwork(),
     decisions: { steps: {} },
   } as Design;
 }

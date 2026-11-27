@@ -8,6 +8,7 @@ import addons from "../knowledge/addons.json" with { type: "json" };
 import vsan from "../knowledge/vsan.json" with { type: "json" };
 import defaults from "../knowledge/defaults.json" with { type: "json" };
 import identity from "../knowledge/identity.json" with { type: "json" };
+import network from "../knowledge/network.json" with { type: "json" };
                                                                                    
 
                                                             
@@ -64,4 +65,13 @@ export const IDENTITY = {
   modes: identity.tables.modes.data                                                  ,
   providers: identity.tables.providers.data                                                                      ,
   provisioning: identity.tables.provisioning.data                                                                     ,
+};
+
+// ESX host networking (VCF 9.1+): switch models, MTU, addressing, and the studio's own defaults
+export const NETWORK = {
+  vdsModels: network.tables.vdsModels.data                                                                                    ,
+  mtu: network.tables.mtu.data,
+  methods: network.tables.addressing.data.methods                          ,
+  tepPerHost: network.tables.addressing.data.tepPerHost,
+  defaults: network.tables.studioDefaults.data,
 };

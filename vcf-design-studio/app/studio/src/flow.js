@@ -14,7 +14,7 @@ export const STEPS         = [
   { id: "hosts", n: 7, title: "Host types", kind: "required", blurb: "The server models you plan to use." },
   { id: "topology", n: 8, title: "Topology", kind: "required", blurb: "Instances, workload domains and clusters." },
   { id: "storage", n: 9, title: "Cluster storage", kind: "skippable", blurb: "vSAN policy, capacity reserves, memory tiering." },
-  { id: "hostnet", n: 10, title: "Host networking", kind: "coming", blurb: "VDS, uplinks and VLANs." },
+  { id: "hostnet", n: 10, title: "Host networking", kind: "skippable", blurb: "Distributed switches, NICs, MTU, host addressing, DNS and NTP." },
   { id: "nsx", n: 11, title: "NSX & connectivity", kind: "coming", blurb: "Edges, Tier-0 / Tier-1 gateways and BGP." },
   { id: "addons", n: 12, title: "Add-ons", kind: "skippable", blurb: "vDefend, Live Recovery, Avi, HCX, Data Services Manager." },
   { id: "review", n: 13, title: "Review", kind: "review", blurb: "Everything decided, skipped and open." },

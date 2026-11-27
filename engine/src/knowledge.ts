@@ -7,6 +7,7 @@ import addons from "../knowledge/addons.json" with { type: "json" };
 import vsan from "../knowledge/vsan.json" with { type: "json" };
 import defaults from "../knowledge/defaults.json" with { type: "json" };
 import identity from "../knowledge/identity.json" with { type: "json" };
+import network from "../knowledge/network.json" with { type: "json" };
 import type { Spec, Vendor, Profile, Settings, ClusterDefaults } from "./types.ts";
 
 interface S3 { vcpu: number; ramGB: number; diskGB: number }
@@ -63,4 +64,13 @@ export const IDENTITY = {
   modes: identity.tables.modes.data as Record<string, { label: string; use: string }>,
   providers: identity.tables.providers.data as Record<string, { label: string; kind: "federated" | "directory" }>,
   provisioning: identity.tables.provisioning.data as Record<string, { label: string; for: "federated" | "directory" }>,
+};
+
+// ESX host networking (VCF 9.1+): switch models, MTU, addressing, and the studio's own defaults
+export const NETWORK = {
+  vdsModels: network.tables.vdsModels.data as Record<string, { label: string; vds: number; nics: number; storageVds: number }>,
+  mtu: network.tables.mtu.data,
+  methods: network.tables.addressing.data.methods as Record<string, string>,
+  tepPerHost: network.tables.addressing.data.tepPerHost,
+  defaults: network.tables.studioDefaults.data,
 };

@@ -4,7 +4,8 @@
 // worked out from the design, so the guided steps and the Expert view always agree. No DOM; tested.
 import { CLUSTER_DEFAULTS, IDENTITY } from "../../engine/src/index.js";
                                                                     
-import { policyFields, fleetFields, addonFields } from "./fields.js";
+import { policyFields, fleetFields, addonFields, clusterNetFields } from "./fields.js";
+import { allClusters, recommended, effective, hostnetOpen, NET_KEYS } from "./hostnet.js";
                                          
                                            
 import { STEPS } from "./flow.js";
@@ -33,6 +34,15 @@ export function changes(d        , step        )           {
   if (step === "identity") {
     const m = d.identity.mode;
     return m && m !== "instance" ? [{ path: ["identity", "mode"], where: "", label: "Identity Broker mode", value: IDENTITY.modes[m].label, def: IDENTITY.modes.instance.label }] : [];
+  }
+  if (step === "hostnet") {
+    const out           = [];
+    allClusters(d).forEach(({ c }) => {
+      const rec = recommended(d, c), v = effective(d, c), fs = clusterNetFields(rec);
+      for (const key of NET_KEYS) if (v[key] !== rec[key]) { const f = fs.find(x => x.key === key) ;
+        out.push({ path: ["network", "clusters", c.id, key], where: c.name, label: f.label, value: show(f, v[key]), def: show(f, rec[key]) }); }
+    });
+    return out;
   }
   if (step === "storage") {
     const out           = [];
@@ -86,10 +96,12 @@ export function stepState(d        , id        )                                
   }
   if (s.kind === "skippable") {
     const n = changes(d, id).length, chosen = d.decisions.steps[id];
-    if (n) return { state: "decided", note: `${n} value${n > 1 ? "s" : ""} changed from the recommendation.` };
-    if (chosen === "recommended") return { state: "recommended", note: "Recommended values accepted." };
+    const open = id === "hostnet" && chosen !== "skipped" ? hostnetOpen(d) : undefined;
+    const rest = open && open.length ? ` ${open.length} item${open.length > 1 ? "s" : ""} still open.` : "";
+    if (n) return { state: "decided", note: `${n} value${n > 1 ? "s" : ""} changed from the recommendation.` + rest, open };
+    if (chosen === "recommended") return { state: "recommended", note: "Recommended values accepted." + rest, open };
     if (chosen === "skipped") return { state: "skipped", note: "Skipped for now: an open item in the design." };
-    return { state: "open", note: "Recommended values in place, not reviewed yet." };
+    return { state: "open", note: "Recommended values in place, not reviewed yet.", open: open && open.length ? open : undefined };
   }
   return { state: "", note: "" };
 }
@@ -101,6 +113,7 @@ const withChoice = (d        , id        , c                   )     => {
 /** Use recommended: every changed value back to its default, and the choice recorded. */
 export function recommendOps(d        , id        )       {
   if (id === "identity") return [{ op: "set", path: ["identity", "mode"], value: "instance" }, withChoice(d, id, "recommended")];
+  if (id === "hostnet") return [{ op: "set", path: ["network", "clusters"], value: {} }, withChoice(d, id, "recommended")];
   const D                          = id === "storage" ? CLUSTER_DEFAULTS                                       : {};
   const ops       = changes(d, id).map(c => {
     if (id === "storage") return { op: "set", path: c.path, value: D[c.path[c.path.length - 1]          ] };

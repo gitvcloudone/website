@@ -3,12 +3,13 @@
 // Topology is a tree; the selected instance, domain or cluster opens its settings next to it.
 // A pure function of the design → HTML (no DOM), so tests can render it. Inputs carry data-edit
 // (what they change); buttons carry data-xact (a structural change); main.ts turns both into proposals.
-import { PROFILES, IDENTITY, workloadTotals, hostCfg, maxFor, tierMax, settingsFromDesign, clusterReason, hwText, HOST_LCPU_MAX } from "../../engine/src/index.js";
+import { PROFILES, IDENTITY, NETWORK, workloadTotals, hostCfg, maxFor, tierMax, settingsFromDesign, clusterReason, hwText, HOST_LCPU_MAX } from "../../engine/src/index.js";
                                                                                                         
-import { projectFields, policyFields, fleetFields, addonFields, identityFields, breakGlassFields, ACCESS, hostTypeFields, domainFields, domainNsxFields, edgeSizes, clusterFields, STORAGE } from "./fields.js";
+import { projectFields, policyFields, fleetFields, addonFields, identityFields, breakGlassFields, ACCESS, fleetNetFields, clusterNetFields, NIC_COUNTS, hostTypeFields, domainFields, domainNsxFields, edgeSizes, clusterFields, STORAGE } from "./fields.js";
                                                  
 import { locate, moveTo91 } from "./edit.js";
 import { sizeDesign } from "./store.js";
+import { allClusters, recommended, effective, networksOf, hostsByCluster, nicsOf } from "./hostnet.js";
 import { overridden, estate } from "./rvimport.js";
                                                          
 
@@ -228,6 +229,26 @@ export function projectHtml(d        ) {
   return note + `<div class="grid">${fields(projectFields(d.project.version), d.project                                      , { t: "sec", sec: "project" })}</div>`;
 }
 
+/** Host networking: fleet DNS / NTP, NICs per host type, and per cluster the switch model, speed, MTU, TEP addressing and the networks that follow. */
+export function hostnetHtml(d        , r              ) {
+  const hosts = hostsByCluster(r), multi = d.topology.instances.length > 1;
+  const nics = d.hostTypes.map(h => `<tr><td>${esc(h.name)}</td><td><select data-edit="${attr({ t: "nics", ht: h.id })}" data-type="select" aria-label="NICs per host, ${esc(h.name)}">${NIC_COUNTS.map(([k, l]) => `<option value="${k}" ${k === nicsOf(d, h.id) ? "selected" : ""}>${l}</option>`).join("")}</select></td></tr>`).join("");
+  const cards = allClusters(d).map(({ inst, dm, c }) => {
+    const rec = recommended(d, c), v = effective(d, c), n = hosts.get(c.id) || 0;
+    const rows = networksOf(d, c, n).map(x => `<tr><td>${esc(x.net)}</td><td class="n">0${x.vds}</td><td class="n num">${x.mtu}</td><td>${esc(x.addr)}</td><td class="n num">${nf(x.ips)}</td></tr>`).join("");
+    return `<div class="addon"><h4>${esc(c.name)} <span class="hint">${esc((multi ? inst.name + " / " : "") + dm.name)} · ${plural(n, "host")}</span></h4>
+      <div class="grid">${fields(clusterNetFields(rec), v                                      , { t: "net", cid: c.id })}</div>
+      <div class="tablewrap"><table class="nets"><thead><tr><th>Network</th><th class="n">vDS</th><th class="n">MTU</th><th>Addressing</th><th class="n">IPs</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }).join("");
+  return `<h4>DNS and NTP</h4><div class="grid">${fields(fleetNetFields(), d.network                                      , { t: "sec", sec: "network" })}</div>
+    <h4>NICs per host for VCF traffic</h4>
+    <p class="hint">Hosts with 4 or more NICs get storage separation recommended on vSAN clusters (two distributed switches).</p>
+    ${d.hostTypes.length ? `<div class="tablewrap"><table class="nics"><tbody>${nics}</tbody></table></div>` : `<p class="hint">Add host types first.</p>`}
+    <h4>Clusters</h4>
+    ${cards ? `<div class="addons">${cards}</div>` : `<p class="hint">No clusters yet. Add them in Topology.</p>`}
+    <p class="hint">Addresses are per network at today's host count, with no room for growth. VCF can't change an infrastructure subnet's mask later, so the IP plan sizes subnets with headroom. VLAN IDs and subnets come with that plan.</p>`;
+}
+
 export function addonsHtml(d        ) {
   const S = d.addons                                      ;
   return `<div class="addons">${addonFields(d.addons, clusterChoices(d)).map(g => `<div class="addon"><h4>${esc(g.title)}</h4><div class="grid">${fields(g.fields, S, { t: "sec", sec: "addons" })}</div><p class="hint">${esc(g.note)}</p></div>`).join("")}</div>`;
@@ -247,6 +268,7 @@ export function expertHtml(d        , r              , ui          )         {
     section("identity", "Identity & access", d.identity.mode ? (d.identity.mode === "instance" ? "Instance mode" : "Embedded mode") + (d.identity.idp ? " · " + IDENTITY.providers[d.identity.idp].label : "") : "not decided", identityHtml(d), ui, "identity"),
     section("hosts", "Host types", plural(d.hostTypes.length, "host type"), hostTypesHtml(d), ui, "hosts"),
     section("topology", "Topology", `${plural(d.topology.instances.length, "instance")} · ${plural(nClu, "cluster")}`, topologyHtml(d, r, ui), ui, "topology"),
+    section("hostnet", "Host networking", d.network.domain || "DNS domain not set", hostnetHtml(d, r), ui, "hostnet"),
     section("addons", "Add-ons", addOns ? `${addOns} on` : "none", addonsHtml(d), ui, "addons"),
   ].join("");
 }

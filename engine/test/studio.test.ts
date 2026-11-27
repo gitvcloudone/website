@@ -273,7 +273,7 @@ test("required steps say what's missing; a filled design has them done", () => {
   assert.deepStrictEqual(["project", "workload", "hosts", "topology"].map(id => steps.stepState(n, id).state), ["todo", "todo", "todo", "todo"]);
   const d = caseDesign("multi-instance"); d.project.customer = "Acme";
   assert.deepStrictEqual(["project", "workload", "hosts", "topology"].map(id => steps.stepState(d, id).state), ["done", "done", "done", "done"]);
-  assert.equal(steps.stepState(d, "identity").state, "open"); assert.equal(steps.stepState(d, "hostnet").state, "coming");
+  assert.equal(steps.stepState(d, "identity").state, "open"); assert.equal(steps.stepState(d, "nsx").state, "coming");
 });
 
 test("skippable steps: open, then Skip / Use recommended are recorded; changed values make it a decision; Use recommended resets them", () => {
@@ -397,4 +397,80 @@ test("new designs offer VCF 9.1 only; a design brought in at 9.0 keeps 9.0 and i
   assert.deepStrictEqual(m.licCores, [store.sizeDesign(d).licCores, store.sizeDesign(after).licCores]);
   assert.ok(expertHtml(d, store.sizeDesign(d), { sel: "", closed: new Set() }).includes("This design is for VCF 9.0."));
   assert.ok(!expertHtml(after, store.sizeDesign(after), { sel: "", closed: new Set() }).includes("This design is for VCF 9.0."));
+});
+
+// ---------- host networking (4b) ----------
+import * as hostnet from "../../studio/src/hostnet.ts";
+test("a format 4 design opens with host networking at the recommendation and its identity kept", () => {
+  const raw = JSON.parse(readText(new URL("../fixtures/designs/format-4.vcf-design.json", import.meta.url), "utf8"));
+  assert.equal(raw.formatVersion, 4);
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
+  assert.deepStrictEqual(r.design.network, engine.newNetwork());
+  assert.deepStrictEqual(r.design.identity, raw.identity);
+  assert.equal(steps.stepState(r.design, "hostnet").state, "open");
+});
+
+test("host networking: storage separation is recommended only for vSAN clusters on hosts with 4+ NICs; values differing are decisions", () => {
+  let d = caseDesign("multi-instance");
+  const vsan = hostnet.allClusters(d).find(x => engine.isVsan(x.c))!.c;
+  assert.deepStrictEqual(hostnet.recommended(d, vsan), { vds: "single", nicGbps: 25, mtu: 9000, tep: "pool" });
+  d = must(d, hostnet.nicsOps(d, vsan.hostType, 4));
+  assert.equal(hostnet.recommended(d, vsan).vds, "storage");
+  assert.deepStrictEqual(d.network.clusters, {}, "a recommendation is never stored");
+  assert.equal(steps.changes(d, "hostnet").length, 0);
+  d = must(d, hostnet.netOps(d, vsan.id, "nicGbps", 10));
+  d = must(d, hostnet.netOps(d, vsan.id, "mtu", 1500));   // below the overlay minimum: clamped, not dropped
+  assert.deepStrictEqual(d.network.clusters[vsan.id], { nicGbps: 10, mtu: 1600 });
+  assert.equal(steps.stepState(d, "hostnet").state, "decided");
+  assert.deepStrictEqual(steps.changes(d, "hostnet").map(c => [c.where, c.value, c.def]), [[vsan.name, "10 GbE", "25 GbE"], [vsan.name, "1600", "9000"]]);
+  d = must(d, hostnet.netOps(d, vsan.id, "mtu", 9000));
+  assert.deepStrictEqual(d.network.clusters[vsan.id], { nicGbps: 10 }, "back to recommended: not stored");
+  d = must(d, steps.recommendOps(d, "hostnet"));
+  assert.deepStrictEqual(d.network.clusters, {}); assert.equal(steps.stepState(d, "hostnet").state, "recommended");
+});
+
+test("host networking: networks and address counts follow the switch model and the sized hosts; sizing never changes", () => {
+  const d0 = caseDesign("multi-instance"), r0 = store.sizeDesign(d0);
+  const vsan = hostnet.allClusters(d0).find(x => engine.isVsan(x.c))!.c;
+  let d = must(d0, hostnet.nicsOps(d0, vsan.hostType, 4));
+  d = must(d, [...hostnet.netOps(d, vsan.id, "tep", "dhcp"), { op: "set", path: ["network", "domain"], value: "vcf.example.com" }]);
+  assert.deepStrictEqual(store.sizeDesign(d), r0);
+  const n = hostnet.hostsByCluster(r0).get(vsan.id)!;
+  assert.ok(n > 0);
+  assert.deepStrictEqual(hostnet.networksOf(d, vsan, n).map(x => [x.net, x.vds, x.mtu, x.addr, x.ips]), [
+    ["ESX management", 1, 1500, "Static", n], ["vMotion", 1, 9000, "Network pool", n], ["vSAN", 2, 9000, "Network pool", n], ["Host TEP (NSX overlay)", 1, 9000, "DHCPv4", 2 * n]]);
+});
+
+test("host networking: open items for DNS / NTP and for a switch model the hardware can't carry", () => {
+  let d = caseDesign("multi-instance");
+  const c = hostnet.allClusters(d)[0].c;
+  assert.deepStrictEqual(hostnet.hostnetOpen(d), ["Enter the DNS domain.", "Enter the DNS servers.", "Enter the NTP servers."]);
+  d = must(d, [{ op: "set", path: ["network", "domain"], value: "vcf.example.com" }, { op: "set", path: ["network", "dns"], value: "10.0.0.10" }, { op: "set", path: ["network", "ntp"], value: "10.0.0.10" }]);
+  d = must(d, hostnet.netOps(d, c.id, "vds", "storage"));
+  assert.ok(hostnet.hostnetOpen(d).some(t => t.startsWith(`${c.name}: the storage separation model needs 4 NICs`)));
+  assert.ok(steps.stepState(d, "hostnet").open!.length > 0);
+  d = must(d, hostnet.nicsOps(d, c.hostType, 4));
+  assert.ok(!hostnet.hostnetOpen(d).some(t => /needs 4 NICs/.test(t)));
+});
+
+test("host networking: a saved file keeps only known values for clusters and host types in the design", () => {
+  const d = caseDesign("multi-instance"), c = hostnet.allClusters(d)[0].c, h = d.hostTypes[0].id;
+  const raw = { ...JSON.parse(engine.serializeDesign(d)), network: { domain: "x.example", dns: 5, ntp: "n", hostNics: { [h]: 4, nope: 4, [d.hostTypes[0].id + "x"]: 2 },
+    clusters: { [c.id]: { vds: "storage", nicGbps: 33, mtu: 1200, tep: "pool", junk: 1 }, nope: { vds: "single" } } } };
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.deepStrictEqual(r.design.network, { domain: "x.example", dns: "", ntp: "n", hostNics: { [h]: 4 }, clusters: { [c.id]: { vds: "storage", tep: "pool" } } });
+  // deleting a cluster drops its values
+  const dm = r.design.topology.instances[0].wlds[0];
+  const add = edit.actionOps(r.design, { act: "addClu", id: dm.id });
+  let d2 = must(r.design, add.ops); const nc = add.select!;
+  d2 = must(d2, hostnet.netOps(d2, nc, "nicGbps", 100));
+  assert.deepStrictEqual(d2.network.clusters[nc], { nicGbps: 100 });
+  d2 = must(d2, edit.actionOps(d2, { act: "delClu", id: nc }).ops);
+  assert.equal(d2.network.clusters[nc], undefined); assert.deepStrictEqual(Object.keys(d2.network.clusters), [c.id]);
+});
+
+test("the network knowledge file has a source, a link and a verified date for each table", () => {
+  const k = JSON.parse(readText(new URL("../knowledge/network.json", import.meta.url), "utf8"));
+  for (const [name, t] of Object.entries(k.tables) as [string, { source: string; url: string; verified: string }][]) assert.ok(t.source && /^https:\/\/techdocs\.broadcom\.com\//.test(t.url) && /^\d{4}-\d\d-\d\d$/.test(t.verified), name);
 });
