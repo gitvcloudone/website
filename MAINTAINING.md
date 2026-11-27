@@ -35,6 +35,11 @@ date with the source, so always run `npm run build` and commit its output with y
 | Add or remove a download | `studio/src/export/index.ts` (`EXPORTERS`, each with its feature flag) | Its button appears on the Design output page by itself |
 | Change the Word, Excel or HTML rendering | `studio/src/export/docx.ts`, `xlsx.ts`, `html.ts` (no libraries: they write the file formats directly) | Open the result in Word or Excel |
 | Change the PDF layout | The print rules at the end of `vcf-design-studio/studio.css` (the PDF is the browser printing the HLD preview) | Print from the Design output page |
+| Change what the AI copilot can do | `studio/src/ai/tools.ts` (`TOOLS`: each tool's description, input and what it returns) and its instructions in `studio/src/ai/copilot.ts` | AI tests use a stand-in API; no key needed |
+| Change what the AI may set | `studio/src/ai/catalog.ts` (design choices only; customer facts stay out) | Tests check no customer fact is settable |
+| Change what's swapped for stand-in names | `studio/src/ai/redact.ts` | Tests check nothing identifying is sent |
+| Change how HLD sections are drafted | `studio/src/ai/writer.ts` (the brief per section and the writing rules) | Tests |
+| Change the AI models or add the hosted backend | `studio/src/ai/connector.ts` (`MODELS`; `hostedConnector` takes the same request as the Claude Messages API) | Tests |
 | Change the page layout or styles | `vcf-design-studio/index.html`, `vcf-design-studio/studio.css` | Look at it on desktop and phone width |
 
 ## Golden tests
