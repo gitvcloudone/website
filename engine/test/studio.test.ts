@@ -784,7 +784,7 @@ test("easy button: fewest hosts, lowest licensing and the sweet spot are what th
     assert.ok(pool.every(c => few.hosts <= c.hosts), `${name} ${layout}: fewest`);
     assert.ok(pool.every(c => lic.licCores <= c.licCores), `${name} ${layout}: licensing`);
     assert.ok(!pool.some(c => c.hosts <= bal.hosts && c.licCores <= bal.licCores && (c.hosts < bal.hosts || c.licCores < bal.licCores)), `${name} ${layout}: balanced is on the trade-off curve`);
-    for (const x of o) assert.deepStrictEqual(engine.fixHw(x.hw), x.hw, "a configuration that exists");
+    for (const x of o) assert.deepStrictEqual(engine.fixHw({ ...x.hw }), x.hw, "a configuration that exists");
   }
   const amd = easy.easyOptions(caseDesign("simple-basic"), { ...GEN, vendor: "amd" });
   assert.ok(amd.every(x => x.hw.vendor === "amd"));
