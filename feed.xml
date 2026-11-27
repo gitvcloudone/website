@@ -73,6 +73,14 @@
     <description>The SDDC software on VMware Cloud on AWS is being upgraded to version 9.1. This is an upgrade of the SDDC software components themselves, not another 1.26 release. Broadcom is still finalizing feature details and will share them in later communications. The rollout comes in three phases, and the…</description>
   </item>
   <item>
+    <title>VMware Telco Cloud Platform SKUs end, VCF Telco takes over</title>
+    <link>https://vcloudone.com/updates/#vcf-telco-tcp-eoa</link>
+    <guid isPermaLink="true">https://vcloudone.com/updates/#vcf-telco-tcp-eoa</guid>
+    <pubDate>Mon, 02 Nov 2026 12:00:00 +0000</pubDate>
+    <category>VMware</category>
+    <description>Standalone VMware Telco Cloud Platform (TCP) licensing SKUs reached end of availability on November 2, 2026. Telco deployments are now licensed under the standard VMware Cloud Foundation (VCF) SKU, using the name VCF Telco. TCP was a separate, telecom-focused bundle with its own standalone SKU…</description>
+  </item>
+  <item>
     <title>Amazon EVS adds Osaka, Taipei, Spain and Tel Aviv</title>
     <link>https://vcloudone.com/updates/#evs-regions-sep</link>
     <guid isPermaLink="true">https://vcloudone.com/updates/#evs-regions-sep</guid>
@@ -239,14 +247,6 @@
     <pubDate>Fri, 16 Jan 2026 12:00:00 +0000</pubDate>
     <category>Hyperscalers</category><category>VMware</category>
     <description>SDDC 1.26 moves VMware Cloud on AWS to vSphere 8.0 Update 3. It&#x27;s the biggest platform release VMC has had in a while, and it changes how you size storage. vSAN ESA. vSAN has two architectures. The Original Storage Architecture (OSA) splits each host&#x27;s drives into a cache tier and a capacity tier…</description>
-  </item>
-  <item>
-    <title>Amazon EVS adds seven Regions</title>
-    <link>https://vcloudone.com/updates/#evs-regions-dec</link>
-    <guid isPermaLink="true">https://vcloudone.com/updates/#evs-regions-dec</guid>
-    <pubDate>Mon, 15 Dec 2025 12:00:00 +0000</pubDate>
-    <category>Hyperscalers</category><category>VMware</category>
-    <description>Amazon EVS is now in seven more Regions: US West (N. California), Asia Pacific (Hyderabad), Asia Pacific (Malaysia), Canada West (Calgary), Europe (Milan), Mexico (Central) and South America (São Paulo). A quick reminder of how EVS uses a Region. An EVS environment runs on bare-metal EC2 hosts in…</description>
   </item>
 </channel>
 </rss>
