@@ -101,3 +101,28 @@ export function units(api) {
   out.excludeRules = canonical(api.excludeRules({ exVcls: true, patterns: " test-*, *-old,, TEST-*, a.b(c)*, *x?y* " }));
   return canonical(out);
 }
+
+// Rename ids by position (host types H0.., instances I0, domains I0D0, clusters I0D0C0, edges I0D0E0)
+// and repoint every reference, so states loaded with different ids can be compared.
+export function relabel({ S, hostTypes, topo, groups }) {
+  const st = JSON.parse(JSON.stringify({ S, hostTypes, topo, groups: groups.map(({ over, parsed, ...g }) => g) }));
+  const hm = new Map(), tm = new Map();
+  st.hostTypes.forEach((h, k) => { hm.set(h.id, `H${k}`); h.id = `H${k}`; });
+  st.topo.instances.forEach((i, ii) => {
+    tm.set(i.id, `I${ii}`); i.id = `I${ii}`;
+    [i.mgmt, ...i.wlds].forEach((d, di) => {
+      const dp = `I${ii}D${di}`; tm.set(d.id, dp); d.id = dp;
+      d.clusters.forEach((c, ci) => { tm.set(c.id, `${dp}C${ci}`); c.id = `${dp}C${ci}`; c.hostType = hm.has(c.hostType) ? hm.get(c.hostType) : c.hostType; });
+      d.edges.forEach((e, ei) => { e.id = `${dp}E${ei}`; });
+    });
+  });
+  const ref = (v) => (tm.has(v) ? tm.get(v) : v);
+  for (const i of st.topo.instances) for (const d of [i.mgmt, ...i.wlds]) for (const e of d.edges) e.on = ref(e.on);
+  st.S.aviSeOn = ref(st.S.aviSeOn);
+  for (const g of st.groups) if (g.opts) { g.opts.place = ref(g.opts.place); g.opts.drTo = ref(g.opts.drTo); }
+  return st;
+}
+
+export function sizeState(api, st) {
+  return canonical({ result: api.size(st.S, st.topo, st.groups, st.hostTypes), totals: api.workloadTotals(st.groups) });
+}
