@@ -72,6 +72,15 @@ the decisions, explains them and documents them — it doesn't just validate a f
   exception is shown on the option card up front and recorded in the HLD as a decision with a risk.
   A test checks every easy-button option against Review for every golden workload.
 
+## Two editions, one codebase
+
+- **VCF Design Studio** (classic) at `/vcf-design-studio/`: no AI anywhere; it never shows, loads or calls AI.
+- **VCF Design Studio: AI-powered** at `/vcf-design-studio-ai/`: the same app plus the AI layer.
+- The page says which it is (`data-edition="ai"` on `<html>`); `studio/src/flags.ts` holds the editions,
+  their names and which features each has. Both pages load the same built app and styles from
+  `vcf-design-studio/`, so every fix lands in both. They share the design saved in the browser, so a
+  design moves between them. Each names itself in the documents it makes.
+
 ## AI layer (build step 9)
 
 - **The AI suggests and explains; the engine decides.** Every AI change arrives as a proposal through
@@ -146,6 +155,7 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
    from Review to Design output.
 8. Ship at a new path (e.g. /vcf-design-studio/), with /vcf-sizing/ redirecting. (27 Nov: published at
    /vcf-design-studio/, unlinked and noindex, for testing. Menus, sitemap and the redirect come later.)
-9. (Done 27 Nov, on the branch.) AI layer: copilot panel (explain, what-if, propose changes) and HLD
+9. (Done 27 Nov, on the branch.) AI layer, in its own edition at /vcf-design-studio-ai/ (unlinked,
+   noindex); the classic app stays AI-free. AI layer: copilot panel (explain, what-if, propose changes) and HLD
    writer (executive summary, design rationale, risk mitigations), with the user's own key first; a hosted
    backend later. Design format 10 adds `decisions.ai` and `narrative`.
