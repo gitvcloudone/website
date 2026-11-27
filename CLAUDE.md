@@ -67,12 +67,18 @@ the decisions, explains them and documents them — it doesn't just validate a f
 - Keep today's one-page layout as an **Expert view** on the same engine and design file.
 - Easy button offers 2–3 options (fewest hosts, lowest licensing, balanced); every auto choice is a
   decision marked "auto-selected" with its reason, and can be overridden.
+- **Auto-designs must meet every Required and Recommended rule.** Required rules are a hard floor:
+  never show an option that breaks one. "Fewest hosts" means the fewest that still pass the
+  Recommended rules (e.g. 4-host vSAN clusters, rebuild capacity during maintenance). A deliberate
+  exception is shown on the option card up front and recorded in the HLD as a decision with a risk.
+  A test checks every easy-button option against Review for every golden workload.
 
 ## Best practices
 
 Pillars: Availability, Manageability, Performance, Recoverability, Security (AMPRS), plus Cost and
 licensing efficiency. A deviation from a recommendation asks for a short reason and becomes a design
-decision plus a risk in the HLD. Review shows a score per pillar.
+decision plus a risk in the HLD. Review shows a score per pillar. Don't show scores or "at risk"
+badges until the design has a workload and topology to score.
 
 ## Design output
 
@@ -86,6 +92,10 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
 
 - TypeScript engine with unit tests per rule and **golden tests** (saved designs, including RVTools
   ones, with locked outputs). CI runs tests on every push; a failing test blocks deploy.
+- The built files in `vcf-design-studio/app/` are committed because the site has no build step. CI
+  runs the build and fails if the committed build differs from the source. Commit `package-lock.json`.
+- Every fix comes with a test that would have caught it.
+- No internal jargon in the UI (e.g. "design format N"); that belongs in the design file, not on screen.
 - Static site; no backend, accounts, payments or AI yet. Mobile-friendly layouts and PWA-ready, so
   iPhone/Android apps (Capacitor) can follow later.
 - Analytics, when added: cookieless, events only, never design content (no customer names, counts
@@ -105,5 +115,8 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
 4. Identity, host networking and NSX steps; IP/VLAN/DNS plan.
 5. Best-practice rules, scorecard, decisions and risks.
 6. Easy button with options.
+6b. Fixes from the 27 Nov review, before step 7: easy-button options meet the rules; no scores on an
+   empty design; drop "design format N" from the banner; add the feature-flags module; add
+   MAINTAINING.md and package-lock.json; CI build check. A test for each.
 7. Exporters: HLD, diagrams, draw.io, prerequisite checklist.
 8. Ship at a new path (e.g. /vcf-design-studio/), with /vcf-sizing/ redirecting.
