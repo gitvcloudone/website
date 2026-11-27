@@ -1,0 +1,24 @@
+// Design document migrations. MIGRATIONS[n] upgrades a formatVersion n document to n + 1.
+// To change the format: bump FORMAT_VERSION in document.ts, add MIGRATIONS[old] here, and add a
+// saved document of the old version to engine/fixtures/designs/ so the upgrade stays tested.
+import { FORMAT_VERSION } from "./document.ts";
+
+type Doc = Record<string, any>;
+export type Migration = (d: Doc) => Doc;
+
+export const MIGRATIONS: Record<number, Migration> = {
+  // formatVersion 1 is the first; nothing to upgrade yet.
+};
+
+export function migrateDesign(input: Doc, migrations: Record<number, Migration> = MIGRATIONS, current = FORMAT_VERSION): Doc {
+  const v = input.formatVersion;
+  if (!Number.isInteger(v) || v < 1) throw new Error("This design file has no valid format version.");
+  if (v > current) throw new Error(`This design was saved by a newer version of VCF Design Studio (format ${v}; this version reads up to ${current}). Reload the page to get the latest version.`);
+  let d = structuredClone(input);
+  for (let n = v; n < current; n++) {
+    const m = migrations[n];
+    if (!m) throw new Error(`No upgrade from design format ${n} to ${n + 1}.`);
+    d = { ...m(d), formatVersion: n + 1 };
+  }
+  return d;
+}

@@ -1,0 +1,122 @@
+// Loading: design documents (any formatVersion up to the current one), "Copy settings" text from the
+// VCF Sizing page (v1, also what its autosave keeps in localStorage "vcfSizer.session"), and
+// host-types files. Settings are normalised exactly as the page's applySettings/loadTopo do, except
+// that ids from the file are kept (a new id is given only when one is missing or already used).
+import { DEFAULTS, CLUSTER_DEFAULTS, PROFILES } from "../knowledge.ts";
+import { fixHw } from "../hardware.ts";
+import type { HostType, Settings, Domain, Instance, Cluster, Edge } from "../types.ts";
+import { FORMAT, FORMAT_VERSION, DEFAULT_SCOPE, sectionsFromSettings, settingsFromDesign } from "./document.ts";
+import type { Design, DesignGroup, RvtoolsScope } from "./document.ts";
+import { migrateDesign } from "./migrations.ts";
+
+type Obj = Record<string, any>;
+export type LoadResult =
+  | { kind: "design"; from: "design" | "vcf-sizing"; design: Design; notes: string[] }
+  | { kind: "hostTypes"; hostTypes: HostType[] };
+export interface LoadOptions {
+  /** Host types this browser already has (the page's localStorage "vcfSizer.hostTypes"). A settings file without host types uses these, as the page does. */
+  browserHostTypes?: Obj[];
+}
+
+/** Ids from the file where possible; a fresh one when missing or taken. remap: old id → new id, last one wins (as the page's Map). */
+function ids(prefix: string) {
+  const used = new Set<string>(), remap = new Map<unknown, string>();
+  let n = 0;
+  const fresh = (p: string) => { let id; do id = `${p}${++n}`; while (used.has(id)); return id; };
+  return {
+    take(old: unknown, p = prefix) { const id = typeof old === "string" && old !== "" && !used.has(old) ? old : fresh(p); used.add(id); remap.set(old, id); return id; },
+    remap,
+  };
+}
+
+const newOpts = () => ({ cpuPeak: 0, ramPeak: 0, place: "auto", drTo: "", drMode: "storage" });
+const domainDefaults = (name: string, kind: string) => ({ name, kind, vcSize: "medium", nsx: "shared", nsxSize: "large", nsxNodes: 3, clusters: [], edges: [] });
+
+/** The page's settings, host types, topology, scope and groups → a design. Mirrors applySettings + loadTopo. */
+function normalize(o: Obj, opt: LoadOptions & { keepSource: boolean }): { design: Design; notes: string[] } {
+  // settings: known keys only, defaults for the rest, a known deployment model
+  const keep = Object.fromEntries(Object.entries(o.settings || {}).filter(([k]) => k in DEFAULTS || ["customer", "site", "notes"].includes(k)));
+  const S = { ...DEFAULTS, customer: "", site: "", notes: "", ...keep } as Settings & Obj;
+  if (!PROFILES[S.profile]) S.profile = DEFAULTS.profile;
+
+  // host types
+  const hid = ids("h");
+  let hostTypes: HostType[];
+  const htMap = new Map<unknown, string>();
+  if (Array.isArray(o.hostTypes) && o.hostTypes.length) hostTypes = o.hostTypes.map((h: Obj) => { const n = fixHw({ ...h, id: hid.take(h && h.id) }); htMap.set(h && h.id, n.id); return n; });
+  else hostTypes = (opt.browserHostTypes || []).map(h => fixHw({ ...h, id: hid.take(h && h.id) }));
+  if (!hostTypes.length && o.topo && JSON.stringify(o.topo).includes('"clusters":[{')) hostTypes = [fixHw({ id: hid.take(undefined), name: "Host type 1" })];
+
+  // topology (same order of id assignment as the page: management domain and its clusters, the instance, then workload domains)
+  const tid = ids(""), eid = ids("e");
+  let osa = 0;
+  const dom = (d: Obj, kind: string): Domain => {
+    const out = { ...domainDefaults(d.name || "Domain", kind), ...d, kind, id: tid.take(d.id, "d"),
+      clusters: (d.clusters || []).map((c: Obj) => {
+        const x: Obj = { ...CLUSTER_DEFAULTS, ...c, id: tid.take(c.id, "c"), hostType: htMap.get(c.hostType) || (hostTypes[0] || {} as HostType).id || "" };
+        if (x.storage === "osa") { x.storage = "esa"; osa++; }
+        delete x.hw;
+        return x as Cluster;
+      }),
+      edges: (d.edges || []).map((e: Obj) => ({ ...e, id: eid.take(e.id, "e") }) as Edge) };
+    return out as Domain;
+  };
+  const instances: Instance[] = o.topo ? (o.topo.instances || []).map((i: Obj, ii: number) => {
+    const mg = dom(i.mgmt || { name: "Management", clusters: [] }, "mgmt");
+    return { id: tid.take(i.id, "i"), name: i.name || `Instance ${ii + 1}`, profile: PROFILES[i.profile] ? i.profile : "", mgmt: mg, wlds: (i.wlds || []).map((d: Obj) => dom(d, "wld")) };
+  }) : [];
+  for (const i of instances) for (const d of [i.mgmt, ...i.wlds]) for (const e of d.edges) e.on = e.on === "bm" ? "bm" : (tid.remap.get(e.on) || (d.clusters[0] || {} as Cluster).id);
+  if (S.aviSeOn) S.aviSeOn = tid.remap.get(S.aviSeOn) || "";
+
+  const rvtoolsScope = Object.fromEntries(Object.keys(DEFAULT_SCOPE).map(k => [k, { ...DEFAULT_SCOPE, ...(o.scope || {}) }[k]])) as unknown as RvtoolsScope;
+  let gid = 1;
+  const groups: DesignGroup[] = (o.groups || []).map((g: Obj) => ({ id: gid++, name: g.name, source: opt.keepSource && g.source ? g.source : "manual", include: g.include !== false, values: { ...g.values },
+    opts: { ...newOpts(), ...(g.opts || {}), place: (g.opts && g.opts.place && tid.remap.get(g.opts.place)) || "auto", drTo: (g.opts && g.opts.drTo && tid.remap.get(g.opts.drTo)) || "" }, meta: g.meta || null }));
+
+  const notes: string[] = [];
+  if (osa) notes.push(`${osa} vSAN OSA cluster${osa > 1 ? "s were" : " was"} switched to vSAN ESA.`);
+  if (!opt.keepSource && (o.groups || []).some((g: Obj) => g && g.source === "rvtools")) notes.push("RVTools groups load as manual totals.");
+  const design: Design = { format: FORMAT, formatVersion: FORMAT_VERSION, ...sectionsFromSettings(S),
+    workload: { groups, rvtoolsScope }, hostTypes, topology: { instances } } as Design;
+  return { design, notes };
+}
+
+/** Host types from a host-types file: { tool: "vcf-host-types", hostTypes }, a plain array, or the older { presets: [{ name, hw }] }. */
+export function parseHostTypesFile(o: unknown): HostType[] {
+  const x = o as Obj;
+  const list: unknown[] = Array.isArray(x) ? x : (x && x.hostTypes) || ((x && x.presets) || []).map((p: Obj) => ({ ...p.hw, name: p.name }));
+  const hid = ids("h");
+  const out = list.filter(p => p && typeof p === "object").map(p => fixHw({ ...(p as Obj), id: hid.take((p as Obj).id) }));
+  if (!out.length) throw new Error("That file isn't a host types file from this calculator.");
+  return out;
+}
+
+/** Add imported host types to a list: same name replaces (keeping its id), others are added. Mirrors the page's import. */
+export function mergeHostTypes(existing: HostType[], incoming: HostType[]): HostType[] {
+  const out = existing.map(h => ({ ...h })), hid = ids("h");
+  for (const h of out) hid.take(h.id);
+  for (const q of incoming) {
+    const i = out.findIndex(x => x.name === q.name);
+    if (i >= 0) out[i] = { ...out[i], ...q, id: out[i].id }; else out.push({ ...q, id: hid.take(q.id) });
+  }
+  return out;
+}
+
+/** Load anything the tool can open: a design document, VCF Sizing "Copy settings" text, or a host-types file. */
+export function loadDesign(input: unknown, opt: LoadOptions = {}): LoadResult {
+  let o: unknown = input;
+  if (typeof o === "string") { try { o = JSON.parse(o); } catch { throw new Error("That text isn't valid settings. Copy it again from the calculator."); } }
+  if (!o || typeof o !== "object") throw new Error("That isn't a VCF design or settings file.");
+  const x = o as Obj;
+  if (Array.isArray(x) || x.tool === "vcf-host-types" || (Array.isArray(x.presets) && !x.settings && !x.topo)) return { kind: "hostTypes", hostTypes: parseHostTypesFile(x) };
+  if (x.format === FORMAT) {
+    const d = migrateDesign(x);
+    const flat = { settings: settingsFromDesign(d as Design), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups };
+    return { kind: "design", from: "design", ...normalize(flat, { ...opt, browserHostTypes: [], keepSource: true }) };
+  }
+  if (x.tool !== undefined && x.tool !== "vcf") throw new Error(`This is a ${String(x.tool).toUpperCase()} file, not a VCF design.`);
+  return { kind: "design", from: "vcf-sizing", ...normalize(x, { ...opt, keepSource: false }) };
+}
+
+/** A design as text, ready to save or copy. */
+export function serializeDesign(d: Design): string { return JSON.stringify(d, null, 1); }
