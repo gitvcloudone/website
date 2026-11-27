@@ -9,6 +9,8 @@ import { STEPS, stepById } from "./flow.js";
 import { expertHtml } from "./expert.js";
                                             
 import { fieldOps, hostTypeOps, actionOps } from "./edit.js";
+import { readExport, rebuild, SHEETS } from "./rvimport.js";
+                                                
                                         
 
 const $ = (id        ) => document.getElementById(id) ;
@@ -107,7 +109,8 @@ function stepHtml(id        ) {
   </section>`;
 }
 
-const ui           = { sel: "", closed: new Set() };
+const rv                                                                             = { files: [], stats: null };   // this visit only, never saved
+const ui           = { sel: "", closed: new Set(), rv };
 
 // re-rendering replaces the form, so keep focus (and the caret) on the same control
 const focusKey = (el                ) => el instanceof HTMLElement ? el.dataset.edit || el.dataset.xact || el.dataset.sel || "" : "";
@@ -148,6 +151,7 @@ document.addEventListener("click", e => {
     forget(localStorage); replace(newDesign(), []); go(act === "new-guided" ? "#/step/project" : "#/expert");
   }
   else if (act === "open-file") ($("file")                    ).click();
+  else if (act === "rv-open") ($("rvfile")                    ).click();
   else if (act === "paste") $("pastebox").classList.toggle("hidden");
   else if (act === "paste-apply") openText(($("pastetext")                       ).value);
   else if (act === "save-file") {
@@ -158,8 +162,13 @@ document.addEventListener("click", e => {
   }
 });
 // ---------- Expert view edits ----------
-                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                    
 function editOps(e      , v         ) {
+  if (e.t === "scope") {   // a scope change rebuilds the RVTools groups in the same proposal
+    const scope = { ...design.workload.rvtoolsScope, [e.key]: v }, rb = rebuild(design, rv.files, scope);
+    rv.stats = rb.stats;
+    return [{ op: "set"         , path: ["workload", "rvtoolsScope", e.key], value: v }, { op: "set"         , path: ["workload", "groups"], value: rb.groups }];
+  }
   if (e.t === "sec") return [{ op: "set"         , path: [e.sec, e.key], value: v }];
   if (e.t === "node") return fieldOps(design, e.id, e.key, v);
   if (e.t === "ht") return hostTypeOps(design, e.id, e.key, v);
@@ -195,6 +204,40 @@ document.addEventListener("toggle", ev => {
   const el = ev.target               ; if (!(el instanceof HTMLDetailsElement) || !el.dataset.sec) return;
   if (el.open) ui.closed.delete(el.dataset.sec); else ui.closed.add(el.dataset.sec);
 }, true);
+
+// ---------- RVTools ----------
+                                                                                                                                                                                     
+function rebuildRv() {
+  const rb = rebuild(design, rv.files, design.workload.rvtoolsScope);
+  rv.stats = rb.stats;
+  commit({ source: "rvtools-import", ops: [{ op: "set", path: ["workload", "groups"], value: rb.groups }] });
+}
+async function addRvFiles(list                          ) {
+  const fs = Array.from(list || []); if (!fs.length) return;
+  if (typeof XLSX === "undefined") { flash = [{ text: "The spreadsheet reader didn't load. Check your connection and reload the page.", lvl: "crit" }]; render(); return; }
+  flash = [{ text: `Reading ${fs.length} file${fs.length > 1 ? "s" : ""}…`, lvl: "info" }]; render();
+  await new Promise(r => setTimeout(r, 30));
+  for (const f of fs) {
+    try {
+      const wb = XLSX.read(await f.arrayBuffer(), { type: "array", sheets: [...SHEETS], dense: true });
+      rv.files.push(readExport(f.name, n => (wb.Sheets[n] ? XLSX .utils.sheet_to_json(wb.Sheets[n], { defval: null }) : null)));
+    } catch (e) { rv.files.push({ fileName: f.name, vms: [], include: true, status: "error", error: `Couldn't read this file as an RVTools export (${(e         ).message}).` }); }
+  }
+  rebuildRv();
+}
+$("rvfile").addEventListener("change", e => { const inp = e.target                    ; addRvFiles(inp.files).finally(() => { inp.value = ""; }); });
+document.addEventListener("change", e => {
+  const el = e.target                    ; if (!el.dataset || el.dataset.rvfile === undefined) return;
+  rv.files[+el.dataset.rvfile].include = el.checked; rebuildRv();
+});
+document.addEventListener("click", e => {
+  const b = (e.target               ).closest             ("[data-rvdel]"); if (!b) return;
+  rv.files.splice(+b.dataset.rvdel , 1); rebuildRv();
+});
+document.addEventListener("keydown", e => { const d = (e.target               ).closest?.(".drop"); if (d && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); $("rvfile").click(); } });
+document.addEventListener("dragover", e => { const d = (e.target               ).closest?.(".drop"); if (d) { e.preventDefault(); d.classList.add("over"); } });
+document.addEventListener("dragleave", e => { (e.target               ).closest?.(".drop")?.classList.remove("over"); });
+document.addEventListener("drop", e => { const d = (e.target               ).closest?.(".drop"); if (d) { e.preventDefault(); d.classList.remove("over"); addRvFiles(e.dataTransfer && e.dataTransfer.files); } });
 
 $("file").addEventListener("change", async e => {
   const inp = e.target                    , f = inp.files && inp.files[0]; inp.value = "";

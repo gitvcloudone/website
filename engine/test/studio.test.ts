@@ -179,3 +179,75 @@ test("host type edits only keep real configurations", () => {
   d = must(d, edit.hostTypeOps(d, h.id, "name", ""));
   assert.equal(d.hostTypes[0].name, h.name);
 });
+
+// ---------- RVTools import and design format 2 ----------
+import * as rvi from "../../studio/src/rvimport.ts";
+import { readFileSync as readText } from "node:fs";
+
+test("a format 1 design opens as format 2 with nothing changed: RVTools values are kept as saved, none shown as edited", () => {
+  const raw = JSON.parse(readText(new URL("../fixtures/designs/format-1.vcf-design.json", import.meta.url), "utf8"));
+  assert.equal(raw.formatVersion, 1);
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.equal(r.design.formatVersion, 2);
+  assert.deepStrictEqual(r.design.workload.groups.map(g => [g.source, g.parsed]), [["rvtools", null], ["rvtools", null], ["manual", null]]);
+  assert.deepStrictEqual(r.design.workload.groups.map(g => g.values), raw.workload.groups.map((g: { values: unknown }) => g.values));
+  assert.ok(r.design.workload.groups.every(g => rvi.overridden(g).length === 0));
+  const e = engine.designToEngine(raw);
+  const noParsed = (x: unknown) => JSON.parse(JSON.stringify(x, (k, v) => (k === "parsed" ? undefined : v)));
+  assert.deepStrictEqual(noParsed(store.sizeDesign(r.design)), noParsed(engine.size(e.s, e.topo, e.groups, e.hostTypes)), "same sizing (the result only echoes the new field)");
+  // saved again it keeps parsed
+  const again = engine.loadDesign(engine.serializeDesign(r.design)); assert.ok(again.kind === "design" && again.design.workload.groups[0].parsed === null);
+});
+
+const fake = fakeFiles() as Record<string, Record<string, unknown>>;
+const readFake = (n: string) => rvi.readExport(fake[n].fileName as string, s => (fake[n][s] as never) ?? null);
+const rvCases = CASES.filter(c => c.rvtools);
+const strip = (gs: { name: string; source: string; include: boolean; values: unknown; meta: unknown }[]) => gs.map(g => ({ name: g.name, source: g.source, include: g.include, values: g.values, meta: g.meta }));
+
+test("RVTools import in the studio builds the same groups and sizing as the VCF Sizing page, for every RVTools case", () => {
+  assert.equal(rvCases.length, 3);
+  for (const c of rvCases) {
+    const i = buildInputs(engine, c, fake);
+    const manual = i.groups.filter((g: { source: string }) => g.source === "manual");
+    const r = engine.loadDesign({ v: 1, tool: "vcf", settings: i.S, hostTypes: i.hostTypes, topo: i.topo, groups: manual }); if (r.kind !== "design") throw new Error();
+    let d = r.design;
+    const scope = { ...engine.DEFAULT_SCOPE, ...(c.rvtools!.scope || {}) };
+    const files = c.rvtools!.files.map(readFake);
+    const rb = rvi.rebuild(d, files, scope);
+    const opts = (c.rvtools!.opts || {}) as Record<string, object>;
+    rb.groups.forEach(g => { if (opts[g.name]) g.opts = { ...g.opts!, ...opts[g.name] }; });
+    d = must(d, [{ op: "set", path: ["workload", "rvtoolsScope"], value: scope }, { op: "set", path: ["workload", "groups"], value: rb.groups }]);
+    assert.deepStrictEqual(strip(d.workload.groups), strip(i.groups), `${c.name}: groups`);
+    assert.ok(d.workload.groups.filter(g => g.source === "rvtools").every(g => g.parsed && rvi.overridden(g).length === 0));
+    const want = engine.size(i.S, i.topo, i.groups, i.hostTypes), got = store.sizeDesign(d);
+    assert.deepStrictEqual([got.hosts, got.licCores, got.clusters.map(x => x.total)], [want.hosts, want.licCores, want.clusters.map(x => x.total)], `${c.name}: sizing`);
+    assert.equal(rb.stats.dups, i.rv.build.dups); assert.equal(rb.stats.excluded, i.rv.build.excluded);
+  }
+});
+
+test("re-reading or rescoping keeps a group's include, placement and hand edits, as on the page; Reset goes back to RVTools", () => {
+  let d = engine.newDesign();
+  const files = ["A", "B"].map(readFake), scope = { ...engine.DEFAULT_SCOPE };
+  d = must(d, [{ op: "set", path: ["workload", "groups"], value: rvi.rebuild(d, files, scope).groups }]);
+  const name = d.workload.groups[0].name, read = d.workload.groups[0].values.vcpu as number;
+  d = must(d, [{ op: "set", path: ["workload", "groups", 0, "values", "vcpu"], value: 9999 }, { op: "set", path: ["workload", "groups", 0, "opts", "cpuPeak"], value: 30 }, { op: "set", path: ["workload", "groups", 1, "include"], value: false }]);
+  assert.deepStrictEqual(rvi.overridden(d.workload.groups[0]), ["vcpu"]);
+  const scope2 = { ...scope, includeOff: false };
+  const rb = rvi.rebuild(d, files, scope2);
+  d = must(d, [{ op: "set", path: ["workload", "groups"], value: rb.groups }]);
+  const g = d.workload.groups.find(x => x.name === name)!;
+  assert.equal(g.values.vcpu, 9999, "hand edit kept"); assert.equal(g.opts!.cpuPeak, 30, "peak kept"); assert.equal(d.workload.groups[1].include, false, "include kept");
+  assert.ok(g.parsed && g.parsed.vcpu <= read, "parsed values follow the new scope");
+  d = must(d, edit.actionOps(d, { act: "resetGroup", index: d.workload.groups.indexOf(g) }).ops);
+  assert.deepStrictEqual(d.workload.groups[0].values, d.workload.groups[0].parsed, "reset");
+  // removing every file removes the RVTools groups, manual ones stay (as on the page)
+  d = must(d, edit.actionOps(d, { act: "addGroup" }).ops);
+  d = must(d, [{ op: "set", path: ["workload", "groups"], value: rvi.rebuild(d, [], scope2).groups }]);
+  assert.deepStrictEqual(d.workload.groups.map(x => x.source), ["manual"]);
+});
+
+test("a file that isn't an RVTools export is reported, not thrown", () => {
+  const f = rvi.readExport("notes.xlsx", () => null);
+  assert.equal(f.status, "error"); assert.ok(f.error);
+  assert.equal(rvi.rebuild(engine.newDesign(), [f], { ...engine.DEFAULT_SCOPE }).groups.length, 0);
+});

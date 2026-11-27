@@ -72,6 +72,7 @@ function normalize(o     , opt                                       )          
   const rvtoolsScope = Object.fromEntries(Object.keys(DEFAULT_SCOPE).map(k => [k, { ...DEFAULT_SCOPE, ...(o.scope || {}) }[k]]))                           ;
   let gid = 1;
   const groups                = (o.groups || []).map((g     ) => ({ id: gid++, name: g.name, source: opt.keepSource && g.source ? g.source : "manual", include: g.include !== false, values: { ...g.values },
+    parsed: opt.keepSource && g.source === "rvtools" && g.parsed && typeof g.parsed === "object" ? { ...g.parsed } : null,
     opts: { ...newOpts(), ...(g.opts || {}), place: (g.opts && g.opts.place && tid.remap.get(g.opts.place)) || "auto", drTo: (g.opts && g.opts.drTo && tid.remap.get(g.opts.drTo)) || "" }, meta: g.meta || null }));
 
   const notes           = [];

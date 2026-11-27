@@ -185,3 +185,5 @@ table.edges .lbl .why { display: none; }
   .topo2 { grid-template-columns: minmax(0, 1fr); }
   .panel { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
 }
+.excl { cursor: help; border-bottom: 1px dotted currentColor; }
+table.files td { vertical-align: middle; }

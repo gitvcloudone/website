@@ -7,7 +7,9 @@ type Doc = Record<string, any>;
 export type Migration = (d: Doc) => Doc;
 
 export const MIGRATIONS: Record<number, Migration> = {
-  // formatVersion 1 is the first; nothing to upgrade yet.
+  // 1 → 2: groups gain `parsed` (an RVTools group's values as read). Not known for older files, so null:
+  // their values stay exactly as saved, nothing shows as hand-edited.
+  1: d => ({ ...d, workload: { ...d.workload, groups: (d.workload?.groups || []).map((g: Doc) => ({ ...g, parsed: null })) } }),
 };
 
 export function migrateDesign(input: Doc, migrations: Record<number, Migration> = MIGRATIONS, current = FORMAT_VERSION): Doc {

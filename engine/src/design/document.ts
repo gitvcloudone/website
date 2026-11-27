@@ -5,7 +5,7 @@ import { DEFAULTS } from "../knowledge.ts";
 import type { Settings, HostType, Topology, Group } from "../types.ts";
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -20,7 +20,8 @@ type Section<N extends SectionName> = Pick<Settings, (typeof SECTION_KEYS)[N][nu
 export interface RvtoolsScope { includeOff: boolean; templatesStorage: boolean; exVcls: boolean; patterns: string; groupBy: string }
 export const DEFAULT_SCOPE: RvtoolsScope = { includeOff: true, templatesStorage: true, exVcls: true, patterns: "", groupBy: "file" };
 
-export type DesignGroup = Pick<Group, "id" | "name" | "include" | "values" | "opts" | "meta"> & { source: string };
+/** parsed: an RVTools group's values as read from the files (format 2+), so hand edits show and can be reset; null for manual groups and when not known. */
+export type DesignGroup = Pick<Group, "id" | "name" | "include" | "values" | "opts" | "meta"> & { source: string; parsed: Record<string, number> | null };
 
 export interface Design {
   format: typeof FORMAT;

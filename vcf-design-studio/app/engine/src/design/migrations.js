@@ -8,7 +8,9 @@ import { FORMAT_VERSION } from "./document.js";
                                         
 
 export const MIGRATIONS                            = {
-  // formatVersion 1 is the first; nothing to upgrade yet.
+  // 1 → 2: groups gain `parsed` (an RVTools group's values as read). Not known for older files, so null:
+  // their values stay exactly as saved, nothing shows as hand-edited.
+  1: d => ({ ...d, workload: { ...d.workload, groups: (d.workload?.groups || []).map((g     ) => ({ ...g, parsed: null })) } }),
 };
 
 export function migrateDesign(input     , migrations                            = MIGRATIONS, current = FORMAT_VERSION)      {

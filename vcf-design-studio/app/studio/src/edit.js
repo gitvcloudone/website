@@ -71,7 +71,7 @@ const newDomain = (id        , name        , kind        , o                  = 
                                                                                                  
                                                                    
                                                                                   
-                                                             
+                                                                                                    
 
 /** Ops for a structural change, and the id of anything new (to select it). */
 export function actionOps(d0        , a        )                                 {
@@ -137,10 +137,11 @@ export function actionOps(d0        , a        )                                
     case "addGroup": {
       const gs = d.workload.groups, id = gs.reduce((m, g) => Math.max(m, g.id), 0) + 1;
       gs.push({ id, name: `Manual group ${gs.filter(g => g.source === "manual").length + 1}`, source: "manual", include: true,
-        values: { vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, templTiB: 0 }, opts: { cpuPeak: 0, ramPeak: 0, place: "auto", drTo: "", drMode: "storage" }, meta: null });
+        values: { vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, templTiB: 0 }, parsed: null, opts: { cpuPeak: 0, ramPeak: 0, place: "auto", drTo: "", drMode: "storage" }, meta: null });
       break;
     }
     case "delGroup": d.workload.groups.splice(a.index, 1); break;
+    case "resetGroup": { const g = d.workload.groups[a.index]; if (g && g.parsed) g.values = { ...g.parsed }; break; }
   }
   // groups never point at a cluster that's gone (as on the page)
   const has = (id        ) => !!locate(d, id);

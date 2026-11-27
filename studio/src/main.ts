@@ -8,6 +8,8 @@ import { STEPS, stepById } from "./flow.ts";
 import { expertHtml } from "./expert.ts";
 import type { ExpertUi } from "./expert.ts";
 import { fieldOps, hostTypeOps, actionOps } from "./edit.ts";
+import { readExport, rebuild, SHEETS } from "./rvimport.ts";
+import type { LoadedFile } from "./rvimport.ts";
 import type { Action } from "./edit.ts";
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -106,7 +108,8 @@ function stepHtml(id: string) {
   </section>`;
 }
 
-const ui: ExpertUi = { sel: "", closed: new Set() };
+const rv: { files: LoadedFile[]; stats: ReturnType<typeof rebuild>["stats"] | null } = { files: [], stats: null };   // this visit only, never saved
+const ui: ExpertUi = { sel: "", closed: new Set(), rv };
 
 // re-rendering replaces the form, so keep focus (and the caret) on the same control
 const focusKey = (el: Element | null) => el instanceof HTMLElement ? el.dataset.edit || el.dataset.xact || el.dataset.sel || "" : "";
@@ -147,6 +150,7 @@ document.addEventListener("click", e => {
     forget(localStorage); replace(newDesign(), []); go(act === "new-guided" ? "#/step/project" : "#/expert");
   }
   else if (act === "open-file") ($("file") as HTMLInputElement).click();
+  else if (act === "rv-open") ($("rvfile") as HTMLInputElement).click();
   else if (act === "paste") $("pastebox").classList.toggle("hidden");
   else if (act === "paste-apply") openText(($("pastetext") as HTMLTextAreaElement).value);
   else if (act === "save-file") {
@@ -157,8 +161,13 @@ document.addEventListener("click", e => {
   }
 });
 // ---------- Expert view edits ----------
-type Edit = { t: "sec"; sec: "project" | "policy" | "fleet" | "addons"; key: string } | { t: "node"; id: string; key: string } | { t: "ht"; id: string; key: string } | { t: "grp"; i: number; sub?: "values" | "opts"; key: string };
+type Edit = { t: "scope"; key: string } | { t: "sec"; sec: "project" | "policy" | "fleet" | "addons"; key: string } | { t: "node"; id: string; key: string } | { t: "ht"; id: string; key: string } | { t: "grp"; i: number; sub?: "values" | "opts"; key: string };
 function editOps(e: Edit, v: unknown) {
+  if (e.t === "scope") {   // a scope change rebuilds the RVTools groups in the same proposal
+    const scope = { ...design.workload.rvtoolsScope, [e.key]: v }, rb = rebuild(design, rv.files, scope);
+    rv.stats = rb.stats;
+    return [{ op: "set" as const, path: ["workload", "rvtoolsScope", e.key], value: v }, { op: "set" as const, path: ["workload", "groups"], value: rb.groups }];
+  }
   if (e.t === "sec") return [{ op: "set" as const, path: [e.sec, e.key], value: v }];
   if (e.t === "node") return fieldOps(design, e.id, e.key, v);
   if (e.t === "ht") return hostTypeOps(design, e.id, e.key, v);
@@ -194,6 +203,40 @@ document.addEventListener("toggle", ev => {
   const el = ev.target as HTMLElement; if (!(el instanceof HTMLDetailsElement) || !el.dataset.sec) return;
   if (el.open) ui.closed.delete(el.dataset.sec); else ui.closed.add(el.dataset.sec);
 }, true);
+
+// ---------- RVTools ----------
+declare const XLSX: { read(d: ArrayBuffer, o: object): { Sheets: Record<string, unknown> }; utils: { sheet_to_json(s: unknown, o: object): Record<string, unknown>[] } } | undefined;
+function rebuildRv() {
+  const rb = rebuild(design, rv.files, design.workload.rvtoolsScope);
+  rv.stats = rb.stats;
+  commit({ source: "rvtools-import", ops: [{ op: "set", path: ["workload", "groups"], value: rb.groups }] });
+}
+async function addRvFiles(list: FileList | File[] | null) {
+  const fs = Array.from(list || []); if (!fs.length) return;
+  if (typeof XLSX === "undefined") { flash = [{ text: "The spreadsheet reader didn't load. Check your connection and reload the page.", lvl: "crit" }]; render(); return; }
+  flash = [{ text: `Reading ${fs.length} file${fs.length > 1 ? "s" : ""}…`, lvl: "info" }]; render();
+  await new Promise(r => setTimeout(r, 30));
+  for (const f of fs) {
+    try {
+      const wb = XLSX.read(await f.arrayBuffer(), { type: "array", sheets: [...SHEETS], dense: true });
+      rv.files.push(readExport(f.name, n => (wb.Sheets[n] ? XLSX!.utils.sheet_to_json(wb.Sheets[n], { defval: null }) : null)));
+    } catch (e) { rv.files.push({ fileName: f.name, vms: [], include: true, status: "error", error: `Couldn't read this file as an RVTools export (${(e as Error).message}).` }); }
+  }
+  rebuildRv();
+}
+$("rvfile").addEventListener("change", e => { const inp = e.target as HTMLInputElement; addRvFiles(inp.files).finally(() => { inp.value = ""; }); });
+document.addEventListener("change", e => {
+  const el = e.target as HTMLInputElement; if (!el.dataset || el.dataset.rvfile === undefined) return;
+  rv.files[+el.dataset.rvfile].include = el.checked; rebuildRv();
+});
+document.addEventListener("click", e => {
+  const b = (e.target as HTMLElement).closest<HTMLElement>("[data-rvdel]"); if (!b) return;
+  rv.files.splice(+b.dataset.rvdel!, 1); rebuildRv();
+});
+document.addEventListener("keydown", e => { const d = (e.target as HTMLElement).closest?.(".drop"); if (d && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); $("rvfile").click(); } });
+document.addEventListener("dragover", e => { const d = (e.target as HTMLElement).closest?.(".drop"); if (d) { e.preventDefault(); d.classList.add("over"); } });
+document.addEventListener("dragleave", e => { (e.target as HTMLElement).closest?.(".drop")?.classList.remove("over"); });
+document.addEventListener("drop", e => { const d = (e.target as HTMLElement).closest?.(".drop"); if (d) { e.preventDefault(); d.classList.remove("over"); addRvFiles(e.dataTransfer && e.dataTransfer.files); } });
 
 $("file").addEventListener("change", async e => {
   const inp = e.target as HTMLInputElement, f = inp.files && inp.files[0]; inp.value = "";

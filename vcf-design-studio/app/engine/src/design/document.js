@@ -6,7 +6,7 @@ import { DEFAULTS } from "../knowledge.js";
                                                                        
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -21,7 +21,8 @@ export const SECTION_KEYS = {
                                                                                                                                     
 export const DEFAULT_SCOPE               = { includeOff: true, templatesStorage: true, exVcls: true, patterns: "", groupBy: "file" };
 
-                                                                                                                   
+/** parsed: an RVTools group's values as read from the files (format 2+), so hand edits show and can be reset; null for manual groups and when not known. */
+                                                                                                                                                          
 
                          
                         
