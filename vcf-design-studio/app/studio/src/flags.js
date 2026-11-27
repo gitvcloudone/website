@@ -8,7 +8,8 @@
                                                
 export const TIERS         = ["free", "pro", "broadcom"];
 
-                                                                                                    
+                                                                                                   
+                                                                   
 
                                                       
 const ALL         = [...TIERS];
@@ -19,7 +20,11 @@ export const FEATURES                               = {
   expertView: { label: "Expert view", tiers: ALL },
   rvtoolsImport: { label: "RVTools import", tiers: ALL },
   designFile: { label: "Save and open design files", tiers: ALL },
-  designOutput: { label: "Design output (HLD, diagrams, tables, checklist)", tiers: ALL },
+  designOutput: { label: "Design output page (HLD preview, diagrams, IP plan)", tiers: ALL },
+  exportWord: { label: "HLD as Word", tiers: ALL },
+  exportPdf: { label: "HLD as PDF", tiers: ALL },
+  exportDiagrams: { label: "Diagrams as SVG, PNG and draw.io", tiers: ALL },
+  exportTables: { label: "Prerequisites and IP plan as Excel", tiers: ALL },
 };
 
 let current       = "free";
