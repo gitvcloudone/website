@@ -8,7 +8,7 @@ import { openSaved, save, forget, propose, sizeDesign } from "./store.js";
 import { STEPS, stepById } from "./flow.js";
 import { expertHtml } from "./expert.js";
                                             
-import { fieldOps, hostTypeOps, actionOps } from "./edit.js";
+import { fieldOps, hostTypeOps, actionOps, identityOps } from "./edit.js";
 import { readExport, rebuild, SHEETS } from "./rvimport.js";
 import { stepHtml, stateTag } from "./guided.js";
 import { stepState, recommendOps, skipOps, reopenOps } from "./steps.js";
@@ -152,14 +152,16 @@ document.addEventListener("click", e => {
   }
 });
 // ---------- Expert view edits ----------
-                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                                 
 function editOps(e      , v         ) {
   if (e.t === "scope") {   // a scope change rebuilds the RVTools groups in the same proposal
     const scope = { ...design.workload.rvtoolsScope, [e.key]: v }, rb = rebuild(design, rv.files, scope);
     rv.stats = rb.stats;
     return [{ op: "set"         , path: ["workload", "rvtoolsScope", e.key], value: v }, { op: "set"         , path: ["workload", "groups"], value: rb.groups }];
   }
-  if (e.t === "sec") return [{ op: "set"         , path: [e.sec, e.key], value: v }];
+  if (e.t === "sec" && e.sec === "identity") return identityOps(design, e.key, v);
+  if (e.t === "sec") return [{ op: "set"         , path: [...e.sec.split("."), e.key], value: v }];
+  if (e.t === "role") return [{ op: "set"         , path: ["identity", "roles", e.i, e.key], value: v }];
   if (e.t === "node") return fieldOps(design, e.id, e.key, v);
   if (e.t === "ht") return hostTypeOps(design, e.id, e.key, v);
   return [{ op: "set"         , path: ["workload", "groups", e.i, ...(e.sub ? [e.sub] : []), e.key], value: v }];

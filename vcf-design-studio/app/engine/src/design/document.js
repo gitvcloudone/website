@@ -6,7 +6,7 @@ import { DEFAULTS } from "../knowledge.js";
                                                                        
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 3;
+export const FORMAT_VERSION = 4;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -29,6 +29,15 @@ export const DEFAULT_SCOPE               = { includeOff: true, templatesStorage:
 export const STEP_CHOICES                        = ["recommended", "skipped"];
                                                                 
 
+/** Identity & access (format 4+). "" = not decided yet. A role's scope is "fleet" or an instance / domain id; "" when that was removed. */
+                                                       
+                                                                      
+                           
+                                                                                       
+                                                                                     
+ 
+export const newIdentity = ()           => ({ mode: "", idp: "", provisioning: "", roles: [], breakGlass: { holder: "", vault: "", rotationDays: 0, notes: "" } });
+
                          
                         
                         
@@ -39,6 +48,7 @@ export const STEP_CHOICES                        = ["recommended", "skipped"];
                         
                      
                             
+                     
                        
  
 
@@ -62,6 +72,7 @@ export function newDesign()         {
     ...sectionsFromSettings({ ...DEFAULTS, customer: "", site: "", notes: "" }),
     workload: { groups: [], rvtoolsScope: { ...DEFAULT_SCOPE } },
     hostTypes: [], topology: { instances: [] },
+    identity: newIdentity(),
     decisions: { steps: {} },
   }          ;
 }

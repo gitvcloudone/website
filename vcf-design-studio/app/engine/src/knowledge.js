@@ -7,6 +7,7 @@ import management from "../knowledge/management.json" with { type: "json" };
 import addons from "../knowledge/addons.json" with { type: "json" };
 import vsan from "../knowledge/vsan.json" with { type: "json" };
 import defaults from "../knowledge/defaults.json" with { type: "json" };
+import identity from "../knowledge/identity.json" with { type: "json" };
                                                                                    
 
                                                             
@@ -57,3 +58,10 @@ export const POL                                                           = map
 
 export const DEFAULTS           = defaults.tables.settings.data            ;
 export const CLUSTER_DEFAULTS                  = defaults.tables.cluster.data                   ;
+
+// VCF Single Sign-On (VCF 9.1+): Identity Broker modes, identity providers, provisioning methods
+export const IDENTITY = {
+  modes: identity.tables.modes.data                                                  ,
+  providers: identity.tables.providers.data                                                                      ,
+  provisioning: identity.tables.provisioning.data                                                                     ,
+};

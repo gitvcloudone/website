@@ -9,7 +9,7 @@ export const STEPS: Step[] = [
   { id: "workload", n: 3, title: "Workload", kind: "required", blurb: "The VMs to run: RVTools exports, totals by hand, or both." },
   { id: "policy", n: 4, title: "Sizing policy", kind: "skippable", blurb: "CPU and memory ratios, reserves and growth." },
   { id: "fleet", n: 5, title: "Fleet management", kind: "skippable", blurb: "Deployment model and fleet-wide management services." },
-  { id: "identity", n: 6, title: "Identity & access", kind: "coming", blurb: "Identity Broker, identity provider, roles and break-glass." },
+  { id: "identity", n: 6, title: "Identity & access", kind: "skippable", blurb: "Identity Broker, identity provider, roles and break-glass." },
   { id: "hosts", n: 7, title: "Host types", kind: "required", blurb: "The server models you plan to use." },
   { id: "topology", n: 8, title: "Topology", kind: "required", blurb: "Instances, workload domains and clusters." },
   { id: "storage", n: 9, title: "Cluster storage", kind: "skippable", blurb: "vSAN policy, capacity reserves, memory tiering." },

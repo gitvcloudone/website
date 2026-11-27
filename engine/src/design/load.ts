@@ -2,12 +2,13 @@
 // VCF Sizing page (v1, also what its autosave keeps in localStorage "vcfSizer.session"), and
 // host-types files. Settings are normalised exactly as the page's applySettings/loadTopo do, except
 // that ids from the file are kept (a new id is given only when one is missing or already used).
-import { DEFAULTS, CLUSTER_DEFAULTS, PROFILES } from "../knowledge.ts";
+import { DEFAULTS, CLUSTER_DEFAULTS, PROFILES, IDENTITY } from "../knowledge.ts";
 import { fixHw } from "../hardware.ts";
 import type { HostType, Settings, Domain, Instance, Cluster, Edge } from "../types.ts";
 import { FORMAT, FORMAT_VERSION, DEFAULT_SCOPE, sectionsFromSettings, settingsFromDesign } from "./document.ts";
 import type { Design, DesignGroup, RvtoolsScope, StepChoice } from "./document.ts";
-import { STEP_CHOICES } from "./document.ts";
+import { STEP_CHOICES, newIdentity } from "./document.ts";
+import type { Identity, Access } from "./document.ts";
 import { migrateDesign } from "./migrations.ts";
 
 type Obj = Record<string, any>;
@@ -75,14 +76,32 @@ function normalize(o: Obj, opt: LoadOptions & { keepSource: boolean }): { design
     parsed: opt.keepSource && g.source === "rvtools" && g.parsed && typeof g.parsed === "object" ? { ...g.parsed } : null,
     opts: { ...newOpts(), ...(g.opts || {}), place: (g.opts && g.opts.place && tid.remap.get(g.opts.place)) || "auto", drTo: (g.opts && g.opts.drTo && tid.remap.get(g.opts.drTo)) || "" }, meta: g.meta || null }));
 
+  const scopes = new Set(instances.flatMap(i => [i.id, i.mgmt.id, ...i.wlds.map(w => w.id)]));
   const notes: string[] = [];
   if (osa) notes.push(`${osa} vSAN OSA cluster${osa > 1 ? "s were" : " was"} switched to vSAN ESA.`);
   if (!opt.keepSource && (o.groups || []).some((g: Obj) => g && g.source === "rvtools")) notes.push("RVTools groups load as manual totals.");
   const design: Design = { format: FORMAT, formatVersion: FORMAT_VERSION, ...sectionsFromSettings(S),
     workload: { groups, rvtoolsScope }, hostTypes, topology: { instances },
+    identity: identityFrom(o.identity, (id: unknown) => { const n = tid.remap.get(id); return n && scopes.has(n) ? n : undefined; }),
     // only known choices, keyed by step id (a design from a newer build may know more steps: keep those too)
     decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v as StepChoice))) as Record<string, StepChoice> } } as Design;
   return { design, notes };
+}
+
+const str = (v: unknown) => (typeof v === "string" ? v : "");
+/** Identity & access, keeping only known choices. A role whose instance / domain isn't in the design gets scope "" (to choose again), never a wider one. */
+function identityFrom(x: Obj | undefined, remap: (id: unknown) => string | undefined): Identity {
+  const out = newIdentity(); if (!x || typeof x !== "object") return out;
+  if (x.mode in IDENTITY.modes) out.mode = x.mode;
+  if (x.idp in IDENTITY.providers) out.idp = x.idp;
+  const p = IDENTITY.provisioning[x.provisioning];
+  if (p && out.idp && p.for === IDENTITY.providers[out.idp].kind) out.provisioning = x.provisioning;
+  out.roles = (Array.isArray(x.roles) ? x.roles : []).filter((r: unknown) => r && typeof r === "object").map((r: Obj) => ({
+    group: str(r.group), scope: r.scope === "fleet" ? "fleet" : remap(r.scope) || "",
+    access: (["admin", "operator", "readonly"].includes(r.access) ? r.access : "readonly") as Access }));
+  const b = x.breakGlass || {};
+  out.breakGlass = { holder: str(b.holder), vault: str(b.vault), rotationDays: Number.isFinite(b.rotationDays) && b.rotationDays > 0 ? Math.round(b.rotationDays) : 0, notes: str(b.notes) };
+  return out;
 }
 
 /** Host types from a host-types file: { tool: "vcf-host-types", hostTypes }, a plain array, or the older { presets: [{ name, hw }] }. */
@@ -115,7 +134,7 @@ export function loadDesign(input: unknown, opt: LoadOptions = {}): LoadResult {
   if (Array.isArray(x) || x.tool === "vcf-host-types" || (Array.isArray(x.presets) && !x.settings && !x.topo)) return { kind: "hostTypes", hostTypes: parseHostTypesFile(x) };
   if (x.format === FORMAT) {
     const d = migrateDesign(x);
-    const flat = { settings: settingsFromDesign(d as Design), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups, decisions: d.decisions };
+    const flat = { settings: settingsFromDesign(d as Design), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups, decisions: d.decisions, identity: d.identity };
     return { kind: "design", from: "design", ...normalize(flat, { ...opt, browserHostTypes: [], keepSource: true }) };
   }
   if (x.tool !== undefined && x.tool !== "vcf") throw new Error(`This is a ${String(x.tool).toUpperCase()} file, not a VCF design.`);

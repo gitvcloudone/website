@@ -5,7 +5,7 @@ import { maxFor, tierMax } from "../../engine/src/index.ts";
 import type { Design, SizingResult } from "../../engine/src/index.ts";
 import { STEPS, stepById } from "./flow.ts";
 import { projectFields, policyFields, fleetFields, clusterFields } from "./fields.ts";
-import { fields, btn, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml } from "./expert.ts";
+import { fields, btn, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml } from "./expert.ts";
 import type { ExpertUi } from "./expert.ts";
 import { stepState, changes, STORAGE_KEYS } from "./steps.ts";
 import type { StepState } from "./steps.ts";
@@ -46,6 +46,7 @@ function body(d: Design, r: SizingResult, ui: ExpertUi, id: string): string {
     case "workload": return workloadHtml(d, ui);
     case "policy": return `<div class="grid">${fields(policyFields(), d.policy as unknown as Record<string, unknown>, { t: "sec", sec: "policy" })}</div>`;
     case "fleet": return `<div class="grid">${fields(fleetFields(d.fleet), d.fleet as unknown as Record<string, unknown>, { t: "sec", sec: "fleet" })}</div>`;
+    case "identity": return identityHtml(d);
     case "hosts": return hostTypesHtml(d);
     case "topology": return topologyHtml(d, r, ui, STORAGE_KEYS) + `<p class="hint">vSAN policy, reserves and memory tiering for each cluster are in the next step, Cluster storage.</p>`;
     case "storage": return storageHtml(d);
@@ -60,11 +61,12 @@ function reviewHtml(d: Design, r: SizingResult) {
     const detail = ch.length ? `<ul class="changes">${ch.map(c => `<li>${c.where ? `<b>${esc(c.where)}</b> ` : ""}${esc(c.label)}: ${esc(c.value)} <span class="hint">(recommended ${esc(c.def)})</span></li>`).join("")}</ul>` : `<span class="hint">${esc(st.note)}</span>`;
     return `<tr><td>${s.n}</td><td>${s.kind === "coming" ? esc(s.title) : `<a href="#/step/${s.id}">${esc(s.title)}</a>`}</td><td>${stateTag(st.state)}</td><td>${detail}</td></tr>`;
   }).join("");
-  const open = STEPS.filter(s => ["todo", "skipped", "open"].includes(stepState(d, s.id).state));
+  const open = STEPS.flatMap(s => { const st = stepState(d, s.id);
+    return ["todo", "skipped", "open"].includes(st.state) ? [{ s, t: st.note }] : (st.open || []).map(t => ({ s, t })); });
   const crit = r.warnings.filter(w => w.lvl === "crit"), warn = r.warnings.filter(w => w.lvl === "warn");
   return `<div class="tablewrap"><table class="review"><thead><tr><th>#</th><th>Step</th><th>Status</th><th>Decisions and open items</th></tr></thead><tbody>${rows}</tbody></table></div>
     <h4>Open items</h4>
-    ${open.length ? `<ul>${open.map(s => `<li><a href="#/step/${s.id}">${esc(s.title)}</a>: ${esc(stepState(d, s.id).note)}</li>`).join("")}</ul>` : `<p class="hint">None.</p>`}
+    ${open.length ? `<ul>${open.map(o => `<li><a href="#/step/${o.s.id}">${esc(o.s.title)}</a>: ${esc(o.t)}</li>`).join("")}</ul>` : `<p class="hint">None.</p>`}
     <h4>Sizing checks</h4>
     ${crit.length || warn.length ? `<ul class="warns">${[...crit, ...warn].map(w => `<li class="${w.lvl}">${esc(w.t)}</li>`).join("")}</ul>` : `<p class="hint">No issues.</p>`}`;
 }

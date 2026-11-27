@@ -3,9 +3,9 @@
 // Topology is a tree; the selected instance, domain or cluster opens its settings next to it.
 // A pure function of the design → HTML (no DOM), so tests can render it. Inputs carry data-edit
 // (what they change); buttons carry data-xact (a structural change); main.ts turns both into proposals.
-import { PROFILES, workloadTotals, hostCfg, maxFor, tierMax, settingsFromDesign, clusterReason, hwText, HOST_LCPU_MAX } from "../../engine/src/index.js";
+import { PROFILES, IDENTITY, workloadTotals, hostCfg, maxFor, tierMax, settingsFromDesign, clusterReason, hwText, HOST_LCPU_MAX } from "../../engine/src/index.js";
                                                                                                         
-import { projectFields, policyFields, fleetFields, addonFields, hostTypeFields, domainFields, domainNsxFields, edgeSizes, clusterFields, STORAGE } from "./fields.js";
+import { projectFields, policyFields, fleetFields, addonFields, identityFields, breakGlassFields, ACCESS, hostTypeFields, domainFields, domainNsxFields, edgeSizes, clusterFields, STORAGE } from "./fields.js";
                                                  
 import { locate } from "./edit.js";
 import { overridden, estate } from "./rvimport.js";
@@ -189,6 +189,30 @@ export function topologyHtml(d        , r              , ui          , omit     
   return `<div class="topo2"><nav class="treecol" aria-label="Instances, domains and clusters">${treeHtml(d, r, sel)}</nav><div class="panel">${panel}</div></div>`;
 }
 
+/** Where a role applies: the whole fleet, an instance, or a domain. */
+export function scopeChoices(d        )           {
+  const out           = [["fleet", "Whole fleet"]];
+  for (const i of d.topology.instances) { out.push([i.id, `${i.name} (instance)`]); for (const dm of [i.mgmt, ...i.wlds]) out.push([dm.id, `${i.name} / ${dm.name}`]); }
+  return out;
+}
+
+export function identityHtml(d        ) {
+  const x = d.identity, sc = scopeChoices(d);
+  const sel = (i        , key        , v        , opts          ) => `<select data-edit="${attr({ t: "role", i, key })}" data-type="select" aria-label="${key}">${opts.map(([k, l]) => `<option value="${esc(k)}" ${String(k) === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+  const rows = x.roles.map((r, i) => `<tr>
+    <td><input type="text" value="${esc(r.group)}" placeholder="IdP group name" data-edit="${attr({ t: "role", i, key: "group" })}" data-type="text" aria-label="Group"></td>
+    <td>${sel(i, "scope", r.scope, r.scope ? sc : [["", "Removed: choose a scope"], ...sc])}</td>
+    <td>${sel(i, "access", r.access, ACCESS)}</td>
+    <td>${btn("delRole", "Remove", { index: i })}</td></tr>`).join("");
+  return `<div class="grid">${fields(identityFields(x), x                                      , { t: "sec", sec: "identity" })}</div>
+    <h4>Role matrix</h4>
+    <p class="hint">Which identity-provider group gets which access, and where. Access levels are design intent; the design document maps each to the components' own roles.</p>
+    ${x.roles.length ? `<div class="tablewrap"><table class="roles"><thead><tr><th>Group</th><th>Scope</th><th>Access</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
+    <div class="row">${btn("addRole", "Add role", {}, "ghost")}${x.roles.length ? "" : btn("suggestRoles", "Start from suggested roles", {}, "link")}</div>
+    <h4>Break-glass access</h4>
+    <div class="grid">${fields(breakGlassFields(), x.breakGlass                                      , { t: "sec", sec: "identity.breakGlass" })}</div>`;
+}
+
 export function addonsHtml(d        ) {
   const S = d.addons                                      ;
   return `<div class="addons">${addonFields(d.addons, clusterChoices(d)).map(g => `<div class="addon"><h4>${esc(g.title)}</h4><div class="grid">${fields(g.fields, S, { t: "sec", sec: "addons" })}</div><p class="hint">${esc(g.note)}</p></div>`).join("")}</div>`;
@@ -205,6 +229,7 @@ export function expertHtml(d        , r              , ui          )         {
     section("workload", "Workload", `${plural(d.workload.groups.length, "group")}${d.workload.groups.length ? ` · ${nf(t.vcpu)} vCPU · ${nf(t.vramGiB)} GiB vRAM` : ""}`, workloadHtml(d, ui), ui, "workload"),
     section("policy", "Sizing policy", `${d.policy.cpuRatio}:1 CPU · RAM ${d.policy.ramRatio}:1 · fill ${d.policy.memFill}%`, `<div class="grid">${fields(policyFields(), d.policy                                      , { t: "sec", sec: "policy" })}</div>`, ui, "policy"),
     section("fleet", "Fleet management", d.fleet.profile, `<div class="grid">${fields(fleetFields(d.fleet), d.fleet                                      , { t: "sec", sec: "fleet" })}</div>`, ui, "fleet"),
+    section("identity", "Identity & access", d.identity.mode ? (d.identity.mode === "instance" ? "Instance mode" : "Embedded mode") + (d.identity.idp ? " · " + IDENTITY.providers[d.identity.idp].label : "") : "not decided", identityHtml(d), ui, "identity"),
     section("hosts", "Host types", plural(d.hostTypes.length, "host type"), hostTypesHtml(d), ui, "hosts"),
     section("topology", "Topology", `${plural(d.topology.instances.length, "instance")} · ${plural(nClu, "cluster")}`, topologyHtml(d, r, ui), ui, "topology"),
     section("addons", "Add-ons", addOns ? `${addOns} on` : "none", addonsHtml(d), ui, "addons"),

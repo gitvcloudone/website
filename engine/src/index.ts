@@ -14,7 +14,8 @@ export { FORMAT, FORMAT_VERSION, SECTION_KEYS, DEFAULT_SCOPE, newDesign, designT
 export { loadDesign, parseHostTypesFile, mergeHostTypes, serializeDesign } from "./design/load.ts";
 export { MIGRATIONS, migrateDesign } from "./design/migrations.ts";
 export type { Design, DesignGroup, RvtoolsScope, SectionName, StepChoice, Decisions } from "./design/document.ts";
-export { STEP_CHOICES } from "./design/document.ts";
+export { STEP_CHOICES, newIdentity } from "./design/document.ts";
+export type { Identity, Role, Access } from "./design/document.ts";
 export type { LoadResult, LoadOptions } from "./design/load.ts";
 export type { Migration } from "./design/migrations.ts";
 export { clusterReason, summaryLine, hostsFor } from "./explain.ts";

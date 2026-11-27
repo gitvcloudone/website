@@ -6,6 +6,7 @@ import management from "../knowledge/management.json" with { type: "json" };
 import addons from "../knowledge/addons.json" with { type: "json" };
 import vsan from "../knowledge/vsan.json" with { type: "json" };
 import defaults from "../knowledge/defaults.json" with { type: "json" };
+import identity from "../knowledge/identity.json" with { type: "json" };
 import type { Spec, Vendor, Profile, Settings, ClusterDefaults } from "./types.ts";
 
 interface S3 { vcpu: number; ramGB: number; diskGB: number }
@@ -56,3 +57,10 @@ export const POL: Record<string, Record<string, [number, string, number]>> = map
 
 export const DEFAULTS: Settings = defaults.tables.settings.data as Settings;
 export const CLUSTER_DEFAULTS: ClusterDefaults = defaults.tables.cluster.data as ClusterDefaults;
+
+// VCF Single Sign-On (VCF 9.1+): Identity Broker modes, identity providers, provisioning methods
+export const IDENTITY = {
+  modes: identity.tables.modes.data as Record<string, { label: string; use: string }>,
+  providers: identity.tables.providers.data as Record<string, { label: string; kind: "federated" | "directory" }>,
+  provisioning: identity.tables.provisioning.data as Record<string, { label: string; for: "federated" | "directory" }>,
+};

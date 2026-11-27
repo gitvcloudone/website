@@ -10,6 +10,8 @@ import { FORMAT_VERSION } from "./document.js";
 export const MIGRATIONS                            = {
   // 1 → 2: groups gain `parsed` (an RVTools group's values as read). Not known for older files, so null:
   // their values stay exactly as saved, nothing shows as hand-edited.
+  // 3 → 4: identity & access, nothing decided yet.
+  3: d => ({ ...d, identity: { mode: "", idp: "", provisioning: "", roles: [], breakGlass: { holder: "", vault: "", rotationDays: 0, notes: "" } } }),
   // 2 → 3: skip / use-recommended choices on the guided steps; none for older files.
   2: d => ({ ...d, decisions: { steps: {} } }),
   1: d => ({ ...d, workload: { ...d.workload, groups: (d.workload?.groups || []).map((g     ) => ({ ...g, parsed: null })) } }),

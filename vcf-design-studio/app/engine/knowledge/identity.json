@@ -1,0 +1,43 @@
+{
+  "about": "VCF Single Sign-On: Identity Broker deployment modes, supported identity providers and provisioning methods (VCF 9.1 and later).",
+  "tables": {
+    "modes": {
+      "source": "Broadcom TechDocs, VCF 9.1: Identity Broker Detailed Design; Deployment Modes of the Identity Broker",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/single-sign-on-instance-models.html",
+      "verified": "2026-11-26",
+      "notes": "Instance mode runs as a VCF management services component in the management domain of the chosen VCF instance; its size comes from the VCF services runtime, so it adds no separate footprint (Deploy VCF Management Services, VCF 9.1). An embedded broker can later be migrated to instance mode.",
+      "data": {
+        "instance": { "label": "Instance (VCF management services)", "use": "Recommended for production." },
+        "embedded": { "label": "Embedded in the management vCenter", "use": "Intended for lab or proof-of-concept use, typically within a single VCF instance." }
+      }
+    },
+    "providers": {
+      "source": "Broadcom TechDocs, VCF 9.1: Identity Providers and Protocols Supported for VCF Single Sign-On",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/fleet-management/managing-identity-and-access-using-vcf-single-sign-on/what-is/protocols-suported-for--sso.html",
+      "verified": "2026-11-26",
+      "notes": "One identity provider per identity broker instance. Federated providers use SAML 2.0 or OIDC.",
+      "data": {
+        "okta": { "label": "Okta", "kind": "federated" },
+        "entra": { "label": "Microsoft Entra ID", "kind": "federated" },
+        "adfs": { "label": "Microsoft ADFS", "kind": "federated" },
+        "ping": { "label": "Ping Identity", "kind": "federated" },
+        "symantec": { "label": "Symantec Identity Security Platform", "kind": "federated" },
+        "saml": { "label": "Other SAML 2.0 identity provider", "kind": "federated" },
+        "oidc": { "label": "Other OIDC 1.0 identity provider", "kind": "federated" },
+        "adldap": { "label": "Active Directory over LDAP", "kind": "directory" },
+        "openldap": { "label": "OpenLDAP", "kind": "directory" }
+      }
+    },
+    "provisioning": {
+      "source": "Broadcom TechDocs, VCF 9.1: Identity Providers and Protocols Supported for VCF Single Sign-On",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/fleet-management/managing-identity-and-access-using-vcf-single-sign-on/what-is/protocols-suported-for--sso.html",
+      "verified": "2026-11-26",
+      "notes": "The page lists the methods without mapping them to providers; here SCIM and JIT are offered for federated providers and directory sync for directories.",
+      "data": {
+        "scim": { "label": "SCIM 2.0 (the identity provider pushes users and groups)", "for": "federated" },
+        "jit": { "label": "Just-in-time (groups created from the SAML assertion or OIDC response at first login)", "for": "federated" },
+        "directory": { "label": "Directory sync (only the users and groups you select, at intervals; passwords are never synced)", "for": "directory" }
+      }
+    }
+  }
+}

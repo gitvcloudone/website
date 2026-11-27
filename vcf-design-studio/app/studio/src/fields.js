@@ -2,7 +2,7 @@
 // Field definitions: label, input type, choices, and a one-line "why" for each setting. The Expert view
 // renders from these, and the guided steps (3c) will reuse them. No DOM here.
 // The "why" texts are the VCF Sizing page's own tips (POLICY_TIPS and the cluster tips), shortened where they were long.
-import { DEFAULTS, CLUSTER_DEFAULTS, PROFILES, VCENTER, NSXMGR, EDGE, SUPERVISOR, POL, VENDORS, NVME_TB, ramOptions } from "../../engine/src/index.js";
+import { DEFAULTS, CLUSTER_DEFAULTS, IDENTITY, PROFILES, VCENTER, NSXMGR, EDGE, SUPERVISOR, POL, VENDORS, NVME_TB, ramOptions } from "../../engine/src/index.js";
                                                                                      
 
                                                                                  
@@ -165,4 +165,28 @@ export function clusterFields(c         , hw          , d        , maxHosts     
     { key: "tierPct", label: "Tier ratio (% of DRAM)", type: "select", def: D.tierPct, choices: [25, 50, 75, 100, 150, 200, 300, 400].map(n => [n, `${n}%`]), why: "Default 100% (1:1, doubling memory), limited by the drive size and the 4 TB cap." },
   );
   return out;
+}
+
+// ---------- identity & access (VCF 9.1+) ----------
+export const ACCESS           = [["admin", "Administrator"], ["operator", "Operator"], ["readonly", "Read-only"]];
+export function identityFields(x                    )          {
+  const kind = x.idp ? IDENTITY.providers[x.idp].kind : "";
+  return [
+    { key: "mode", label: "Identity Broker mode", type: "select", choices: [["", "Not decided"], ...Object.entries(IDENTITY.modes).map(([k, m]) => [k, m.label]          )],
+      why: "Instance mode is Broadcom's recommendation for production: the broker runs as a VCF management service in the management domain. Embedded (inside the management vCenter) is intended for labs and proofs of concept, and can be migrated to instance mode later." },
+    { key: "idp", label: "Identity provider", type: "select", choices: [["", "Not chosen"], ...Object.entries(IDENTITY.providers).map(([k, p]) => [k, p.label]          )],
+      why: "One identity provider per Identity Broker. Federated providers sign users in with SAML 2.0 or OIDC; a directory (AD over LDAP, OpenLDAP) is read directly." },
+    { key: "provisioning", label: "User and group provisioning", type: "select", on: !!kind,
+      choices: [["", kind ? "Not chosen" : "Choose the identity provider first"], ...Object.entries(IDENTITY.provisioning).filter(([, p]) => p.for === kind).map(([k, p]) => [k, p.label]          )],
+      why: "How users and groups reach VCF. SCIM: the identity provider pushes them. Just-in-time: groups are created at first sign-in. Directory: selected users and groups are synced at intervals; passwords never are." },
+  ];
+}
+export function breakGlassFields()          {
+  return [
+    { key: "holder", label: "Who holds the break-glass accounts", type: "text", placeholder: "e.g. Infrastructure on-call lead",
+      why: "Local administrator accounts still work when the identity provider is down. Name the role or team that holds them." },
+    { key: "vault", label: "Where they're kept", type: "text", placeholder: "e.g. the corporate password vault" },
+    { key: "rotationDays", label: "Password rotation (days, 0 = not set)", type: "number", min: 0, max: 3650, step: 1, why: "The customer's policy for rotating these passwords. No VCF default is assumed." },
+    { key: "notes", label: "Notes", type: "textarea", placeholder: "Access procedure, approvals, audit" },
+  ];
 }

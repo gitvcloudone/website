@@ -2,7 +2,7 @@
 // Edits the Expert view makes, as proposals: one field, or a structural change (add, duplicate, remove).
 // The rules are the VCF Sizing page's own (its topology change and click handlers), so the same input
 // gives the same design. No DOM here; tested in engine/test/studio.test.ts.
-import { CLUSTER_DEFAULTS, POL, fixHw, maxFor, isVsan } from "../../engine/src/index.js";
+import { CLUSTER_DEFAULTS, POL, IDENTITY, fixHw, maxFor, isVsan } from "../../engine/src/index.js";
                                                                                          
                                            
 
@@ -61,6 +61,16 @@ export function hostTypeOps(d        , id        , key        , value         ) 
   return [{ op: "set", path: ["hostTypes", k], value: fixHw({ ...h, [key]: v }) }];
 }
 
+/** An identity field. Changing the provider clears a provisioning method that doesn't fit it (a directory only syncs). */
+export function identityOps(d        , key        , value         )       {
+  const ops       = [{ op: "set", path: ["identity", key], value }];
+  if (key === "idp") {
+    const kind = value ? IDENTITY.providers[value          ]?.kind : "", p = IDENTITY.provisioning[d.identity.provisioning];
+    if (d.identity.provisioning && (!p || p.for !== kind)) ops.push({ op: "set", path: ["identity", "provisioning"], value: "" });
+  }
+  return ops;
+}
+
 // ---------- structural changes: computed on a copy, sent as whole sections ----------
 const newDomain = (id        , name        , kind        , o                  = {})         =>
   ({ id, name, kind, vcSize: "medium", nsx: "shared", nsxSize: "large", nsxNodes: 3, clusters: [], edges: [], ...o });
@@ -71,7 +81,13 @@ const newDomain = (id        , name        , kind        , o                  = 
                                                                                                  
                                                                    
                                                                                   
-                                                                                                    
+                                                                                                   
+                                                                                     
+
+/** Starting role matrix: fleet-wide groups at three access levels. Placeholder names, to rename to the customer's groups. */
+export const SUGGESTED_ROLES = [
+  { group: "vcf-admins", scope: "fleet", access: "admin" }, { group: "vcf-operators", scope: "fleet", access: "operator" }, { group: "vcf-readonly", scope: "fleet", access: "readonly" },
+]         ;
 
 /** Ops for a structural change, and the id of anything new (to select it). */
 export function actionOps(d0        , a        )                                 {
@@ -141,12 +157,17 @@ export function actionOps(d0        , a        )                                
       break;
     }
     case "delGroup": d.workload.groups.splice(a.index, 1); break;
+    case "addRole": d.identity.roles.push({ group: "", scope: "fleet", access: "readonly" }); break;
+    case "delRole": d.identity.roles.splice(a.index, 1); break;
+    case "suggestRoles": d.identity.roles.push(...SUGGESTED_ROLES.map(r => ({ ...r }))); break;
     case "resetGroup": { const g = d.workload.groups[a.index]; if (g && g.parsed) g.values = { ...g.parsed }; break; }
   }
   // groups never point at a cluster that's gone (as on the page)
   const has = (id        ) => !!locate(d, id);
   for (const g of d.workload.groups) if (g.opts) { if (g.opts.place && g.opts.place !== "auto" && !has(g.opts.place)) g.opts.place = "auto"; if (g.opts.drTo && !has(g.opts.drTo)) g.opts.drTo = ""; }
+  // a role scoped to a removed instance or domain loses its scope (chosen again), never widens to the fleet
+  for (const r of d.identity.roles) if (r.scope && r.scope !== "fleet") { const at = locate(d, r.scope); if (!at || (at.kind !== "inst" && at.kind !== "dom")) r.scope = ""; }
   const ops       = [];
-  for (const k of ["topology", "hostTypes", "workload"]         ) if (JSON.stringify(d[k]) !== JSON.stringify(d0[k])) ops.push({ op: "set", path: [k], value: d[k] });
+  for (const k of ["topology", "hostTypes", "workload", "identity"]         ) if (JSON.stringify(d[k]) !== JSON.stringify(d0[k])) ops.push({ op: "set", path: [k], value: d[k] });
   return { ops, select };
 }

@@ -5,7 +5,7 @@ import { DEFAULTS } from "../knowledge.ts";
 import type { Settings, HostType, Topology, Group } from "../types.ts";
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 3;
+export const FORMAT_VERSION = 4;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -28,6 +28,15 @@ export type StepChoice = "recommended" | "skipped";
 export const STEP_CHOICES: readonly StepChoice[] = ["recommended", "skipped"];
 export interface Decisions { steps: Record<string, StepChoice> }
 
+/** Identity & access (format 4+). "" = not decided yet. A role's scope is "fleet" or an instance / domain id; "" when that was removed. */
+export type Access = "admin" | "operator" | "readonly";
+export interface Role { group: string; scope: string; access: Access }
+export interface Identity {
+  mode: "" | "instance" | "embedded"; idp: string; provisioning: string; roles: Role[];
+  breakGlass: { holder: string; vault: string; rotationDays: number; notes: string };
+}
+export const newIdentity = (): Identity => ({ mode: "", idp: "", provisioning: "", roles: [], breakGlass: { holder: "", vault: "", rotationDays: 0, notes: "" } });
+
 export interface Design {
   format: typeof FORMAT;
   formatVersion: number;
@@ -38,6 +47,7 @@ export interface Design {
   hostTypes: HostType[];
   topology: Topology;
   addons: Section<"addons">;
+  identity: Identity;
   decisions: Decisions;
 }
 
@@ -61,6 +71,7 @@ export function newDesign(): Design {
     ...sectionsFromSettings({ ...DEFAULTS, customer: "", site: "", notes: "" }),
     workload: { groups: [], rvtoolsScope: { ...DEFAULT_SCOPE } },
     hostTypes: [], topology: { instances: [] },
+    identity: newIdentity(),
     decisions: { steps: {} },
   } as Design;
 }

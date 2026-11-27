@@ -2,7 +2,7 @@
 // Guided-step status: what's done, decided, accepted as recommended, skipped or still open.
 // Only explicit choices are stored (design.decisions.steps: "recommended" | "skipped"); everything else is
 // worked out from the design, so the guided steps and the Expert view always agree. No DOM; tested.
-import { CLUSTER_DEFAULTS } from "../../engine/src/index.js";
+import { CLUSTER_DEFAULTS, IDENTITY } from "../../engine/src/index.js";
                                                                     
 import { policyFields, fleetFields, addonFields } from "./fields.js";
                                          
@@ -30,6 +30,10 @@ export function changes(d        , step        )           {
   if (step === "policy") return sec("policy", policyFields());
   if (step === "fleet") return sec("fleet", fleetFields(d.fleet));
   if (step === "addons") return sec("addons", addonFields(d.addons, []).flatMap(g => g.fields));
+  if (step === "identity") {
+    const m = d.identity.mode;
+    return m && m !== "instance" ? [{ path: ["identity", "mode"], where: "", label: "Identity Broker mode", value: IDENTITY.modes[m].label, def: IDENTITY.modes.instance.label }] : [];
+  }
   if (step === "storage") {
     const out           = [];
     d.topology.instances.forEach((inst, ii) => [inst.mgmt, ...inst.wlds].forEach((dm, k) => dm.clusters.forEach((c, ci) => {
@@ -44,8 +48,21 @@ export function changes(d        , step        )           {
 
                                                                                           
 
-/** A step's state and a short note (what's missing, or what was decided). */
-export function stepState(d        , id        )                                     {
+/** Identity choices that are still open (the provider, provisioning, roles and break-glass are the customer's, so there's no default for them). */
+export function identityOpen(d        )           {
+  const x = d.identity, out           = [];
+  if (!x.idp) out.push("Choose the identity provider.");
+  else if (!x.provisioning) out.push("Choose how users and groups are provisioned.");
+  if (!x.roles.length) out.push("Define who gets which access (role matrix).");
+  const lost = x.roles.filter(r => !r.scope).length;
+  if (lost) out.push(`${lost} role${lost > 1 ? "s" : ""} lost ${lost > 1 ? "their" : "its"} scope when an instance or domain was removed: choose again.`);
+  if (x.roles.some(r => !r.group.trim())) out.push("A role has no identity provider group.");
+  if (!x.breakGlass.holder.trim()) out.push("Name who holds the break-glass accounts.");
+  return out;
+}
+
+/** A step's state, a short note (what's missing, or what was decided) and, for Identity, the choices still open. */
+export function stepState(d        , id        )                                                      {
   const s = STEPS.find(x => x.id === id);
   if (!s) return { state: "", note: "" };
   if (s.kind === "coming") return { state: "coming", note: "Comes in a later build step." };
@@ -56,6 +73,16 @@ export function stepState(d        , id        )                                
       : id === "topology" ? (d.topology.instances.some(i => i.mgmt.clusters.length) ? "" : "Add an instance with a cluster in its management domain.")
       : "";
     return miss ? { state: "todo", note: miss } : { state: "done", note: "" };
+  }
+  if (id === "identity") {
+    const x = d.identity, open = identityOpen(d), chosen = d.decisions.steps[id];
+    const any = !!(x.mode || x.idp || x.roles.length || x.breakGlass.holder || x.breakGlass.vault || x.breakGlass.notes || x.breakGlass.rotationDays);
+    const rest = open.length ? ` ${open.length} choice${open.length > 1 ? "s" : ""} still open.` : "";
+    if (changes(d, id).length) return { state: "decided", note: "Embedded mode chosen (Broadcom intends it for labs and proofs of concept)." + rest, open };
+    if (chosen === "recommended" && x.mode === "instance") return { state: "recommended", note: "Recommended mode accepted." + rest, open };
+    if (chosen === "skipped" && !any) return { state: "skipped", note: "Skipped for now: an open item in the design.", open: [] };
+    if (any) return { state: "decided", note: (x.mode ? "Mode chosen." : "Mode not chosen yet.") + rest, open: x.mode ? open : ["Choose the Identity Broker mode.", ...open] };
+    return { state: "open", note: "Not decided yet.", open: [] };
   }
   if (s.kind === "skippable") {
     const n = changes(d, id).length, chosen = d.decisions.steps[id];
@@ -73,6 +100,7 @@ const withChoice = (d        , id        , c                   )     => {
 };
 /** Use recommended: every changed value back to its default, and the choice recorded. */
 export function recommendOps(d        , id        )       {
+  if (id === "identity") return [{ op: "set", path: ["identity", "mode"], value: "instance" }, withChoice(d, id, "recommended")];
   const D                          = id === "storage" ? CLUSTER_DEFAULTS                                       : {};
   const ops       = changes(d, id).map(c => {
     if (id === "storage") return { op: "set", path: c.path, value: D[c.path[c.path.length - 1]          ] };

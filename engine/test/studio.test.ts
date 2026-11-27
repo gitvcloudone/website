@@ -258,11 +258,11 @@ import * as steps from "../../studio/src/steps.ts";
 import { stepHtml } from "../../studio/src/guided.ts";
 import { STEPS } from "../../studio/src/flow.ts";
 
-test("a format 2 design opens in format 3 with no step choices", () => {
+test("a format 2 design opens in the current format with no step choices", () => {
   const raw = JSON.parse(readText(new URL("../fixtures/designs/format-2.vcf-design.json", import.meta.url), "utf8"));
   assert.equal(raw.formatVersion, 2);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
-  assert.equal(r.design.formatVersion, 3); assert.deepStrictEqual(r.design.decisions, { steps: {} });
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION); assert.deepStrictEqual(r.design.decisions, { steps: {} });
   assert.equal(r.design.workload.groups[1].values.vms, raw.workload.groups[1].values.vms);
   assert.deepStrictEqual(rvi.overridden(r.design.workload.groups[1]), ["vms"], "format 2 parsed values kept");
   assert.equal(steps.stepState(r.design, "policy").state, "decided", "cpuRatio 5 is a decision");
@@ -273,7 +273,7 @@ test("required steps say what's missing; a filled design has them done", () => {
   assert.deepStrictEqual(["project", "workload", "hosts", "topology"].map(id => steps.stepState(n, id).state), ["todo", "todo", "todo", "todo"]);
   const d = caseDesign("multi-instance"); d.project.customer = "Acme";
   assert.deepStrictEqual(["project", "workload", "hosts", "topology"].map(id => steps.stepState(d, id).state), ["done", "done", "done", "done"]);
-  assert.equal(steps.stepState(d, "identity").state, "coming");
+  assert.equal(steps.stepState(d, "identity").state, "open"); assert.equal(steps.stepState(d, "hostnet").state, "coming");
 });
 
 test("skippable steps: open, then Skip / Use recommended are recorded; changed values make it a decision; Use recommended resets them", () => {
@@ -315,4 +315,63 @@ test("every guided step renders for every golden case", () => {
       if (s.id === "topology") assert.ok(!html.includes('&quot;key&quot;:&quot;comp&quot;'), "storage fields are left to the storage step");
     }
   }
+});
+
+// ---------- identity & access (4a) ----------
+test("a format 3 design opens with identity not decided and its step choices kept", () => {
+  const raw = JSON.parse(readText(new URL("../fixtures/designs/format-3.vcf-design.json", import.meta.url), "utf8"));
+  assert.equal(raw.formatVersion, 3);
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
+  assert.deepStrictEqual(r.design.identity, engine.newIdentity());
+  assert.deepStrictEqual(r.design.decisions.steps, { fleet: "skipped", storage: "recommended" });
+  assert.equal(steps.stepState(r.design, "identity").state, "open");
+});
+
+test("identity never changes sizing (VCF 9.1: instance mode runs on VCF management services)", () => {
+  const d0 = caseDesign("multi-instance");
+  let d = must(d0, steps.recommendOps(d0, "identity"));
+  d = must(d, [...edit.identityOps(d, "idp", "entra"), { op: "set", path: ["identity", "provisioning"], value: "scim" }]);
+  d = must(d, edit.actionOps(d, { act: "suggestRoles" }).ops);
+  assert.deepStrictEqual(store.sizeDesign(d), store.sizeDesign(d0));
+});
+
+test("identity: choices are checked against the knowledge file; the step reports what's still open", () => {
+  let d = caseDesign("multi-instance");
+  assert.equal(steps.stepState(d, "identity").state, "open");
+  d = must(d, steps.recommendOps(d, "identity"));
+  let st = steps.stepState(d, "identity");
+  assert.equal(st.state, "recommended"); assert.equal(d.identity.mode, "instance");
+  assert.deepStrictEqual(st.open, ["Choose the identity provider.", "Define who gets which access (role matrix).", "Name who holds the break-glass accounts."]);
+  assert.ok(!store.propose(d, { source: "t", ops: [{ op: "set", path: ["identity", "idp"], value: "myidp" }] }).ok, "unknown provider refused");
+  assert.ok(!store.propose(d, { source: "t", ops: [{ op: "set", path: ["identity", "provisioning"], value: "scim" }] }).ok, "provisioning needs a provider");
+  d = must(d, edit.identityOps(d, "idp", "okta")); d = must(d, [{ op: "set", path: ["identity", "provisioning"], value: "jit" }]);
+  assert.ok(!store.propose(d, { source: "t", ops: [{ op: "set", path: ["identity", "provisioning"], value: "directory" }] }).ok, "directory sync is for directories");
+  d = must(d, edit.identityOps(d, "idp", "adldap"));
+  assert.equal(d.identity.provisioning, "", "switching to a directory clears JIT");
+  d = must(d, [{ op: "set", path: ["identity", "provisioning"], value: "directory" }, { op: "set", path: ["identity", "breakGlass", "holder"], value: "On-call lead" }]);
+  d = must(d, edit.actionOps(d, { act: "suggestRoles" }).ops);
+  assert.deepStrictEqual(steps.stepState(d, "identity").open, []);
+  d = must(d, [{ op: "set", path: ["identity", "mode"], value: "embedded" }]);
+  assert.equal(steps.stepState(d, "identity").state, "decided");
+  assert.deepStrictEqual(steps.changes(d, "identity").map(c => c.value), ["Embedded in the management vCenter"]);
+});
+
+test("a role scoped to a removed domain loses its scope instead of widening to the fleet", () => {
+  let d = caseDesign("multi-instance");
+  const inst = d.topology.instances[0], wld = inst.wlds[0];
+  d = must(d, edit.actionOps(d, { act: "addRole" }).ops);
+  d = must(d, [{ op: "set", path: ["identity", "roles", 0, "scope"], value: wld.id }, { op: "set", path: ["identity", "roles", 0, "access"], value: "admin" }]);
+  assert.equal(d.identity.roles[0].scope, wld.id);
+  d = must(d, edit.actionOps(d, { act: "delDom", id: wld.id }).ops);
+  assert.equal(d.identity.roles[0].scope, "", "scope cleared");
+  assert.ok(steps.identityOpen(d).some(t => /lost its scope/.test(t)));
+  // a saved file pointing at a cluster or an unknown id gets the same treatment
+  const r = engine.loadDesign({ ...JSON.parse(engine.serializeDesign(d)), identity: { ...d.identity, roles: [{ group: "g", scope: allClusters(d)[0].id, access: "root" }] } });
+  assert.ok(r.kind === "design"); assert.deepStrictEqual(r.design.identity.roles, [{ group: "g", scope: "", access: "readonly" }]);
+});
+
+test("the identity knowledge file has a source, a link and a verified date for each table", () => {
+  const k = JSON.parse(readText(new URL("../knowledge/identity.json", import.meta.url), "utf8"));
+  for (const [name, t] of Object.entries(k.tables) as [string, { source: string; url: string; verified: string }][]) assert.ok(t.source && /^https:\/\/techdocs\.broadcom\.com\//.test(t.url) && /^\d{4}-\d\d-\d\d$/.test(t.verified), name);
 });
