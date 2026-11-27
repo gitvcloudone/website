@@ -53,7 +53,7 @@ function wellFormed(x: string, what: string) {
   assert.deepStrictEqual(stack, [], `${what}: unclosed tags`);
   assert.equal(body.replace(/<(\/?)([A-Za-z_][\w:.-]*)((?:\s+[\w:.-]+="[^"]*")*)\s*(\/?)>/g, "").includes("<"), false, `${what}: a tag that doesn't parse`);
 }
-const texts = (b: Block): string[] => b.t === "p" || b.t === "tbd" ? [b.text] : b.t === "list" ? b.items : b.t === "table" ? [...b.head, ...b.rows.flat()] : [b.caption];
+const texts = (b: Block): string[] => b.t === "p" || b.t === "tbd" ? [b.text] : b.t === "list" ? b.items : b.t === "table" ? [...b.head, ...b.rows.flat()] : b.t === "ai" ? [b.label, ...b.paras] : [b.caption];
 
 test("HLD: every section CLAUDE.md lists, for every sized test design, with no undefined or NaN", () => {
   const want = ["Executive summary", "Requirements, assumptions, constraints and risks", "Fleet, instance, domain and cluster design", "Host and storage design",

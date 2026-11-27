@@ -2,7 +2,8 @@
 // from the design and its sizing. Every output format (the page preview, Word, PDF via print) renders this
 // same model, so they always say the same thing. A pure function of the design → data (no DOM); tested.
 import { IDENTITY, NETWORK, NSX, PILLARS, RULES, SOURCES, isVsan, clusterReason, summaryLine, workloadTotals } from "../../engine/src/index.ts";
-import type { Design, SizingResult } from "../../engine/src/index.ts";
+import type { Design, SizingResult, NarrativeTarget } from "../../engine/src/index.ts";
+import { snapOf } from "./snap.ts";
 import { evaluate, scorecard, decisionRegister, riskRegister, scorable } from "./rules.ts";
 import { stepState, changes, show } from "./steps.ts";
 import { STEPS } from "./flow.ts";
@@ -19,7 +20,8 @@ export type Block =
   | { t: "list"; items: string[] }
   | { t: "table"; head: string[]; rows: string[][]; num?: number[] }   // num: column indexes to right-align
   | { t: "tbd"; text: string }                                         // "To be defined": a skipped or unfinished part
-  | { t: "diagram"; id: "topology" | "network"; caption: string };
+  | { t: "diagram"; id: "topology" | "network"; caption: string }
+  | { t: "ai"; label: string; paras: string[]; stale: boolean };                // AI-drafted text, labelled as such
 export interface Section { id: string; title: string; blocks: Block[]; sub?: Section[] }
 export interface Hld {
   title: string; customer: string; site: string; version: string; date: string; status: string;
@@ -42,6 +44,15 @@ const settingsTable = (fs: Field[], o: Record<string, unknown>): Block => table(
   fs.filter(f => f.on !== false).map(f => [f.label, show(f, o[f.key]), f.def !== undefined && o[f.key] !== f.def ? show(f, f.def) : "✓ same"]));
 const where = (d: Design, inst: { name: string }, rest: string) => (d.topology.instances.length > 1 ? `${inst.name} / ` : "") + rest;
 
+/** A fingerprint of everything an AI draft depends on (the design, less the drafts and the AI log). */
+export const designSnap = (d: Design) => snapOf({ ...d, narrative: {}, decisions: { ...d.decisions, ai: [] } });
+/** AI-drafted text for a target, as an HLD block, or nothing. */
+function aiBlock(d: Design, t: NarrativeTarget): Block[] {
+  const n = d.narrative?.[t]; if (!n || !n.text.trim()) return [];
+  const stale = n.snap !== designSnap(d);
+  return [{ t: "ai", label: n.edited ? "Drafted with AI and edited by the architect" : "AI draft: review before sharing", paras: n.text.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean), stale }];
+}
+
 /** The HLD for a design. `date` is passed in so the content is reproducible (tests, saved copies). */
 export function buildHld(d: Design, r: SizingResult, date: string): Hld {
   const res = evaluate(d, r), score = scorecard(d, res), decs = decisionRegister(d, res), risks = riskRegister(res);
@@ -56,7 +67,7 @@ export function buildHld(d: Design, r: SizingResult, date: string): Hld {
   const summary = r.clusters.length
     ? `${customer}${d.project.site ? ` (${d.project.site})` : ""}: a VMware Cloud Foundation ${d.project.version} design of ${plural(d.topology.instances.length, "instance")}, ${plural(domains.length, "domain")} and ${plural(clusters.length, "cluster")}, sized at ${summaryLine(r)}.`
     : `${customer}: a VMware Cloud Foundation ${d.project.version} design that isn't sized yet. Add the workload, host types and topology.`;
-  const execBlocks: Block[] = [p(summary)];
+  const execBlocks: Block[] = [p(summary), ...aiBlock(d, "summary")];
   if (r.clusters.length) {
     execBlocks.push(p(`It runs ${plural(T.vms, "VM")} with ${nf(T.vcpu)} vCPU and ${nf(T.vramGiB)} GiB of memory today, planned with ${d.policy.growth}% growth. ` +
       `The design needs ${plural(r.hosts, "host")} with ${nf(r.cores)} physical cores, licensed as ${nf(r.licCores)} VCF cores${r.lic.addOnTiB ? ` plus ${nf(r.lic.addOnTiB)} TiB of vSAN add-on capacity` : ""}.`));
@@ -90,6 +101,7 @@ export function buildHld(d: Design, r: SizingResult, date: string): Hld {
   const crit = r.warnings.filter(w => w.lvl !== "info");
   if (crit.length) riskBlocks.push(p("Sizing checks:"), { t: "list", items: crit.map(w => `${w.lvl === "crit" ? "Must fix" : "Check"}: ${w.t}`) });
   if (!riskBlocks.length) riskBlocks.push(p("No risks recorded and no open items."));
+  riskBlocks.push(...aiBlock(d, "mitigations"));
 
   // ----- 3. Fleet, instance, domain and cluster design -----
   const fleetBlocks: Block[] = [...skipNote(d, "fleet"), settingsTable(fleetFields(d.fleet), d.fleet as unknown as Record<string, unknown>)];
@@ -192,8 +204,10 @@ export function buildHld(d: Design, r: SizingResult, date: string): Hld {
   ] : [tbd("To be defined: the bill of materials follows once the design is sized.")];
 
   // ----- 10. Decisions and scorecard -----
-  const KIND: Record<string, string> = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", auto: "Auto-selected", deviation: "Deviation accepted" };
-  const decBlocks: Block[] = decs.length ? [table(["Area", "Decision", "Kind", "Reason"], decs.map(x => [x.step, x.text, KIND[x.kind], x.reason || ""]))] : [p("No decisions recorded yet.")];
+  const KIND: Record<string, string> = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", auto: "Auto-selected", deviation: "Deviation accepted", ai: "AI-suggested, applied by the architect" };
+  const rationale = aiBlock(d, "rationale");
+  const decBlocks: Block[] = rationale.length ? [...rationale] : [];
+  decBlocks.push(...(decs.length ? [table(["Area", "Decision", "Kind", "Reason"], decs.map(x => [x.step, x.text, KIND[x.kind], x.reason || ""]))] : [p("No decisions recorded yet.")]));
   const scoreBlocks: Block[] = ready ? [table(["Pillar", "Met", "Deviations accepted", "Not met", "Status"], score.map(s => [s.label, `${s.met} of ${s.applicable}`, s.accepted, s.open,
     s.atRisk ? "At risk" : s.incomplete.length ? `Incomplete: ${s.incomplete.join(", ")} skipped` : s.open ? "Open items" : s.applicable ? "Good" : "Nothing to check"]), [2, 3])]
     : [tbd("Scores appear once the design has a workload and a topology.")];

@@ -5,7 +5,7 @@ import { DEFAULTS } from "../knowledge.ts";
 import type { Settings, HostType, Topology, Group } from "../types.ts";
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 9;
+export const FORMAT_VERSION = 10;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -34,7 +34,15 @@ export interface AutoChoice {
   option: "fewest" | "licensing" | "balanced"; source: "generic" | "custom"; vendor: "either" | "intel" | "amd"; layout: "standard" | "consolidated";
   reasons: Record<string, string>; snap: { hostTypes: string; topology: string };
 }
-export interface Decisions { steps: Record<string, StepChoice>; deviations: Record<string, Deviation>; auto: AutoChoice | null }
+/** An AI suggestion the user applied (format 10+): what it proposed, why, when, and the parts of the design it set. */
+export interface AiChange { summary: string; reason: string; at: string; paths: string[] }
+export interface Decisions { steps: Record<string, StepChoice>; deviations: Record<string, Deviation>; auto: AutoChoice | null; ai: AiChange[] }
+
+/** AI-drafted HLD text (format 10+), by target. `edited` once the user changes it; `snap` fingerprints the design it was
+ *  drafted for, so the HLD can say when the design has changed since. */
+export const NARRATIVE_TARGETS = ["summary", "rationale", "mitigations"] as const;
+export type NarrativeTarget = (typeof NARRATIVE_TARGETS)[number];
+export interface Narrative { text: string; edited: boolean; snap: string; at: string }
 
 /** Identity & access (format 4+). "" = not decided yet. A role's scope is "fleet" or an instance / domain id; "" when that was removed. */
 export type Access = "admin" | "operator" | "readonly";
@@ -81,6 +89,7 @@ export interface Design {
   network: Network;
   plan: Plan;
   decisions: Decisions;
+  narrative: Partial<Record<NarrativeTarget, Narrative>>;
 }
 
 const pick = <N extends SectionName>(n: N, s: Record<string, unknown>) => Object.fromEntries(SECTION_KEYS[n].map(k => [k, s[k]])) as Section<N>;
@@ -106,7 +115,8 @@ export function newDesign(): Design {
     identity: newIdentity(),
     network: newNetwork(),
     plan: newPlan(),
-    decisions: { steps: {}, deviations: {}, auto: null },
+    decisions: { steps: {}, deviations: {}, auto: null, ai: [] },
+    narrative: {},
   } as Design;
 }
 

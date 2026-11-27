@@ -1,0 +1,344 @@
+{
+ "format": "vcf-design",
+ "formatVersion": 9,
+ "project": {
+  "customer": "Format 9 fixture",
+  "site": "",
+  "notes": "",
+  "version": "9.1"
+ },
+ "fleet": {
+  "profile": "HA Medium",
+  "automation": true,
+  "logs": false,
+  "logReplicas": 3,
+  "opsNet": "off",
+  "opsNetNodes": 1,
+  "opsNetCollectors": 1
+ },
+ "policy": {
+  "cpuRatio": 5,
+  "mgmtRatio": 2,
+  "ramRatio": 1,
+  "memReserve": 8,
+  "vsanMem": 32,
+  "memFill": 90,
+  "vmOverhead": 3,
+  "growth": 0,
+  "uplift": 0,
+  "activePct": 20,
+  "storageBasis": "allocated"
+ },
+ "addons": {
+  "vdefend": "off",
+  "ids": true,
+  "mps": false,
+  "ssp": "large",
+  "gwfw": false,
+  "vlrOn": false,
+  "vlrVms": 500,
+  "aviOn": false,
+  "aviCtl": "small",
+  "aviSe": 2,
+  "aviSeSize": 2,
+  "aviSeOn": "",
+  "hcxOn": false,
+  "hcxNe": 1,
+  "hcxNeHa": false,
+  "dsmOn": false
+ },
+ "workload": {
+  "groups": [
+   {
+    "id": 1,
+    "name": "vc-a.lab.example",
+    "source": "rvtools",
+    "include": true,
+    "values": {
+     "vms": 186,
+     "vcpu": 1289,
+     "vramGiB": 5604.75,
+     "usedTiB": 50.94356448424937,
+     "allocTiB": 108.29296875,
+     "templTiB": 0.04291534423828125
+    },
+    "parsed": null,
+    "opts": {
+     "cpuPeak": 30,
+     "ramPeak": 0,
+     "place": "auto",
+     "drTo": "",
+     "drMode": "storage"
+    },
+    "meta": {
+     "big": [
+      {
+       "name": "vc-a-vm0111",
+       "cpus": 48,
+       "memGiB": 768
+      },
+      {
+       "name": "vc-a-vm0148",
+       "cpus": 64,
+       "memGiB": 512
+      },
+      {
+       "name": "vc-a-vm0074",
+       "cpus": 64,
+       "memGiB": 384
+      },
+      {
+       "name": "vc-a-vm0037",
+       "cpus": 48,
+       "memGiB": 256
+      }
+     ],
+     "snap": {
+      "cpuPct": 0.29644812252964425,
+      "actPct": 0.21421812175406266,
+      "conPct": 0.6251758216060759
+     },
+     "vc": "vc-a.lab.example"
+    }
+   },
+   {
+    "id": 2,
+    "name": "vc-b.lab.example",
+    "source": "rvtools",
+    "include": true,
+    "values": {
+     "vms": 78,
+     "vcpu": 377,
+     "vramGiB": 1856.3773483037949,
+     "usedTiB": 21.75452118535759,
+     "allocTiB": 41.74415153102018,
+     "templTiB": 0.042916326492559165
+    },
+    "parsed": {
+     "vms": 73,
+     "vcpu": 377,
+     "vramGiB": 1856.3773483037949,
+     "usedTiB": 21.75452118535759,
+     "allocTiB": 41.74415153102018,
+     "templTiB": 0.042916326492559165
+    },
+    "opts": {
+     "cpuPeak": 0,
+     "ramPeak": 0,
+     "place": "auto",
+     "drTo": "",
+     "drMode": "storage"
+    },
+    "meta": {
+     "big": [
+      {
+       "name": "vc-b-vm0037",
+       "cpus": 48,
+       "memGiB": 512.000173330307
+      }
+     ],
+     "snap": {
+      "cpuPct": null,
+      "actPct": null,
+      "conPct": null
+     },
+     "vc": "vc-b.lab.example"
+    }
+   },
+   {
+    "id": 3,
+    "name": "Manual extra",
+    "source": "manual",
+    "include": true,
+    "values": {
+     "vms": 10,
+     "vcpu": 40,
+     "vramGiB": 160,
+     "usedTiB": 2,
+     "allocTiB": 3,
+     "templTiB": 0
+    },
+    "parsed": null,
+    "opts": {
+     "cpuPeak": 0,
+     "ramPeak": 0,
+     "place": "auto",
+     "drTo": "",
+     "drMode": "storage"
+    },
+    "meta": null
+   }
+  ],
+  "rvtoolsScope": {
+   "includeOff": true,
+   "templatesStorage": true,
+   "exVcls": true,
+   "patterns": "",
+   "groupBy": "file"
+  }
+ },
+ "hostTypes": [
+  {
+   "id": "h1",
+   "name": "Standard 2×32",
+   "vendor": "intel",
+   "sockets": 2,
+   "cores": 32,
+   "ramGB": 1024,
+   "ht": true,
+   "nvme": 6,
+   "nvmeTB": 7.68
+  }
+ ],
+ "topology": {
+  "instances": [
+   {
+    "id": "i1",
+    "name": "Instance i1",
+    "profile": "",
+    "mgmt": {
+     "name": "Management",
+     "kind": "mgmt",
+     "vcSize": "medium",
+     "nsx": "shared",
+     "nsxSize": "large",
+     "nsxNodes": 3,
+     "clusters": [
+      {
+       "hostType": "h1",
+       "storage": "esa",
+       "topo": "standard",
+       "nPlus": 1,
+       "policy": "auto",
+       "local": "auto",
+       "comp": 1.25,
+       "dedupe": 1,
+       "opsRes": 10,
+       "rebuild": true,
+       "maxHosts": 16,
+       "fixedHosts": 0,
+       "auto": false,
+       "vdefend": false,
+       "tierOn": false,
+       "tierDrives": 1,
+       "tierPct": 100,
+       "supOn": false,
+       "supSize": "small",
+       "id": "m1",
+       "name": "m1"
+      }
+     ],
+     "edges": [],
+     "id": "i1-m"
+    },
+    "wlds": [
+     {
+      "name": "WLD-01",
+      "kind": "wld",
+      "vcSize": "medium",
+      "nsx": "dedicated",
+      "nsxSize": "large",
+      "nsxNodes": 3,
+      "clusters": [
+       {
+        "hostType": "h1",
+        "storage": "esa",
+        "topo": "standard",
+        "nPlus": 1,
+        "policy": "auto",
+        "local": "auto",
+        "comp": 1.25,
+        "dedupe": 1,
+        "opsRes": 10,
+        "rebuild": true,
+        "maxHosts": 32,
+        "fixedHosts": 0,
+        "auto": true,
+        "vdefend": true,
+        "tierOn": false,
+        "tierDrives": 1,
+        "tierPct": 100,
+        "supOn": false,
+        "supSize": "small",
+        "id": "c1",
+        "name": "c1"
+       }
+      ],
+      "edges": [],
+      "id": "w1"
+     }
+    ]
+   }
+  ]
+ },
+ "identity": {
+  "mode": "instance",
+  "idp": "entra",
+  "provisioning": "scim",
+  "roles": [
+   {
+    "group": "vcf-admins",
+    "scope": "fleet",
+    "access": "admin"
+   },
+   {
+    "group": "wld-ops",
+    "scope": "w1",
+    "access": "operator"
+   }
+  ],
+  "breakGlass": {
+   "holder": "On-call lead",
+   "vault": "",
+   "rotationDays": 0,
+   "notes": ""
+  }
+ },
+ "network": {
+  "domain": "vcf.example.com",
+  "dns": "10.0.0.10",
+  "ntp": "10.0.0.10",
+  "hostNics": {
+   "h1": 4
+  },
+  "clusters": {
+   "m1": {
+    "mtu": 1700
+   }
+  },
+  "domains": {
+   "w1": {
+    "model": "distributed",
+    "localAsn": 65010
+   }
+  }
+ },
+ "plan": {
+  "base": "10.10.0.0/16",
+  "vlanStart": 1610,
+  "rows": {
+   "m1:esx": {
+    "vlan": 1611,
+    "cidr": "10.10.1.0/27",
+    "gw": "10.10.1.1"
+   },
+   "i1:vmmgmt": {
+    "vlan": 1610,
+    "cidr": "10.10.0.0/25",
+    "gw": "10.10.0.1"
+   }
+  }
+ },
+ "decisions": {
+  "steps": {
+   "fleet": "skipped",
+   "storage": "recommended"
+  },
+  "deviations": {
+   "AV-BFD@w1": {
+    "reason": "Switches lack BFD"
+   }
+  },
+  "auto": null
+ }
+}

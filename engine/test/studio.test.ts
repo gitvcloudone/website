@@ -193,7 +193,7 @@ test("a format 1 design opens in the current format with nothing changed: RVTool
   assert.equal(raw.formatVersion, 1);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
   assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
-  assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null });
+  assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null, ai: [] });
   assert.deepStrictEqual(r.design.workload.groups.map(g => [g.source, g.parsed]), [["rvtools", null], ["rvtools", null], ["manual", null]]);
   assert.deepStrictEqual(r.design.workload.groups.map(g => g.values), raw.workload.groups.map((g: { values: unknown }) => g.values));
   assert.ok(r.design.workload.groups.every(g => rvi.overridden(g).length === 0));
@@ -266,7 +266,7 @@ test("a format 2 design opens in the current format with no step choices", () =>
   const raw = JSON.parse(readText(new URL("../fixtures/designs/format-2.vcf-design.json", import.meta.url), "utf8"));
   assert.equal(raw.formatVersion, 2);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
-  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION); assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null });
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION); assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null, ai: [] });
   assert.equal(r.design.workload.groups[1].values.vms, raw.workload.groups[1].values.vms);
   assert.deepStrictEqual(rvi.overridden(r.design.workload.groups[1]), ["vms"], "format 2 parsed values kept");
   assert.equal(steps.stepState(r.design, "policy").state, "decided", "cpuRatio 5 is a decision");

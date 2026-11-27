@@ -6,7 +6,7 @@ import { DEFAULTS } from "../knowledge.js";
                                                                        
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 9;
+export const FORMAT_VERSION = 10;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -35,7 +35,15 @@ export const STEP_CHOICES                        = ["recommended", "skipped"];
                                                                                                                                                      
                                                                                  
  
-                                                                                                                                
+/** An AI suggestion the user applied (format 10+): what it proposed, why, when, and the parts of the design it set. */
+                                                                                          
+                                                                                                                                                
+
+/** AI-drafted HLD text (format 10+), by target. `edited` once the user changes it; `snap` fingerprints the design it was
+ *  drafted for, so the HLD can say when the design has changed since. */
+export const NARRATIVE_TARGETS = ["summary", "rationale", "mitigations"]         ;
+                                                                 
+                                                                                      
 
 /** Identity & access (format 4+). "" = not decided yet. A role's scope is "fleet" or an instance / domain id; "" when that was removed. */
                                                        
@@ -82,6 +90,7 @@ export const newPlan = ()       => ({ base: "", vlanStart: 0, rows: {} });
                    
              
                        
+                                                         
  
 
 const pick =                        (n   , s                         ) => Object.fromEntries(SECTION_KEYS[n].map(k => [k, s[k]]))              ;
@@ -107,7 +116,8 @@ export function newDesign()         {
     identity: newIdentity(),
     network: newNetwork(),
     plan: newPlan(),
-    decisions: { steps: {}, deviations: {}, auto: null },
+    decisions: { steps: {}, deviations: {}, auto: null, ai: [] },
+    narrative: {},
   }          ;
 }
 

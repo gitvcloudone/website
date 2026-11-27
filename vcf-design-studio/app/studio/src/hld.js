@@ -3,7 +3,8 @@
 // from the design and its sizing. Every output format (the page preview, Word, PDF via print) renders this
 // same model, so they always say the same thing. A pure function of the design → data (no DOM); tested.
 import { IDENTITY, NETWORK, NSX, PILLARS, RULES, SOURCES, isVsan, clusterReason, summaryLine, workloadTotals } from "../../engine/src/index.js";
-                                                                      
+                                                                                       
+import { snapOf } from "./snap.js";
 import { evaluate, scorecard, decisionRegister, riskRegister, scorable } from "./rules.js";
 import { stepState, changes, show } from "./steps.js";
 import { STEPS } from "./flow.js";
@@ -20,7 +21,8 @@ import { prerequisites } from "./prereqs.js";
                                   
                                                                                                             
                                                                                                                        
-                                                                  
+                                                                 
+                                                                                // AI-drafted text, labelled as such
                                                                                         
                       
                                                                                                
@@ -43,6 +45,15 @@ const settingsTable = (fs         , o                         )        => table(
   fs.filter(f => f.on !== false).map(f => [f.label, show(f, o[f.key]), f.def !== undefined && o[f.key] !== f.def ? show(f, f.def) : "✓ same"]));
 const where = (d        , inst                  , rest        ) => (d.topology.instances.length > 1 ? `${inst.name} / ` : "") + rest;
 
+/** A fingerprint of everything an AI draft depends on (the design, less the drafts and the AI log). */
+export const designSnap = (d        ) => snapOf({ ...d, narrative: {}, decisions: { ...d.decisions, ai: [] } });
+/** AI-drafted text for a target, as an HLD block, or nothing. */
+function aiBlock(d        , t                 )          {
+  const n = d.narrative?.[t]; if (!n || !n.text.trim()) return [];
+  const stale = n.snap !== designSnap(d);
+  return [{ t: "ai", label: n.edited ? "Drafted with AI and edited by the architect" : "AI draft: review before sharing", paras: n.text.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean), stale }];
+}
+
 /** The HLD for a design. `date` is passed in so the content is reproducible (tests, saved copies). */
 export function buildHld(d        , r              , date        )      {
   const res = evaluate(d, r), score = scorecard(d, res), decs = decisionRegister(d, res), risks = riskRegister(res);
@@ -57,7 +68,7 @@ export function buildHld(d        , r              , date        )      {
   const summary = r.clusters.length
     ? `${customer}${d.project.site ? ` (${d.project.site})` : ""}: a VMware Cloud Foundation ${d.project.version} design of ${plural(d.topology.instances.length, "instance")}, ${plural(domains.length, "domain")} and ${plural(clusters.length, "cluster")}, sized at ${summaryLine(r)}.`
     : `${customer}: a VMware Cloud Foundation ${d.project.version} design that isn't sized yet. Add the workload, host types and topology.`;
-  const execBlocks          = [p(summary)];
+  const execBlocks          = [p(summary), ...aiBlock(d, "summary")];
   if (r.clusters.length) {
     execBlocks.push(p(`It runs ${plural(T.vms, "VM")} with ${nf(T.vcpu)} vCPU and ${nf(T.vramGiB)} GiB of memory today, planned with ${d.policy.growth}% growth. ` +
       `The design needs ${plural(r.hosts, "host")} with ${nf(r.cores)} physical cores, licensed as ${nf(r.licCores)} VCF cores${r.lic.addOnTiB ? ` plus ${nf(r.lic.addOnTiB)} TiB of vSAN add-on capacity` : ""}.`));
@@ -91,6 +102,7 @@ export function buildHld(d        , r              , date        )      {
   const crit = r.warnings.filter(w => w.lvl !== "info");
   if (crit.length) riskBlocks.push(p("Sizing checks:"), { t: "list", items: crit.map(w => `${w.lvl === "crit" ? "Must fix" : "Check"}: ${w.t}`) });
   if (!riskBlocks.length) riskBlocks.push(p("No risks recorded and no open items."));
+  riskBlocks.push(...aiBlock(d, "mitigations"));
 
   // ----- 3. Fleet, instance, domain and cluster design -----
   const fleetBlocks          = [...skipNote(d, "fleet"), settingsTable(fleetFields(d.fleet), d.fleet                                      )];
@@ -193,8 +205,10 @@ export function buildHld(d        , r              , date        )      {
   ] : [tbd("To be defined: the bill of materials follows once the design is sized.")];
 
   // ----- 10. Decisions and scorecard -----
-  const KIND                         = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", auto: "Auto-selected", deviation: "Deviation accepted" };
-  const decBlocks          = decs.length ? [table(["Area", "Decision", "Kind", "Reason"], decs.map(x => [x.step, x.text, KIND[x.kind], x.reason || ""]))] : [p("No decisions recorded yet.")];
+  const KIND                         = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", auto: "Auto-selected", deviation: "Deviation accepted", ai: "AI-suggested, applied by the architect" };
+  const rationale = aiBlock(d, "rationale");
+  const decBlocks          = rationale.length ? [...rationale] : [];
+  decBlocks.push(...(decs.length ? [table(["Area", "Decision", "Kind", "Reason"], decs.map(x => [x.step, x.text, KIND[x.kind], x.reason || ""]))] : [p("No decisions recorded yet.")]));
   const scoreBlocks          = ready ? [table(["Pillar", "Met", "Deviations accepted", "Not met", "Status"], score.map(s => [s.label, `${s.met} of ${s.applicable}`, s.accepted, s.open,
     s.atRisk ? "At risk" : s.incomplete.length ? `Incomplete: ${s.incomplete.join(", ")} skipped` : s.open ? "Open items" : s.applicable ? "Good" : "Nothing to check"]), [2, 3])]
     : [tbd("Scores appear once the design has a workload and a topology.")];

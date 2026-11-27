@@ -7,6 +7,8 @@ type Doc = Record<string, any>;
 export type Migration = (d: Doc) => Doc;
 
 export const MIGRATIONS: Record<number, Migration> = {
+  // 9 → 10: applied AI suggestions and AI-drafted HLD text; none yet.
+  9: d => ({ ...d, decisions: { ...d.decisions, ai: [] }, narrative: {} }),
   // 8 → 9: the easy button's record; not used yet.
   8: d => ({ ...d, decisions: { ...d.decisions, auto: null } }),
   // 7 → 8: accepted best-practice deviations, none yet.

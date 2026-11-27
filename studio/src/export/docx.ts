@@ -45,6 +45,7 @@ export function hldDocx(h: Hld, images: Partial<Record<"topology" | "network", D
       case "p": return para(b.text);
       case "list": return b.items.map(t => `<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>${run(t)}</w:p>`).join("");
       case "tbd": return para(b.text, "Tbd");
+      case "ai": return para(`${b.label}${b.stale ? ". The design changed after this was drafted." : ""}`, "AiLabel") + b.paras.map(x => para(x, "AiText")).join("");
       case "table": return tableXml(b.head, b.rows, b.num);
       case "diagram": {
         const img = images[b.id];
@@ -114,6 +115,8 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles
 <w:style w:type="paragraph" w:styleId="TableText"><w:name w:val="Table Text"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Spacer"><w:name w:val="Spacer"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="0" w:line="120" w:lineRule="exact"/></w:pPr></w:style>
 <w:style w:type="paragraph" w:styleId="Tbd"><w:name w:val="To Be Defined"/><w:basedOn w:val="Normal"/><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="FFF4D6"/><w:ind w:left="120" w:right="120"/><w:pBdr><w:left w:val="single" w:sz="18" w:space="6" w:color="C98A00"/></w:pBdr></w:pPr><w:rPr><w:i/><w:color w:val="6B4E00"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="AiLabel"><w:name w:val="AI Label"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="120" w:after="40"/><w:pBdr><w:left w:val="single" w:sz="18" w:space="6" w:color="6B55B3"/></w:pBdr><w:ind w:left="120"/></w:pPr><w:rPr><w:b/><w:color w:val="6B55B3"/><w:sz w:val="16"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="AiText"><w:name w:val="AI Text"/><w:basedOn w:val="Normal"/><w:pPr><w:pBdr><w:left w:val="single" w:sz="18" w:space="6" w:color="6B55B3"/></w:pBdr><w:ind w:left="120"/></w:pPr></w:style>
 <w:style w:type="paragraph" w:styleId="Caption"><w:name w:val="caption"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/><w:spacing w:after="200"/></w:pPr><w:rPr><w:i/><w:color w:val="595959"/><w:sz w:val="18"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Small"><w:name w:val="Small"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="595959"/><w:sz w:val="18"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="7F7F7F"/><w:sz w:val="16"/></w:rPr></w:style>

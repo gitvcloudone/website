@@ -12,6 +12,7 @@ function block(b: Block, svgs: Partial<Record<string, string>>): string {
     case "tbd": return `<p class="hld-tbd">${esc(b.text)}</p>`;
     case "table": return `<div class="tablewrap"><table class="hld-table"><thead><tr>${b.head.map((h, i) => `<th${b.num?.includes(i) ? ` class="n"` : ""}>${esc(h)}</th>`).join("")}</tr></thead>` +
       `<tbody>${b.rows.map(r => `<tr>${r.map((c, i) => `<td${b.num?.includes(i) ? ` class="n num"` : ""}>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    case "ai": return `<div class="hld-ai"><p class="hld-ai-label">${esc(b.label)}${b.stale ? ` · <span class="hld-ai-stale">the design changed after this was drafted</span>` : ""}</p>${b.paras.map(x => `<p>${esc(x)}</p>`).join("")}</div>`;
     case "diagram": return `<figure class="hld-fig">${svgs[b.id] || ""}<figcaption>${esc(b.caption)}</figcaption></figure>`;
   }
 }
