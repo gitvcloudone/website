@@ -1,0 +1,128 @@
+{
+  "about": "Server hardware the host-type picker offers, and vSphere per-host maximums.",
+  "tables": {
+    "vendors": {
+      "source": "Intel Xeon (4th Gen to Xeon 6) and AMD EPYC (9004/9005) product lines, as stated on the VCF Sizing page",
+      "url": null,
+      "verified": "2026-11-23",
+      "notes": "Memory is offered only as balanced configurations: every channel populated with the same DIMM.",
+      "data": {
+        "intel": {
+          "label": "Intel Xeon",
+          "sockets": [
+            1,
+            2,
+            4,
+            8
+          ],
+          "memoryChannels": [
+            8,
+            12
+          ],
+          "dimmsPerChannel": [
+            1,
+            2
+          ],
+          "coresPerSocket": [
+            8,
+            12,
+            16,
+            18,
+            20,
+            24,
+            28,
+            32,
+            36,
+            40,
+            44,
+            48,
+            52,
+            56,
+            60,
+            64,
+            72,
+            80,
+            86,
+            92,
+            96,
+            112,
+            120,
+            128,
+            144
+          ]
+        },
+        "amd": {
+          "label": "AMD EPYC",
+          "sockets": [
+            1,
+            2
+          ],
+          "memoryChannels": [
+            12
+          ],
+          "dimmsPerChannel": [
+            1,
+            2
+          ],
+          "coresPerSocket": [
+            8,
+            16,
+            24,
+            32,
+            36,
+            48,
+            64,
+            72,
+            84,
+            96,
+            112,
+            128,
+            144,
+            160,
+            192
+          ]
+        }
+      }
+    },
+    "dimmsGB": {
+      "source": "DDR5 RDIMM sizes (binary GB: 64 GB = 64 GiB)",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": [
+        16,
+        32,
+        48,
+        64,
+        96,
+        128,
+        256
+      ]
+    },
+    "nvmeTB": {
+      "source": "NVMe drive sizes used for vSAN ESA and the memory tier (decimal TB)",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": [
+        1.6,
+        1.92,
+        3.2,
+        3.84,
+        6.4,
+        7.68,
+        12.8,
+        15.36,
+        30.72
+      ]
+    },
+    "limits": {
+      "source": "vSphere configuration maximums; VCF 9 memory tiering partition cap",
+      "url": null,
+      "verified": "2026-11-23",
+      "data": {
+        "memoryTierMaxBytes": 4000000000000,
+        "hostRamMaxGB": 24576,
+        "hostLogicalCpuMax": 960
+      }
+    }
+  }
+}
