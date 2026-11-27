@@ -13,6 +13,10 @@ import { nsxOps } from "./nsx.ts";
 import { planOps, proposePlan } from "./ip.ts";
 import { evaluate, scorecard, deviationOps, scorable } from "./rules.ts";
 import { enabled } from "./flags.ts";
+import { EXPORTERS } from "./export/index.ts";
+import type { Output } from "./export/index.ts";
+import type { DocImage } from "./export/docx.ts";
+import { diagrams, toSvg } from "./diagram.ts";
 import { easyOptions, applyOptionOps, snapOf } from "./easy.ts";
 import type { EasyInputs, EasyOption } from "./easy.ts";
 import { easyHtml } from "./guided.ts";
@@ -165,7 +169,46 @@ document.addEventListener("click", e => {
     a.href = URL.createObjectURL(new Blob([serializeDesign(design)], { type: "application/json" }));
     a.download = `${name}.vcf-design.json`; document.body.appendChild(a); a.click(); a.remove();
   }
+  else if (act === "export") void runExport(b.dataset.export || "", b);
 });
+
+// ---------- design outputs (the exporters; this part only adds what needs the browser) ----------
+function download(o: Output) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([o.data as BlobPart], { type: o.mime })); a.download = o.name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+/** An SVG drawn on a canvas at 2× for a sharp PNG. */
+async function svgToPng(svg: string): Promise<DocImage> {
+  const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = () => fail(new Error("The diagram couldn't be drawn.")); img.src = url; });
+  const w = img.naturalWidth, h = img.naturalHeight, c = document.createElement("canvas"); c.width = w * 2; c.height = h * 2;
+  const g = c.getContext("2d")!; g.scale(2, 2); g.drawImage(img, 0, 0); URL.revokeObjectURL(url);
+  const blob = await new Promise<Blob>((ok, fail) => c.toBlob(b => (b ? ok(b) : fail(new Error("The PNG couldn't be made."))), "image/png"));
+  return { png: new Uint8Array(await blob.arrayBuffer()), w, h };
+}
+async function runExport(id: string, b: HTMLElement) {
+  const x = EXPORTERS.find(e => e.id === id); if (!x || !enabled(x.feature)) return;
+  const label = b.textContent; b.setAttribute("aria-busy", "true"); b.textContent = "Preparing…";
+  try {
+    const r = sizeDesign(design), date = new Date().toISOString().slice(0, 10), slugName = (design.project.customer.trim() || "vcf-design").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    if (x.how === "print") {
+      document.body.classList.add("print-hld");
+      const done = () => { document.body.classList.remove("print-hld"); window.removeEventListener("afterprint", done); };
+      window.addEventListener("afterprint", done); window.print(); setTimeout(done, 1000);
+    } else if (x.how === "png") {
+      const g = diagrams(design, r).find(z => z.id === x.diagram); if (!g) return;
+      const p = await svgToPng(toSvg(g));
+      download({ data: p.png, mime: "image/png", name: `${slugName || "vcf-design"}-${g.id}.png` });
+    } else if (x.build) {
+      // the Word file embeds the diagrams, drawn here as PNGs first
+      const images: Partial<Record<"topology" | "network", DocImage>> = {};
+      if (x.id === "hld-docx") for (const g of diagrams(design, r)) { try { images[g.id] = await svgToPng(toSvg(g)); } catch { /* the document notes where to download it instead */ } }
+      download(x.build(design, r, date, images));
+    }
+  } catch (e) { flash = [{ text: (e as Error).message, lvl: "crit" }]; render(); }
+  finally { b.removeAttribute("aria-busy"); b.textContent = label; }
+}
 // ---------- Expert view edits ----------
 type Edit = { t: "scope"; key: string } | { t: "role"; i: number; key: string } | { t: "net"; cid: string; key: "vds" | "nicGbps" | "mtu" | "tep" } | { t: "nics"; ht: string } | { t: "dev"; key: string } | { t: "plan"; key: string; f: "vlan" | "cidr" | "gw" } | { t: "nsx"; did: string; key: "model" | "t0Ha" | "tgwHa" | "bfd" | "edgeTep" | "extPrefix" | "privPrefix" | "localAsn" | "peerAsn" } | { t: "sec"; sec: "project" | "policy" | "fleet" | "addons" | "identity" | "identity.breakGlass" | "network" | "plan"; key: string } | { t: "node"; id: string; key: string } | { t: "ht"; id: string; key: string } | { t: "grp"; i: number; sub?: "values" | "opts"; key: string };
 function editOps(e: Edit, v: unknown) {

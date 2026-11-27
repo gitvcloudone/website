@@ -14,6 +14,10 @@ import { nsxOps } from "./nsx.js";
 import { planOps, proposePlan } from "./ip.js";
 import { evaluate, scorecard, deviationOps, scorable } from "./rules.js";
 import { enabled } from "./flags.js";
+import { EXPORTERS } from "./export/index.js";
+                                                
+                                                 
+import { diagrams, toSvg } from "./diagram.js";
 import { easyOptions, applyOptionOps, snapOf } from "./easy.js";
                                                         
 import { easyHtml } from "./guided.js";
@@ -166,7 +170,46 @@ document.addEventListener("click", e => {
     a.href = URL.createObjectURL(new Blob([serializeDesign(design)], { type: "application/json" }));
     a.download = `${name}.vcf-design.json`; document.body.appendChild(a); a.click(); a.remove();
   }
+  else if (act === "export") void runExport(b.dataset.export || "", b);
 });
+
+// ---------- design outputs (the exporters; this part only adds what needs the browser) ----------
+function download(o        ) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([o.data            ], { type: o.mime })); a.download = o.name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+/** An SVG drawn on a canvas at 2× for a sharp PNG. */
+async function svgToPng(svg        )                    {
+  const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  await new Promise      ((ok, fail) => { img.onload = () => ok(); img.onerror = () => fail(new Error("The diagram couldn't be drawn.")); img.src = url; });
+  const w = img.naturalWidth, h = img.naturalHeight, c = document.createElement("canvas"); c.width = w * 2; c.height = h * 2;
+  const g = c.getContext("2d") ; g.scale(2, 2); g.drawImage(img, 0, 0); URL.revokeObjectURL(url);
+  const blob = await new Promise      ((ok, fail) => c.toBlob(b => (b ? ok(b) : fail(new Error("The PNG couldn't be made."))), "image/png"));
+  return { png: new Uint8Array(await blob.arrayBuffer()), w, h };
+}
+async function runExport(id        , b             ) {
+  const x = EXPORTERS.find(e => e.id === id); if (!x || !enabled(x.feature)) return;
+  const label = b.textContent; b.setAttribute("aria-busy", "true"); b.textContent = "Preparing…";
+  try {
+    const r = sizeDesign(design), date = new Date().toISOString().slice(0, 10), slugName = (design.project.customer.trim() || "vcf-design").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    if (x.how === "print") {
+      document.body.classList.add("print-hld");
+      const done = () => { document.body.classList.remove("print-hld"); window.removeEventListener("afterprint", done); };
+      window.addEventListener("afterprint", done); window.print(); setTimeout(done, 1000);
+    } else if (x.how === "png") {
+      const g = diagrams(design, r).find(z => z.id === x.diagram); if (!g) return;
+      const p = await svgToPng(toSvg(g));
+      download({ data: p.png, mime: "image/png", name: `${slugName || "vcf-design"}-${g.id}.png` });
+    } else if (x.build) {
+      // the Word file embeds the diagrams, drawn here as PNGs first
+      const images                                                    = {};
+      if (x.id === "hld-docx") for (const g of diagrams(design, r)) { try { images[g.id] = await svgToPng(toSvg(g)); } catch { /* the document notes where to download it instead */ } }
+      download(x.build(design, r, date, images));
+    }
+  } catch (e) { flash = [{ text: (e         ).message, lvl: "crit" }]; render(); }
+  finally { b.removeAttribute("aria-busy"); b.textContent = label; }
+}
 // ---------- Expert view edits ----------
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
 function editOps(e      , v         ) {

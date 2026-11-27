@@ -9,6 +9,10 @@ import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, ad
 import { evaluate, scorecard, decisionRegister, riskRegister, scorable } from "./rules.ts";
 import type { EasyInputs, EasyOption } from "./easy.ts";
 import { enabled } from "./flags.ts";
+import { buildHld } from "./hld.ts";
+import { diagrams, toSvg } from "./diagram.ts";
+import { hldHtml } from "./export/html.ts";
+import { EXPORTERS } from "./export/index.ts";
 import type { ExpertUi } from "./expert.ts";
 import { stepState, changes, STORAGE_KEYS } from "./steps.ts";
 import type { StepState } from "./steps.ts";
@@ -71,7 +75,7 @@ function reviewHtml(d: Design, r: SizingResult) {
     return [...(["todo", "skipped", "open"].includes(st.state) ? [{ s, t: st.note }] : []), ...(st.open || []).map(t => ({ s, t }))]; });
   const ready = scorable(d, r);
   const ruleOpen = !ready ? [] : res.filter(x => x.status === "open").flatMap(x => x.findings.filter(f => !f.reason).map(f => ({ x, f })));
-  const stepLink = (id: string) => id === "plan" ? `<a href="#plan">IP / VLAN / DNS plan</a>` : `<a href="#/step/${id}">${esc(stepById(id)?.title || id)}</a>`;
+  const stepLink = (id: string) => id === "plan" ? `<a href="#/step/output">IP / VLAN / DNS plan</a>` : `<a href="#/step/${id}">${esc(stepById(id)?.title || id)}</a>`;
   const KIND: Record<string, string> = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", auto: "Auto-selected", deviation: "Deviation accepted" };
   const crit = r.warnings.filter(w => w.lvl === "crit"), warn = r.warnings.filter(w => w.lvl === "warn");
   return `<div class="tablewrap"><table class="review"><thead><tr><th>#</th><th>Step</th><th>Status</th><th>Decisions and open items</th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -87,14 +91,24 @@ function reviewHtml(d: Design, r: SizingResult) {
     ${risks.length ? `<div class="tablewrap"><table class="risks"><thead><tr><th>Risk</th><th>Where</th><th>Rule</th><th>Accepted because</th></tr></thead><tbody>${risks.map(x => `<tr class="${x.high ? "high" : ""}"><td>${x.high ? `<span class="pill crit">High</span> ` : ""}${esc(x.risk)}</td><td>${esc(x.where)}</td><td>${esc(x.rule.title)} <span class="hint">(${esc(x.rule.source)})</span></td><td>${esc(x.reason)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="hint">None: every deviation accepted with a reason becomes a risk here.</p>`}
     <h4>Sizing checks</h4>
     ${crit.length || warn.length ? `<ul class="warns">${[...crit, ...warn].map(w => `<li class="${w.lvl}">${esc(w.t)}</li>`).join("")}</ul>` : `<p class="hint">No issues.</p>`}
-    <h3 id="plan">IP / VLAN / DNS plan</h3>
-    ${planHtml(d, r)}`;
+    <p class="hint">The IP / VLAN / DNS plan, the diagrams and the design document are on the next step, <a href="#/step/output">Design output</a>.</p>`;
 }
 
-function outputHtml() {
-  return `<p>The design outputs come in a later build step: a high-level design document, architecture diagrams (SVG, PNG, draw.io), IP / VLAN / DNS tables and a prerequisites checklist.</p>
-    <p class="hint">Until then, Save design file keeps everything decided so far; the outputs will be produced from that same file.</p>
+function outputHtml(d: Design, r: SizingResult) {
+  if (!enabled("designOutput")) return `<p class="hint">Design output isn't available here.</p>`;
+  if (!r.clusters.length) return `<p class="need">The outputs need a sized design: add the workload, host types and topology first.</p>
     <div class="row"><button type="button" data-act="save-file">Save design file</button></div>`;
+  const date = new Date().toISOString().slice(0, 10), h = buildHld(d, r, date), gs = diagrams(d, r);
+  const svgs = Object.fromEntries(gs.map(g => [g.id, toSvg(g)]));
+  const groups = [...new Set(EXPORTERS.map(e => e.group))];
+  const downloads = groups.map(g => { const xs = EXPORTERS.filter(e => e.group === g && enabled(e.feature));
+    return xs.length ? `<div class="dl-group"><h4>${esc(g)}</h4><div class="row">${xs.map(e => `<button type="button" class="ghost" data-act="export" data-export="${e.id}">${esc(e.label)}</button>`).join("")}</div></div>` : ""; }).join("");
+  return `<section class="card"><h3>Downloads</h3>
+      <p class="hint">Everything is made in your browser from this design; nothing is uploaded. The PDF opens your browser's print dialog: choose Save as PDF.</p>
+      ${downloads}<div class="dl-group"><h4>Design file</h4><div class="row"><button type="button" class="ghost" data-act="save-file">Save design file</button></div></div></section>
+    <section class="card"><h3>Diagrams</h3>${gs.map(g => `<figure class="diagram">${svgs[g.id]}</figure>`).join("")}</section>
+    <section class="card" id="plan"><h3>IP / VLAN / DNS plan</h3>${planHtml(d, r)}</section>
+    <section class="card hld-wrap"><h3>High-level design preview</h3><p class="hint">The same content as the Word and PDF downloads.</p>${hldHtml(h, svgs)}</section>`;
 }
 
 /** One guided step's screen. */
@@ -103,7 +117,7 @@ export function stepHtml(d: Design, r: SizingResult, ui: ExpertUi, id: string): 
   const prev = STEPS.slice(0, i).reverse().find(x => x.kind !== "coming"), next = STEPS.slice(i + 1).find(x => x.kind !== "coming");
   const st = stepState(d, id);
   const content = s.kind === "coming" ? `<p class="hint">This step is designed and comes in a later stage of the build. Its choices will land in the same design file.</p>`
-    : id === "review" ? reviewHtml(d, r) : id === "output" ? outputHtml() : body(d, r, ui, id);
+    : id === "review" ? reviewHtml(d, r) : id === "output" ? outputHtml(d, r) : body(d, r, ui, id);
   return `<section class="card step">
     <header><h2>${s.n}. ${esc(s.title)}</h2>${stateTag(st.state)}</header>
     <p>${esc(s.blurb)}</p>
