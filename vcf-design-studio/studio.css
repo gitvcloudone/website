@@ -187,3 +187,20 @@ table.edges .lbl .why { display: none; }
 }
 .excl { cursor: help; border-bottom: 1px dotted currentColor; }
 table.files td { vertical-align: middle; }
+
+/* ===== Guided steps ===== */
+.tag.st-done, .tag.st-recommended, .tag.st-decided { color: var(--good); }
+.tag.st-todo { color: var(--crit); }
+.tag.st-skipped { color: var(--warn); }
+.tag.st-open, .tag.st-coming { color: var(--muted); font-weight: 500; }
+.choicebar { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--muted); border-radius: 6px; }
+.choicebar.st-recommended, .choicebar.st-decided { border-left-color: var(--good); }
+.choicebar.st-skipped { border-left-color: var(--warn); background: var(--warn-soft); }
+.choicebar p { margin: 0; }
+.need { margin: 0; padding: 8px 12px; border-left: 3px solid var(--crit); background: var(--crit-soft); border-radius: 4px; }
+.step .xbody { margin-top: 4px; }
+table.review td { vertical-align: top; }
+ul.changes { margin: 0; padding-left: 16px; font-size: 12.5px; }
+.step .xbody > ul { margin: 0; padding-left: 18px; }
+.step .xbody > h4 { margin: 6px 0 0; font: 600 13.5px var(--body); }
+.step .xbody a:not(.btn) { color: var(--accent); }

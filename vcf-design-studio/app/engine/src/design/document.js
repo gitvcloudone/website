@@ -6,7 +6,7 @@ import { DEFAULTS } from "../knowledge.js";
                                                                        
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 2;
+export const FORMAT_VERSION = 3;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -24,6 +24,11 @@ export const DEFAULT_SCOPE               = { includeOff: true, templatesStorage:
 /** parsed: an RVTools group's values as read from the files (format 2+), so hand edits show and can be reset; null for manual groups and when not known. */
                                                                                                                                                           
 
+/** Explicit choices on the skippable guided steps (format 3+). Whether a step is "decided" is worked out from its values. */
+                                                   
+export const STEP_CHOICES                        = ["recommended", "skipped"];
+                                                                
+
                          
                         
                         
@@ -34,6 +39,7 @@ export const DEFAULT_SCOPE               = { includeOff: true, templatesStorage:
                         
                      
                             
+                       
  
 
 const pick =                        (n   , s                         ) => Object.fromEntries(SECTION_KEYS[n].map(k => [k, s[k]]))              ;
@@ -56,6 +62,7 @@ export function newDesign()         {
     ...sectionsFromSettings({ ...DEFAULTS, customer: "", site: "", notes: "" }),
     workload: { groups: [], rvtoolsScope: { ...DEFAULT_SCOPE } },
     hostTypes: [], topology: { instances: [] },
+    decisions: { steps: {} },
   }          ;
 }
 

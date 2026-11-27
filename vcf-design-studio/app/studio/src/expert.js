@@ -36,8 +36,8 @@ export function fieldHtml(f       , value         , edit                        
   else input = `<input type="text" value="${esc(value)}" placeholder="${esc(f.placeholder || "")}" ${da}>`;
   return `<label class="${cls}"><span class="lbl">${esc(f.label)}${why}${mark}</span>${input}</label>`;
 }
-const fields = (fs         , obj                         , edit                         ) => fs.map(f => fieldHtml(f, obj[f.key], edit)).join("");
-const btn = (act        , label        , o                          = {}, cls = "link") => `<button type="button" class="${cls}" data-xact="${attr({ act, ...o })}">${esc(label)}</button>`;
+export const fields = (fs         , obj                         , edit                         ) => fs.map(f => fieldHtml(f, obj[f.key], edit)).join("");
+export const btn = (act        , label        , o                          = {}, cls = "link") => `<button type="button" class="${cls}" data-xact="${attr({ act, ...o })}">${esc(label)}</button>`;
 
 function section(id        , title        , status        , body        , ui          , step         ) {
   return `<details class="card xsec" data-sec="${id}" ${ui.closed.has(id) ? "" : "open"}>
@@ -87,7 +87,7 @@ function rvtoolsHtml(d        , ui          ) {
   return drop + list + scope + stat + est;
 }
 
-function workloadHtml(d        , ui          ) {
+export function workloadHtml(d        , ui          ) {
   const gs = d.workload.groups, cl = clusterChoices(d);
   const COLS                             = [["vms", "VMs", 0], ["vcpu", "vCPU", 0], ["vramGiB", "vRAM GiB", 0], ["usedTiB", "Used TiB", 1], ["allocTiB", "Allocated TiB", 1], ["templTiB", "Templates TiB", 1]];
   const sel = (i        , key        , v        , opts          ) => `<select data-edit="${attr({ t: "grp", i, sub: "opts", key })}" data-type="select" aria-label="${key}">${opts.map(([k, l]) => `<option value="${esc(k)}" ${String(k) === String(v) ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
@@ -112,7 +112,7 @@ function workloadHtml(d        , ui          ) {
     <div class="row">${btn("addGroup", "Add manual group", {}, "ghost")}<span class="hint">Amber values are edited by hand (Reset goes back to RVTools). Place in: Auto spreads a group over clusters that take auto workloads. Peak CPU % / RAM % (from monitoring) size a group on use instead of the ratios.</span></div>`;
 }
 
-function hostTypesHtml(d        ) {
+export function hostTypesHtml(d        ) {
   const users = (id        ) => d.topology.instances.flatMap(i => [i.mgmt, ...i.wlds].flatMap(dm => dm.clusters.filter(c => c.hostType === id).map(c => c.name)));
   return d.hostTypes.map(h => {
     const u = users(h.id), cores = h.sockets * h.cores, thr = h.ht ? cores * 2 : cores;
@@ -166,7 +166,7 @@ function domPanel(d        , dm        , inst          ) {
     <div class="row">${btn("addEdge", "Add edge cluster", { id: dm.id })}</div>`;
 }
 
-function cluPanel(d        , c         , dm        , r              ) {
+function cluPanel(d        , c         , dm        , r              , omit                    = []) {
   const hw = d.hostTypes.find(h => h.id === c.hostType) || d.hostTypes[0];
   if (!hw) return `<p class="hint">Add a host type for this cluster.</p>`;
   const S = settingsFromDesign(d), hc = hostCfg({ ...c, hw }, S), vs = c.storage === "esa", tMax = tierMax(c, hw);
@@ -174,18 +174,24 @@ function cluPanel(d        , c         , dm        , r              ) {
   const isMgmtDefault = dm.kind === "mgmt" && dm.clusters[0] === c;
   return `<h3>${esc(c.name)} <span class="hint">cluster in ${esc(dm.name)}</span>${isMgmtDefault ? ' <span class="pill warn">management appliances</span>' : ""}</h3>
     ${res.length ? `<p class="reason">${res.map(x => esc((x.c.name !== c.name ? x.c.name + ": " : "") + clusterReason(x))).join("<br>")}</p>` : ""}
-    <div class="grid">${fields(clusterFields(c, hw, d, maxFor(c), tMax), c                                      , { t: "node", id: c.id })}</div>
+    <div class="grid">${fields(clusterFields(c, hw, d, maxFor(c), tMax).filter(f => !omit.includes(f.key)), c                                      , { t: "node", id: c.id })}</div>
     <p class="hint">${esc(hw.name)} · ${esc(STORAGE[c.storage] || c.storage)} · per host: ${hc.cores} cores · ${nf(hc.licCores)} licensed · ${vs ? `${nf(hc.rawTiB, 2)} TiB raw vSAN · ` : ""}${nf(hc.ramUsable)} GiB usable RAM after reserves${hc.tiering ? ` · ${nf(hc.tierGiB)} GiB memory tier` : ""}</p>
     <div class="row">${btn("dupClu", "Duplicate cluster", { id: c.id })}${btn("delClu", "Remove cluster", { id: c.id })}</div>`;
 }
 
-function topologyHtml(d        , r              , ui          ) {
+/** omit: cluster fields to leave out (the guided Topology step leaves storage to its own step). */
+export function topologyHtml(d        , r              , ui          , omit                    = []) {
   if (!d.topology.instances.length) return `<p class="hint">No instances yet. Add one, then clusters in its management domain and any workload domains.</p><div class="row">${btn("addInst", "Add instance", {}, "ghost")}</div>`;
   const at = locate(d, ui.sel) || locate(d, d.topology.instances[0].id) ;
   const panel = at.kind === "inst" ? instPanel(d, at.inst) : at.kind === "dom" ? domPanel(d, at.dom , at.inst)
-    : at.kind === "clu" ? cluPanel(d, at.obj                      , at.dom , r) : domPanel(d, at.dom , at.inst);
+    : at.kind === "clu" ? cluPanel(d, at.obj                      , at.dom , r, omit) : domPanel(d, at.dom , at.inst);
   const sel = at.kind === "edge" ? at.dom .id : (at.obj                  ).id;
   return `<div class="topo2"><nav class="treecol" aria-label="Instances, domains and clusters">${treeHtml(d, r, sel)}</nav><div class="panel">${panel}</div></div>`;
+}
+
+export function addonsHtml(d        ) {
+  const S = d.addons                                      ;
+  return `<div class="addons">${addonFields(d.addons, clusterChoices(d)).map(g => `<div class="addon"><h4>${esc(g.title)}</h4><div class="grid">${fields(g.fields, S, { t: "sec", sec: "addons" })}</div><p class="hint">${esc(g.note)}</p></div>`).join("")}</div>`;
 }
 
 // ---------- the page ----------
@@ -193,7 +199,6 @@ export function expertHtml(d        , r              , ui          )         {
   const nClu = d.topology.instances.reduce((a, i) => a + [i.mgmt, ...i.wlds].reduce((b, dm) => b + dm.clusters.length, 0), 0);
   const t                         = workloadTotals(d.workload.groups                      );
   const addOns = (["vdefend", "vlrOn", "aviOn", "hcxOn", "dsmOn"]         ).filter(k => k === "vdefend" ? d.addons.vdefend !== "off" : d.addons[k]).length;
-  const S = d.addons                                      ;
   return [
     `<section class="card xhead"><header><h2>Expert view</h2><span class="hint">Every setting on one page, on the same design as the guided steps. Hover <span class="why">?</span> for why a default was chosen; changed values are marked.</span></header></section>`,
     section("project", "Project", d.project.customer || "Untitled", `<div class="grid">${fields(projectFields(), d.project                                      , { t: "sec", sec: "project" })}</div>`, ui, "project"),
@@ -202,6 +207,6 @@ export function expertHtml(d        , r              , ui          )         {
     section("fleet", "Fleet management", d.fleet.profile, `<div class="grid">${fields(fleetFields(d.fleet), d.fleet                                      , { t: "sec", sec: "fleet" })}</div>`, ui, "fleet"),
     section("hosts", "Host types", plural(d.hostTypes.length, "host type"), hostTypesHtml(d), ui, "hosts"),
     section("topology", "Topology", `${plural(d.topology.instances.length, "instance")} · ${plural(nClu, "cluster")}`, topologyHtml(d, r, ui), ui, "topology"),
-    section("addons", "Add-ons", addOns ? `${addOns} on` : "none", `<div class="addons">${addonFields(d.addons, clusterChoices(d)).map(g => `<div class="addon"><h4>${esc(g.title)}</h4><div class="grid">${fields(g.fields, S, { t: "sec", sec: "addons" })}</div><p class="hint">${esc(g.note)}</p></div>`).join("")}</div>`, ui, "addons"),
+    section("addons", "Add-ons", addOns ? `${addOns} on` : "none", addonsHtml(d), ui, "addons"),
   ].join("");
 }

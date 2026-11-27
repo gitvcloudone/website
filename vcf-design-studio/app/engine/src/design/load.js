@@ -7,7 +7,8 @@ import { DEFAULTS, CLUSTER_DEFAULTS, PROFILES } from "../knowledge.js";
 import { fixHw } from "../hardware.js";
                                                                                        
 import { FORMAT, FORMAT_VERSION, DEFAULT_SCOPE, sectionsFromSettings, settingsFromDesign } from "./document.js";
-                                                                       
+                                                                                   
+import { STEP_CHOICES } from "./document.js";
 import { migrateDesign } from "./migrations.js";
 
                                
@@ -79,7 +80,9 @@ function normalize(o     , opt                                       )          
   if (osa) notes.push(`${osa} vSAN OSA cluster${osa > 1 ? "s were" : " was"} switched to vSAN ESA.`);
   if (!opt.keepSource && (o.groups || []).some((g     ) => g && g.source === "rvtools")) notes.push("RVTools groups load as manual totals.");
   const design         = { format: FORMAT, formatVersion: FORMAT_VERSION, ...sectionsFromSettings(S),
-    workload: { groups, rvtoolsScope }, hostTypes, topology: { instances } }          ;
+    workload: { groups, rvtoolsScope }, hostTypes, topology: { instances },
+    // only known choices, keyed by step id (a design from a newer build may know more steps: keep those too)
+    decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v              )))                               } }          ;
   return { design, notes };
 }
 
@@ -113,7 +116,7 @@ export function loadDesign(input         , opt              = {})             {
   if (Array.isArray(x) || x.tool === "vcf-host-types" || (Array.isArray(x.presets) && !x.settings && !x.topo)) return { kind: "hostTypes", hostTypes: parseHostTypesFile(x) };
   if (x.format === FORMAT) {
     const d = migrateDesign(x);
-    const flat = { settings: settingsFromDesign(d          ), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups };
+    const flat = { settings: settingsFromDesign(d          ), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups, decisions: d.decisions };
     return { kind: "design", from: "design", ...normalize(flat, { ...opt, browserHostTypes: [], keepSource: true }) };
   }
   if (x.tool !== undefined && x.tool !== "vcf") throw new Error(`This is a ${String(x.tool).toUpperCase()} file, not a VCF design.`);

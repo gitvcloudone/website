@@ -184,11 +184,12 @@ test("host type edits only keep real configurations", () => {
 import * as rvi from "../../studio/src/rvimport.ts";
 import { readFileSync as readText } from "node:fs";
 
-test("a format 1 design opens as format 2 with nothing changed: RVTools values are kept as saved, none shown as edited", () => {
+test("a format 1 design opens in the current format with nothing changed: RVTools values are kept as saved, none shown as edited", () => {
   const raw = JSON.parse(readText(new URL("../fixtures/designs/format-1.vcf-design.json", import.meta.url), "utf8"));
   assert.equal(raw.formatVersion, 1);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
-  assert.equal(r.design.formatVersion, 2);
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
+  assert.deepStrictEqual(r.design.decisions, { steps: {} });
   assert.deepStrictEqual(r.design.workload.groups.map(g => [g.source, g.parsed]), [["rvtools", null], ["rvtools", null], ["manual", null]]);
   assert.deepStrictEqual(r.design.workload.groups.map(g => g.values), raw.workload.groups.map((g: { values: unknown }) => g.values));
   assert.ok(r.design.workload.groups.every(g => rvi.overridden(g).length === 0));
@@ -250,4 +251,68 @@ test("a file that isn't an RVTools export is reported, not thrown", () => {
   const f = rvi.readExport("notes.xlsx", () => null);
   assert.equal(f.status, "error"); assert.ok(f.error);
   assert.equal(rvi.rebuild(engine.newDesign(), [f], { ...engine.DEFAULT_SCOPE }).groups.length, 0);
+});
+
+// ---------- guided steps (3c) ----------
+import * as steps from "../../studio/src/steps.ts";
+import { stepHtml } from "../../studio/src/guided.ts";
+import { STEPS } from "../../studio/src/flow.ts";
+
+test("a format 2 design opens in format 3 with no step choices", () => {
+  const raw = JSON.parse(readText(new URL("../fixtures/designs/format-2.vcf-design.json", import.meta.url), "utf8"));
+  assert.equal(raw.formatVersion, 2);
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.equal(r.design.formatVersion, 3); assert.deepStrictEqual(r.design.decisions, { steps: {} });
+  assert.equal(r.design.workload.groups[1].values.vms, raw.workload.groups[1].values.vms);
+  assert.deepStrictEqual(rvi.overridden(r.design.workload.groups[1]), ["vms"], "format 2 parsed values kept");
+  assert.equal(steps.stepState(r.design, "policy").state, "decided", "cpuRatio 5 is a decision");
+});
+
+test("required steps say what's missing; a filled design has them done", () => {
+  const n = engine.newDesign();
+  assert.deepStrictEqual(["project", "workload", "hosts", "topology"].map(id => steps.stepState(n, id).state), ["todo", "todo", "todo", "todo"]);
+  const d = caseDesign("multi-instance"); d.project.customer = "Acme";
+  assert.deepStrictEqual(["project", "workload", "hosts", "topology"].map(id => steps.stepState(d, id).state), ["done", "done", "done", "done"]);
+  assert.equal(steps.stepState(d, "identity").state, "coming");
+});
+
+test("skippable steps: open, then Skip / Use recommended are recorded; changed values make it a decision; Use recommended resets them", () => {
+  let d = caseDesign("simple-basic");
+  for (const id of ["policy", "fleet", "storage", "addons"]) {
+    d = must(d, steps.reopenOps(d, id));
+    const before = steps.changes(d, id).length;
+    assert.equal(steps.stepState(d, id).state, before ? "decided" : "open", id);
+    d = must(d, steps.skipOps(d, id));
+    assert.equal(steps.stepState(d, id).state, before ? "decided" : "skipped", id);
+    d = must(d, steps.recommendOps(d, id));
+    assert.equal(steps.stepState(d, id).state, "recommended", id); assert.equal(steps.changes(d, id).length, 0, id);
+    assert.equal(d.decisions.steps[id], "recommended");
+    d = must(d, steps.reopenOps(d, id)); assert.equal(steps.stepState(d, id).state, "open");
+  }
+  d = must(d, [{ op: "set", path: ["policy", "cpuRatio"], value: 6 }]);
+  assert.deepStrictEqual(steps.changes(d, "policy").map(c => [c.label, c.value, c.def]), [["Workload CPU ratio (vCPU : core)", "6", "4"]]);
+  const c = allClusters(d)[1];
+  d = must(d, edit.fieldOps(d, c.id, "comp", 1.5));
+  assert.deepStrictEqual(steps.changes(d, "storage").map(x => [x.where, x.value]), [[c.name, "1.5"]]);
+  d = must(d, steps.recommendOps(d, "storage")); assert.equal(allClusters(d)[1].comp, 1.25);
+  assert.equal(d.policy.cpuRatio, 6, "other steps untouched");
+});
+
+test("Use recommended restores the defaults' sizing exactly", () => {
+  const c0 = caseDesign("simple-basic"), n = must(c0, steps.recommendOps(c0, "policy"));
+  let d = must(n, [{ op: "set", path: ["policy", "cpuRatio"], value: 2 }, { op: "set", path: ["policy", "memFill"], value: 50 }]);
+  assert.notEqual(store.sizeDesign(d).hosts, store.sizeDesign(n).hosts);
+  d = must(d, steps.recommendOps(d, "policy"));
+  assert.deepStrictEqual(store.sizeDesign(d), store.sizeDesign(n));
+});
+
+test("every guided step renders for every golden case", () => {
+  for (const c of CASES) {
+    const d = caseDesign(c.name), r = store.sizeDesign(d);
+    for (const s of STEPS) {
+      const html = stepHtml(d, r, { sel: "", closed: new Set() }, s.id);
+      assert.ok(html.includes(s.title.replace("&", "&amp;")) && !html.includes("undefined") && !html.includes("NaN"), `${c.name} / ${s.id}`);
+      if (s.id === "topology") assert.ok(!html.includes('&quot;key&quot;:&quot;comp&quot;'), "storage fields are left to the storage step");
+    }
+  }
 });

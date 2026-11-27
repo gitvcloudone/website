@@ -5,7 +5,7 @@ import { DEFAULTS } from "../knowledge.ts";
 import type { Settings, HostType, Topology, Group } from "../types.ts";
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 2;
+export const FORMAT_VERSION = 3;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -23,6 +23,11 @@ export const DEFAULT_SCOPE: RvtoolsScope = { includeOff: true, templatesStorage:
 /** parsed: an RVTools group's values as read from the files (format 2+), so hand edits show and can be reset; null for manual groups and when not known. */
 export type DesignGroup = Pick<Group, "id" | "name" | "include" | "values" | "opts" | "meta"> & { source: string; parsed: Record<string, number> | null };
 
+/** Explicit choices on the skippable guided steps (format 3+). Whether a step is "decided" is worked out from its values. */
+export type StepChoice = "recommended" | "skipped";
+export const STEP_CHOICES: readonly StepChoice[] = ["recommended", "skipped"];
+export interface Decisions { steps: Record<string, StepChoice> }
+
 export interface Design {
   format: typeof FORMAT;
   formatVersion: number;
@@ -33,6 +38,7 @@ export interface Design {
   hostTypes: HostType[];
   topology: Topology;
   addons: Section<"addons">;
+  decisions: Decisions;
 }
 
 const pick = <N extends SectionName>(n: N, s: Record<string, unknown>) => Object.fromEntries(SECTION_KEYS[n].map(k => [k, s[k]])) as Section<N>;
@@ -55,6 +61,7 @@ export function newDesign(): Design {
     ...sectionsFromSettings({ ...DEFAULTS, customer: "", site: "", notes: "" }),
     workload: { groups: [], rvtoolsScope: { ...DEFAULT_SCOPE } },
     hostTypes: [], topology: { instances: [] },
+    decisions: { steps: {} },
   } as Design;
 }
 

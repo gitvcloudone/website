@@ -9,6 +9,8 @@ import { expertHtml } from "./expert.ts";
 import type { ExpertUi } from "./expert.ts";
 import { fieldOps, hostTypeOps, actionOps } from "./edit.ts";
 import { readExport, rebuild, SHEETS } from "./rvimport.ts";
+import { stepHtml, stateTag } from "./guided.ts";
+import { stepState, recommendOps, skipOps, reopenOps } from "./steps.ts";
 import type { LoadedFile } from "./rvimport.ts";
 import type { Action } from "./edit.ts";
 
@@ -55,7 +57,7 @@ function railHtml(r: Route) {
   const cur = r.view === "start" ? "start" : r.view === "step" ? r.id : "";
   return `<ol class="rail">${STEPS.map(s => {
     const coming = s.kind === "coming";
-    const badge = s.kind === "required" ? `<span class="tag">Required</span>` : s.kind === "skippable" ? `<span class="tag soft">Optional</span>` : coming ? `<span class="tag soft">Coming next</span>` : "";
+    const badge = stateTag(stepState(design, s.id).state) || (s.kind === "required" ? `<span class="tag">Required</span>` : "");
     const inner = `<span class="n">${s.n}</span><span class="t">${esc(s.title)}</span>${badge}`;
     return `<li class="${s.id === cur ? "on" : ""} ${coming ? "coming" : ""}">${coming ? `<span class="item" aria-disabled="true">${inner}</span>` : `<a class="item" href="#/step/${s.id}" ${s.id === cur ? 'aria-current="step"' : ""}>${inner}</a>`}</li>`;
   }).join("")}</ol>
@@ -95,18 +97,6 @@ function startHtml() {
   </section>`;
 }
 
-function stepHtml(id: string) {
-  const s = stepById(id)!;
-  const what = s.kind === "coming" ? "This step is designed and comes in the next stage of the build. Its choices will land in the same design file."
-    : "This step's form is being built (stage 3c). Until then, use the Expert view for these settings.";
-  const i = STEPS.indexOf(s), prev = STEPS.slice(0, i).reverse().find(x => x.kind !== "coming"), next = STEPS.slice(i + 1).find(x => x.kind !== "coming");
-  return `<section class="card">
-    <header><h2>${s.n}. ${esc(s.title)}</h2>${s.kind === "required" ? '<span class="tag">Required</span>' : ""}</header>
-    <p>${esc(s.blurb)}</p>
-    <p class="hint">${what}</p>
-    <div class="row nav">${prev ? `<a class="btn ghost" href="#/step/${prev.id}">← ${esc(prev.title)}</a>` : ""}${next ? `<a class="btn" href="#/step/${next.id}">${esc(next.title)} →</a>` : ""}</div>
-  </section>`;
-}
 
 const rv: { files: LoadedFile[]; stats: ReturnType<typeof rebuild>["stats"] | null } = { files: [], stats: null };   // this visit only, never saved
 const ui: ExpertUi = { sel: "", closed: new Set(), rv };
@@ -118,7 +108,7 @@ function render() {
   const caret = document.activeElement instanceof HTMLInputElement && document.activeElement.type === "text" ? document.activeElement.selectionStart : null;
   $("rail").innerHTML = railHtml(r);
   $("main").innerHTML = (flash.length ? `<ul class="warns flash">${flash.map(f => `<li class="${f.lvl}">${esc(f.text)}</li>`).join("")}</ul>` : "")
-    + (r.view === "start" ? startHtml() : r.view === "expert" ? expertHtml(design, result, ui) : stepHtml(r.id));
+    + (r.view === "start" ? startHtml() : r.view === "expert" ? expertHtml(design, result, ui) : stepHtml(design, result, ui, r.id));
   $("summary").innerHTML = summaryHtml();
   if (fk) {
     const el = [...document.querySelectorAll<HTMLElement>("[data-edit],[data-xact],[data-sel]")].find(x => focusKey(x) === fk);
@@ -198,6 +188,12 @@ document.addEventListener("click", ev => {
     if (select) ui.sel = select;
     if (ops.length) commit({ source: "expert", ops });
   } catch (err) { flash = [{ text: (err as Error).message, lvl: "crit" }]; render(); }
+});
+document.addEventListener("click", ev => {
+  const b = (ev.target as HTMLElement).closest<HTMLElement>("[data-step]"); if (!b) return;
+  const { act, id } = JSON.parse(b.dataset.step!) as { act: "recommend" | "skip" | "reopen"; id: string };
+  const ops = act === "recommend" ? recommendOps(design, id) : act === "skip" ? skipOps(design, id) : reopenOps(design, id);
+  commit({ source: `guided:${act}`, ops });
 });
 document.addEventListener("toggle", ev => {
   const el = ev.target as HTMLElement; if (!(el instanceof HTMLDetailsElement) || !el.dataset.sec) return;

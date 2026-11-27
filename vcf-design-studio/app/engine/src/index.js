@@ -14,7 +14,8 @@ export { COLS, HCOLS, parseRVTools, excludeRules, buildGroups } from "./rvtools.
 export { FORMAT, FORMAT_VERSION, SECTION_KEYS, DEFAULT_SCOPE, newDesign, designToEngine, sectionsFromSettings, settingsFromDesign } from "./design/document.js";
 export { loadDesign, parseHostTypesFile, mergeHostTypes, serializeDesign } from "./design/load.js";
 export { MIGRATIONS, migrateDesign } from "./design/migrations.js";
-                                                                                           
+                                                                                                                  
+export { STEP_CHOICES } from "./design/document.js";
                                                                 
                                                         
 export { clusterReason, summaryLine, hostsFor } from "./explain.js";

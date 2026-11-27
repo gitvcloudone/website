@@ -9,6 +9,8 @@ export type Migration = (d: Doc) => Doc;
 export const MIGRATIONS: Record<number, Migration> = {
   // 1 → 2: groups gain `parsed` (an RVTools group's values as read). Not known for older files, so null:
   // their values stay exactly as saved, nothing shows as hand-edited.
+  // 2 → 3: skip / use-recommended choices on the guided steps; none for older files.
+  2: d => ({ ...d, decisions: { steps: {} } }),
   1: d => ({ ...d, workload: { ...d.workload, groups: (d.workload?.groups || []).map((g: Doc) => ({ ...g, parsed: null })) } }),
 };
 
