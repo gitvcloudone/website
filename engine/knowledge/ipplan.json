@@ -1,0 +1,43 @@
+{
+  "about": "IP / VLAN / DNS plan for VCF 9.1 and later: which components need an FQDN and a static IP on the management network, reserved ranges, and how much room subnets get.",
+  "tables": {
+    "records": {
+      "source": "Broadcom TechDocs, VCF 9.1: First VCF Instance FQDNs and IP Addresses; Network Deployment Options for VCF Components",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/planning-and-preparation/vcf-components-fqdns-and-ip-addresses/first-vcf-instance-fqdns-and-ip-addresses.html",
+      "verified": "2026-11-26",
+      "notes": "Every VCF component needs a unique FQDN and a static IP with forward (A) and reverse (PTR) DNS; no capital letters in FQDNs; containerized services don't support .local domains. All these addresses are on the VCF management network, which by default shares the VM management network. Counts are the page's simple / HA columns. Fleet-level components are placed in the first instance; the additional-instance page hasn't been checked yet, so later instances list only per-instance components. VCF Operations data node: HA with medium or large only. Edge node management IPs: static, per the host fault tolerant edge cluster design (RCMD-COMSAZ-016).",
+      "data": [
+        { "key": "vcenter", "label": "vCenter", "per": "domain", "fqdn": [1, 1], "ips": [1, 1] },
+        { "key": "nsxNode", "label": "NSX Manager node", "per": "nsxNode", "fqdn": [1, 1], "ips": [1, 1] },
+        { "key": "nsxVip", "label": "NSX Manager cluster VIP", "per": "nsx", "fqdn": [1, 1], "ips": [1, 1] },
+        { "key": "sddc", "label": "SDDC Manager", "per": "instance", "fqdn": [1, 1], "ips": [1, 1] },
+        { "key": "cloudProxy", "label": "Cloud Proxy", "per": "instance", "fqdn": [1, 1], "ips": [1, 1] },
+        { "key": "ops", "label": "VCF Operations (primary, replica, data node)", "per": "fleet", "fqdn": [1, 3], "ips": [1, 3] },
+        { "key": "license", "label": "License Server", "per": "fleet", "fqdn": [1, 1], "ips": [1, 1] },
+        { "key": "fleetSvc", "label": "VCF management services: fleet components", "per": "fleet", "fqdn": [1, 1], "ips": [0, 0] },
+        { "key": "instSvc", "label": "VCF management services: instance components", "per": "fleet", "fqdn": [1, 1], "ips": [0, 0] },
+        { "key": "runtime", "label": "VCF services runtime", "per": "fleet", "fqdn": [1, 1], "ips": [0, 0] },
+        { "key": "idb", "label": "VCF Identity Broker", "per": "fleet", "when": "identityInstance", "fqdn": [1, 1], "ips": [0, 0] },
+        { "key": "auto", "label": "VCF Automation (3 nodes + 2 spare IPs)", "per": "fleet", "when": "automation", "fqdn": [1, 1], "ips": [5, 5] },
+        { "key": "autoRuntime", "label": "VCF Automation services runtime", "per": "fleet", "when": "automation", "fqdn": [1, 1], "ips": [0, 0] },
+        { "key": "logs", "label": "Log management", "per": "fleet", "when": "logs", "fqdn": [1, 1], "ips": [0, 0] },
+        { "key": "opsNet", "label": "VCF Operations for Networks (platform + collectors)", "per": "opsNetNode", "when": "opsNet", "fqdn": [1, 1], "ips": [1, 1] },
+        { "key": "edge", "label": "NSX Edge node (management)", "per": "edge", "fqdn": [1, 1], "ips": [1, 1] },
+        { "key": "esx", "label": "ESX host", "per": "host", "fqdn": [1, 1], "ips": [1, 1] }
+      ]
+    },
+    "reserved": {
+      "source": "Broadcom TechDocs, VCF 9.1: First VCF Instance FQDNs and IP Addresses (services runtime CIDR); IPv4 Addressing Model (inter-tier transit)",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/datacenter-network-requirements/infrastucture-ip-addressing-models/ipv4-addressing-model.html",
+      "verified": "2026-11-26",
+      "notes": "VCF services runtime uses the internal 198.18.0.0/15 (minimum 12, recommended 30 addresses per runtime); if it's in use on your network it must be changed at deployment. NSX inter-tier transit links use a subset of 100.64.0.0/10 (RFC 6598).",
+      "data": [ { "cidr": "198.18.0.0/15", "use": "VCF services runtime (internal)" }, { "cidr": "100.64.0.0/10", "use": "NSX inter-tier transit (RFC 6598)" } ]
+    },
+    "sizing": {
+      "source": "VCF Design Studio default: subnets get room for twice today's addresses, because VCF can't change an infrastructure subnet's mask later (VCF-NET-RCMD-IPA-001). Tier-0 peering /28 (VCF-WLDCON-CTGW-RCMD-CFG-009).",
+      "url": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/datacenter-network-requirements/infrastucture-ip-addressing-models/ipv4-addressing-model.html",
+      "verified": "2026-11-26",
+      "data": { "growth": 2, "minPrefix": 29 }
+    }
+  }
+}

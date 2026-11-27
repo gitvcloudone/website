@@ -5,7 +5,7 @@ import { DEFAULTS } from "../knowledge.ts";
 import type { Settings, HostType, Topology, Group } from "../types.ts";
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 6;
+export const FORMAT_VERSION = 7;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -54,6 +54,11 @@ export interface Network {
 }
 export const newNetwork = (): Network => ({ domain: "", dns: "", ntp: "", hostNics: {}, clusters: {}, domains: {} });
 
+/** IP / VLAN plan (format 7+): what's entered (or proposed) for each network, keyed "<instance, domain or cluster id>:<network>". */
+export interface PlanRow { vlan?: number; cidr?: string; gw?: string }
+export interface Plan { base: string; vlanStart: number; rows: Record<string, PlanRow> }
+export const newPlan = (): Plan => ({ base: "", vlanStart: 0, rows: {} });
+
 export interface Design {
   format: typeof FORMAT;
   formatVersion: number;
@@ -66,6 +71,7 @@ export interface Design {
   addons: Section<"addons">;
   identity: Identity;
   network: Network;
+  plan: Plan;
   decisions: Decisions;
 }
 
@@ -91,6 +97,7 @@ export function newDesign(): Design {
     hostTypes: [], topology: { instances: [] },
     identity: newIdentity(),
     network: newNetwork(),
+    plan: newPlan(),
     decisions: { steps: {} },
   } as Design;
 }

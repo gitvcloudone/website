@@ -10,6 +10,7 @@ import { locate, moveTo91 } from "./edit.ts";
 import { sizeDesign } from "./store.ts";
 import { allClusters, recommended, effective, networksOf, hostsByCluster, nicsOf } from "./hostnet.ts";
 import { allDomains, recommendedNsx, effectiveNsx, asns, nsxNetworks } from "./nsx.ts";
+import { planNets, planIssues, dnsRecords } from "./ip.ts";
 import { overridden, estate } from "./rvimport.ts";
 import type { LoadedFile, rebuild } from "./rvimport.ts";
 
@@ -264,6 +265,33 @@ export function nsxHtml(d: Design) {
   return cards ? `<div class="addons">${cards}</div><p class="hint">Edge clusters and their nodes are set in Topology. VLAN IDs and subnets come with the IP plan.</p>` : `<p class="hint">No domains yet. Add them in Topology.</p>`;
 }
 
+/** The IP / VLAN plan (editable, with the proposer and its checks) and the DNS records the design needs. */
+export function planHtml(d: Design, r: SizingResult) {
+  const nets = planNets(d, r), { issues, missing } = planIssues(d, r), recs = dnsRecords(d, r), multi = d.topology.instances.length > 1;
+  const cell = (key: string, f: string, v: unknown, ph: string, w = "") => `<input type="text" class="${w}" value="${esc(v ?? "")}" placeholder="${ph}" data-edit="${attr({ t: "plan", key, f })}" data-type="text" aria-label="${f}">`;
+  const rows = nets.map(n => { const x = d.plan.rows[n.key] || {};
+    return `<tr><td>${esc(n.name)}</td><td>${esc(n.where)}</td><td class="n num">${n.kind === "vlan" ? nf(n.need) : ""}</td><td class="n num">/${n.prefix}${n.fixed ? "" : ""}</td>
+      <td>${n.kind === "vlan" ? cell(n.key, "vlan", x.vlan, "VLAN", "vlan") : ""}</td><td>${cell(n.key, "cidr", x.cidr, "a.b.c.d/nn")}</td><td>${n.kind === "vlan" ? cell(n.key, "gw", x.gw, "gateway") : ""}</td></tr>`; }).join("");
+  const byInst = d.topology.instances.map(inst => {
+    const rs = recs.filter(x => x.inst === inst);
+    return `${multi ? `<h5>${esc(inst.name)}</h5>` : ""}<div class="tablewrap"><table class="dns"><thead><tr><th>Component</th><th class="n">FQDNs</th><th class="n">Static IPs</th><th>Network</th></tr></thead><tbody>
+      ${rs.map(x => `<tr><td>${esc(x.label)}</td><td class="n num">${nf(x.fqdn)}</td><td class="n num">${nf(x.ips)}</td><td>${esc(nets.find(n => n.key === x.net)?.name || "")}</td></tr>`).join("")}
+      <tr class="total"><td>Total</td><td class="n num">${nf(rs.reduce((a, x) => a + x.fqdn, 0))}</td><td class="n num">${nf(rs.reduce((a, x) => a + x.ips, 0))}</td><td></td></tr></tbody></table></div>`;
+  }).join("");
+  const crit = issues.filter(i => i.lvl === "crit"), warn = issues.filter(i => i.lvl === "warn");
+  return `<p class="hint">Every network the design needs, the addresses each needs at today's size, and a subnet size with room to grow (VCF can't change an infrastructure subnet's mask later). Enter VLANs and subnets, or fill the empty rows from a base block. Entering the same subnet and VLAN on two networks shares them.</p>
+    <div class="grid">${fields([{ key: "base", label: "Base block to plan from", type: "text", placeholder: "e.g. 10.10.0.0/16" }, { key: "vlanStart", label: "First VLAN ID", type: "number", min: 1, max: 4094, step: 1 }],
+      d.plan as unknown as Record<string, unknown>, { t: "sec", sec: "plan" })}</div>
+    <div class="row"><button type="button" data-plan="propose">Fill empty rows</button>${Object.keys(d.plan.rows).length ? `<button type="button" class="link" data-plan="clear">Clear the plan</button>` : ""}</div>
+    <div class="tablewrap"><table class="plan"><thead><tr><th>Network</th><th>Where</th><th class="n">IPs needed</th><th class="n">Size</th><th>VLAN</th><th>Subnet</th><th>Gateway</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <h4>Plan checks</h4>
+    ${missing ? `<p class="hint">${plural(missing, "network")} still without a VLAN or subnet.</p>` : ""}
+    ${issues.length ? `<ul class="warns">${[...crit, ...warn].map(i => `<li class="${i.lvl}">${esc(i.t)}</li>`).join("")}</ul>` : `<p class="hint">${missing ? "Nothing wrong in what's entered." : "No issues."}</p>`}
+    <h4>DNS records</h4>
+    <p class="hint">Each needs a forward (A) and reverse (PTR) record${d.network.domain ? ` in ${esc(d.network.domain)}` : ""}, with no capital letters. VCF management services, VCF Automation and the Identity Broker don't support .local domains. VCF services runtime nodes use the internal 198.18.0.0/15 block (change it at deployment if that range is in use). Additional instances list their own components only; fleet components are counted in the first.</p>
+    ${byInst}`;
+}
+
 export function addonsHtml(d: Design) {
   const S = d.addons as unknown as Record<string, unknown>;
   return `<div class="addons">${addonFields(d.addons, clusterChoices(d)).map(g => `<div class="addon"><h4>${esc(g.title)}</h4><div class="grid">${fields(g.fields, S, { t: "sec", sec: "addons" })}</div><p class="hint">${esc(g.note)}</p></div>`).join("")}</div>`;
@@ -285,6 +313,7 @@ export function expertHtml(d: Design, r: SizingResult, ui: ExpertUi): string {
     section("topology", "Topology", `${plural(d.topology.instances.length, "instance")} · ${plural(nClu, "cluster")}`, topologyHtml(d, r, ui), ui, "topology"),
     section("hostnet", "Host networking", d.network.domain || "DNS domain not set", hostnetHtml(d, r), ui, "hostnet"),
     section("nsx", "NSX & connectivity", plural(Object.values(d.network.domains).filter(x => x.model === "distributed").length, "distributed domain"), nsxHtml(d), ui, "nsx"),
+    section("plan", "IP / VLAN / DNS plan", (m => m ? `${plural(m, "network")} to fill` : "complete")(planIssues(d, r).missing), planHtml(d, r), ui, "plan"),
     section("addons", "Add-ons", addOns ? `${addOns} on` : "none", addonsHtml(d), ui, "addons"),
   ].join("");
 }

@@ -7,8 +7,8 @@ import { fixHw } from "../hardware.ts";
 import type { HostType, Settings, Domain, Instance, Cluster, Edge } from "../types.ts";
 import { FORMAT, FORMAT_VERSION, DEFAULT_SCOPE, sectionsFromSettings, settingsFromDesign } from "./document.ts";
 import type { Design, DesignGroup, RvtoolsScope, StepChoice } from "./document.ts";
-import { STEP_CHOICES, newIdentity, newNetwork } from "./document.ts";
-import type { Identity, Access, Network, ClusterNet, DomainNsx } from "./document.ts";
+import { STEP_CHOICES, newIdentity, newNetwork, newPlan } from "./document.ts";
+import type { Identity, Access, Network, ClusterNet, DomainNsx, Plan, PlanRow } from "./document.ts";
 import { migrateDesign } from "./migrations.ts";
 
 type Obj = Record<string, any>;
@@ -87,6 +87,7 @@ function normalize(o: Obj, opt: LoadOptions & { keepSource: boolean }): { design
     identity: identityFrom(o.identity, (id: unknown) => { const n = tid.remap.get(id); return n && scopes.has(n) ? n : undefined; }),
     network: networkFrom(o.network, id => { const n = tid.remap.get(id); return n && clusterIds.has(n) ? n : undefined; }, id => { const n = hid.remap.get(id); return n && hostTypes.some(h => h.id === n) ? n : undefined; },
       id => { const n = tid.remap.get(id); return n && domainIds.has(n) ? n : undefined; }),
+    plan: planFrom(o.plan, id => { const n = tid.remap.get(id); return n && (scopes.has(n) || clusterIds.has(n)) ? n : undefined; }),
     // only known choices, keyed by step id (a design from a newer build may know more steps: keep those too)
     decisions: { steps: Object.fromEntries(Object.entries((o.decisions && o.decisions.steps) || {}).filter(([k, v]) => /^[a-z]+$/.test(k) && STEP_CHOICES.includes(v as StepChoice))) as Record<string, StepChoice> } } as Design;
   return { design, notes };
@@ -137,6 +138,20 @@ function networkFrom(x: Obj | undefined, cluster: (id: unknown) => string | unde
   return out;
 }
 
+/** The IP / VLAN plan: rows for instances, domains and clusters in the design; VLAN 1-4094; addresses kept as typed (checked by the plan, not here). */
+function planFrom(x: Obj | undefined, id: (id: unknown) => string | undefined): Plan {
+  const out = newPlan(); if (!x || typeof x !== "object") return out;
+  out.base = str(x.base).trim(); out.vlanStart = int(x.vlanStart, 1, 4094) || 0;
+  for (const [k, v] of Object.entries(x.rows || {})) {
+    const m = /^(.+):([a-zA-Z]+)$/.exec(k), n = m && id(m[1]); if (!n || !v || typeof v !== "object") continue;
+    const r = v as Obj, row: PlanRow = {};
+    const vlan = int(r.vlan, 1, 4094); if (vlan) row.vlan = vlan;
+    for (const f of ["cidr", "gw"] as const) { const t = str(r[f]).trim(); if (t) row[f] = t; }
+    if (Object.keys(row).length) out.rows[`${n}:${m![2]}`] = row;
+  }
+  return out;
+}
+
 /** Host types from a host-types file: { tool: "vcf-host-types", hostTypes }, a plain array, or the older { presets: [{ name, hw }] }. */
 export function parseHostTypesFile(o: unknown): HostType[] {
   const x = o as Obj;
@@ -167,7 +182,7 @@ export function loadDesign(input: unknown, opt: LoadOptions = {}): LoadResult {
   if (Array.isArray(x) || x.tool === "vcf-host-types" || (Array.isArray(x.presets) && !x.settings && !x.topo)) return { kind: "hostTypes", hostTypes: parseHostTypesFile(x) };
   if (x.format === FORMAT) {
     const d = migrateDesign(x);
-    const flat = { settings: settingsFromDesign(d as Design), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups, decisions: d.decisions, identity: d.identity, network: d.network };
+    const flat = { settings: settingsFromDesign(d as Design), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups, decisions: d.decisions, identity: d.identity, network: d.network, plan: d.plan };
     return { kind: "design", from: "design", ...normalize(flat, { ...opt, browserHostTypes: [], keepSource: true }) };
   }
   if (x.tool !== undefined && x.tool !== "vcf") throw new Error(`This is a ${String(x.tool).toUpperCase()} file, not a VCF design.`);

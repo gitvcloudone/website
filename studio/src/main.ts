@@ -10,6 +10,7 @@ import type { ExpertUi } from "./expert.ts";
 import { fieldOps, hostTypeOps, actionOps, identityOps } from "./edit.ts";
 import { netOps, nicsOps } from "./hostnet.ts";
 import { nsxOps } from "./nsx.ts";
+import { planOps, proposePlan } from "./ip.ts";
 import { readExport, rebuild, SHEETS } from "./rvimport.ts";
 import { stepHtml, stateTag } from "./guided.ts";
 import { stepState, recommendOps, skipOps, reopenOps } from "./steps.ts";
@@ -153,7 +154,7 @@ document.addEventListener("click", e => {
   }
 });
 // ---------- Expert view edits ----------
-type Edit = { t: "scope"; key: string } | { t: "role"; i: number; key: string } | { t: "net"; cid: string; key: "vds" | "nicGbps" | "mtu" | "tep" } | { t: "nics"; ht: string } | { t: "nsx"; did: string; key: "model" | "t0Ha" | "tgwHa" | "bfd" | "edgeTep" | "extPrefix" | "privPrefix" | "localAsn" | "peerAsn" } | { t: "sec"; sec: "project" | "policy" | "fleet" | "addons" | "identity" | "identity.breakGlass" | "network"; key: string } | { t: "node"; id: string; key: string } | { t: "ht"; id: string; key: string } | { t: "grp"; i: number; sub?: "values" | "opts"; key: string };
+type Edit = { t: "scope"; key: string } | { t: "role"; i: number; key: string } | { t: "net"; cid: string; key: "vds" | "nicGbps" | "mtu" | "tep" } | { t: "nics"; ht: string } | { t: "plan"; key: string; f: "vlan" | "cidr" | "gw" } | { t: "nsx"; did: string; key: "model" | "t0Ha" | "tgwHa" | "bfd" | "edgeTep" | "extPrefix" | "privPrefix" | "localAsn" | "peerAsn" } | { t: "sec"; sec: "project" | "policy" | "fleet" | "addons" | "identity" | "identity.breakGlass" | "network" | "plan"; key: string } | { t: "node"; id: string; key: string } | { t: "ht"; id: string; key: string } | { t: "grp"; i: number; sub?: "values" | "opts"; key: string };
 function editOps(e: Edit, v: unknown) {
   if (e.t === "scope") {   // a scope change rebuilds the RVTools groups in the same proposal
     const scope = { ...design.workload.rvtoolsScope, [e.key]: v }, rb = rebuild(design, rv.files, scope);
@@ -163,6 +164,7 @@ function editOps(e: Edit, v: unknown) {
   if (e.t === "sec" && e.sec === "identity") return identityOps(design, e.key, v);
   if (e.t === "sec") return [{ op: "set" as const, path: [...e.sec.split("."), e.key], value: v }];
   if (e.t === "net") return netOps(design, e.cid, e.key, e.key === "nicGbps" ? Number(v) : v);
+  if (e.t === "plan") return planOps(design, e.key, e.f, v);
   if (e.t === "nsx") return nsxOps(design, e.did, e.key, v);
   if (e.t === "nics") return nicsOps(design, e.ht, Number(v));
   if (e.t === "role") return [{ op: "set" as const, path: ["identity", "roles", e.i, e.key], value: v }];
@@ -250,3 +252,12 @@ window.addEventListener("storage", e => { if (e.key === "vcfStudio.design") $("m
 
 $("ver").textContent = `design format ${FORMAT_VERSION}`;
 render();
+
+// ---------- IP / VLAN plan: the proposer fills empty rows; Clear removes everything entered ----------
+document.addEventListener("click", ev => {
+  const b = (ev.target as HTMLElement).closest<HTMLElement>("[data-plan]"); if (!b) return;
+  try {
+    if (b.dataset.plan === "propose") commit({ source: "plan-proposer", ops: proposePlan(design, result) });
+    else if (confirm("Clear every VLAN, subnet and gateway in the plan?")) commit({ source: "expert", ops: [{ op: "set", path: ["plan", "rows"], value: {} }] });
+  } catch (err) { flash = [{ text: (err as Error).message, lvl: "crit" }]; render(); }
+});

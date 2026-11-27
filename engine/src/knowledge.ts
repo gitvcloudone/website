@@ -9,6 +9,7 @@ import defaults from "../knowledge/defaults.json" with { type: "json" };
 import identity from "../knowledge/identity.json" with { type: "json" };
 import network from "../knowledge/network.json" with { type: "json" };
 import nsx from "../knowledge/nsx.json" with { type: "json" };
+import ipplan from "../knowledge/ipplan.json" with { type: "json" };
 import type { Spec, Vendor, Profile, Settings, ClusterDefaults } from "./types.ts";
 
 interface S3 { vcpu: number; ramGB: number; diskGB: number }
@@ -82,4 +83,13 @@ export const NSX = {
   centralized: nsx.tables.centralized.data,
   distributed: nsx.tables.distributed.data,
   edge: nsx.tables.edgeNodes.data,
+};
+
+// IP / VLAN / DNS plan: components needing FQDNs and IPs, reserved ranges, subnet room
+export interface RecordRule { key: string; label: string; per: string; when?: string; fqdn: [simple: number, ha: number]; ips: [simple: number, ha: number] }
+export const IPPLAN = {
+  records: ipplan.tables.records.data as RecordRule[],
+  reserved: ipplan.tables.reserved.data,
+  growth: ipplan.tables.sizing.data.growth,
+  minPrefix: ipplan.tables.sizing.data.minPrefix,
 };

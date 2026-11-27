@@ -204,3 +204,9 @@ ul.changes { margin: 0; padding-left: 16px; font-size: 12.5px; }
 .step .xbody > ul { margin: 0; padding-left: 18px; }
 .step .xbody > h4 { margin: 6px 0 0; font: 600 13.5px var(--body); }
 .step .xbody a:not(.btn) { color: var(--accent); }
+
+/* IP / VLAN plan */
+table.plan input[type=text] { width: 9.5em; min-width: 0; padding: 4px 6px; }
+table.plan input.vlan[type=text] { width: 4.5em; }
+table.plan td, table.plan th { white-space: nowrap; }
+table.dns tr.total td { font-weight: 600; }

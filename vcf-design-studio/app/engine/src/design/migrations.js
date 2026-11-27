@@ -8,6 +8,8 @@ import { FORMAT_VERSION } from "./document.js";
                                         
 
 export const MIGRATIONS                            = {
+  // 6 → 7: the IP / VLAN plan, nothing entered yet.
+  6: d => ({ ...d, plan: { base: "", vlanStart: 0, rows: {} } }),
   // 5 → 6: NSX connectivity per domain, all recommended.
   5: d => ({ ...d, network: { ...d.network, domains: {} } }),
   // 4 → 5: host networking, all recommended values, fleet services not entered yet.

@@ -554,3 +554,113 @@ test("the NSX knowledge file has a source, a link and a verified date for each t
   const k = JSON.parse(readText(new URL("../knowledge/nsx.json", import.meta.url), "utf8"));
   for (const [name, t] of Object.entries(k.tables) as [string, { source: string; url: string; verified: string }][]) assert.ok(t.source && /^https:\/\/techdocs\.broadcom\.com\//.test(t.url) && /^\d{4}-\d\d-\d\d$/.test(t.verified), name);
 });
+
+// ---------- IP / VLAN / DNS plan (4d) ----------
+import * as ip from "../../studio/src/ip.ts";
+test("a format 6 design opens with an empty plan and its NSX choices kept", () => {
+  const raw = JSON.parse(readText(new URL("../fixtures/designs/format-6.vcf-design.json", import.meta.url), "utf8"));
+  assert.equal(raw.formatVersion, 6);
+  const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
+  assert.deepStrictEqual(r.design.plan, engine.newPlan()); assert.deepStrictEqual(r.design.network, raw.network);
+});
+
+test("plan: IPv4 subnets parse strictly", () => {
+  assert.deepStrictEqual(ip.parseCidr("10.1.2.0/24"), { net: ((10 << 24) >>> 0) + (1 << 16) + (2 << 8), prefix: 24, hostBits: false });
+  assert.equal(ip.parseCidr("10.1.2.5/24")!.hostBits, true);
+  for (const bad of ["10.1.2/24", "10.1.2.256/24", "10.1.2.0/33", "10.1.2.0", "fe80::/64"]) assert.equal(ip.parseCidr(bad), null, bad);
+  assert.equal(ip.cidrText(ip.parseCidr("192.168.10.0/23")!), "192.168.10.0/23");
+});
+
+test("plan: records and networks follow the design (VCF 9.1 first-instance counts)", () => {
+  const d = caseDesign("vdefend-atp"), r = store.sizeDesign(d), recs = ip.dnsRecords(d, r);
+  const get = (l: string) => recs.filter(x => x.label.startsWith(l));
+  assert.equal(get("vCenter")[0].fqdn, 3, "management + two workload domains");
+  assert.equal(get("NSX Manager node")[0].fqdn, 6, "management NSX (HA: 3) + WLD-01 dedicated (3)");
+  assert.equal(get("NSX Manager cluster VIP")[0].fqdn, 2);
+  assert.equal(get("VCF Operations")[0].fqdn, 3, "HA profile");
+  assert.equal(get("VCF Automation (")[0].ips, 5);
+  assert.equal(get("VCF Identity Broker").length, 0, "identity mode not chosen yet");
+  assert.equal(get("NSX Edge node")[0].ips, 11);
+  const hosts = hostnet.hostsByCluster(r);
+  for (const x of get("ESX host")) assert.equal(x.ips, hosts.get(x.net.split(":")[0]));
+  const nets = ip.planNets(d, r), mg = nets.find(n => n.key.endsWith(":vmmgmt"))!;
+  assert.equal(mg.need, recs.filter(x => x.net === mg.key).reduce((a, x) => a + x.ips, 0));
+  assert.ok(2 ** (32 - mg.prefix) - 3 >= mg.need * 2, "room for twice today's addresses");
+  const w1 = dom(d, "WLD-01");
+  assert.deepStrictEqual(nets.filter(n => n.key.startsWith(w1.id + ":")).map(n => [n.name, n.need, n.prefix]), [["Edge TEP", 14, 27], ["Tier-0 peering A", 8, 28], ["Tier-0 peering B", 8, 28], ["VPC external IP block", 0, 24]]);
+  // identity in instance mode adds its FQDN; distributed drops peering and adds the private block; shared TEPs fold into the host TEP
+  let d2 = must(d, [{ op: "set", path: ["identity", "mode"], value: "instance" }, ...nsx.nsxOps(d, w1.id, "model", "distributed")]);
+  d2 = must(d2, nsx.nsxOps(d2, w1.id, "edgeTep", "shared"));
+  assert.equal(ip.dnsRecords(d2, r).filter(x => x.label === "VCF Identity Broker").length, 1);
+  const n2 = ip.planNets(d2, r).filter(n => n.key.startsWith(w1.id + ":")).map(n => n.name);
+  assert.deepStrictEqual(n2, ["VPC external IP block", "Private transit gateway block"]);
+  const c1 = w1.clusters[0], tep = ip.planNets(d2, r).find(n => n.key === `${c1.id}:tep`)!;
+  assert.equal(tep.name, "Host and edge TEP"); assert.equal(tep.need, hosts.get(c1.id)! * 2 + 14);
+});
+
+test("plan: the proposer fills only empty rows, without overlaps, and the result passes every check", () => {
+  let d = caseDesign("vdefend-atp"); const r = store.sizeDesign(d);
+  assert.throws(() => ip.proposePlan(d, r), /base block/);
+  const c1 = dom(d, "WLD-01").clusters[0];
+  d = must(d, [{ op: "set", path: ["plan", "base"], value: "10.10.0.0/16" }, { op: "set", path: ["plan", "vlanStart"], value: 1610 }]);
+  d = must(d, [...ip.planOps(d, `${c1.id}:vmotion`, "vlan", "1611"), ...[]]);
+  d = must(d, ip.planOps(d, `${c1.id}:vmotion`, "cidr", "10.10.0.0/26"));
+  d = must(d, ip.planOps(d, `${c1.id}:vmotion`, "gw", "10.10.0.62"));
+  d = must(d, ip.proposePlan(d, r));
+  assert.deepStrictEqual(d.plan.rows[`${c1.id}:vmotion`], { vlan: 1611, cidr: "10.10.0.0/26", gw: "10.10.0.62" }, "entered row kept");
+  const nets = ip.planNets(d, r);
+  for (const n of nets) { const x = d.plan.rows[n.key]; assert.ok(x && x.cidr && ip.parseCidr(x.cidr)!.prefix === (n.key === `${c1.id}:vmotion` ? 26 : n.prefix), n.key); if (n.kind === "vlan") assert.ok(x.vlan && x.gw, n.key); }
+  assert.equal(new Set(nets.filter(n => n.kind === "vlan").map(n => d.plan.rows[n.key].vlan)).size, nets.filter(n => n.kind === "vlan").length, "a VLAN each");
+  assert.deepStrictEqual(ip.planIssues(d, r), { issues: [], missing: 0 });
+  assert.deepStrictEqual(store.sizeDesign(d), r, "sizing unchanged");
+  // too small a base
+  const small = must(caseDesign("vdefend-atp"), [{ op: "set", path: ["plan", "base"], value: "10.10.0.0/24" }, { op: "set", path: ["plan", "vlanStart"], value: 100 }]);
+  assert.throws(() => ip.proposePlan(small, r), /too small for the plan/);
+});
+
+test("plan: checks catch too-small subnets, overlaps, duplicate VLANs, gateways and reserved ranges; shared subnets add up", () => {
+  let d = caseDesign("vdefend-atp"); const r = store.sizeDesign(d);
+  const w1 = dom(d, "WLD-01"), c1 = w1.clusters[0], c2 = w1.clusters[1], n1 = hostnet.hostsByCluster(r).get(c1.id)!;
+  const set = (key: string, vlan: string, cidr: string, gw: string) => { d = must(d, ip.planOps(d, key, "vlan", vlan)); d = must(d, ip.planOps(d, key, "cidr", cidr)); d = must(d, ip.planOps(d, key, "gw", gw)); };
+  set(`${c1.id}:esx`, "10", "10.0.0.0/28", "10.0.0.1");          // 14 hosts, 13 usable
+  set(`${c1.id}:vmotion`, "11", "10.0.0.8/29", "10.0.0.9");       // overlaps the one above
+  set(`${c1.id}:vsan`, "10", "10.0.1.0/24", "");                  // VLAN 10 again, other subnet; no gateway
+  set(`${c1.id}:tep`, "12", "198.18.4.0/24", "198.18.4.1");       // reserved
+  set(`${c2.id}:esx`, "13", "10.0.2.0/27", "10.0.2.40");          // gateway outside
+  set(`${c2.id}:vmotion`, "14", "10.0.3.5/24", "10.0.3.1");       // host bits
+  const t = ip.planIssues(d, r).issues.map(i => i.t).join("\n");
+  assert.match(t, new RegExp(`ESX management \\(WLD-01 / ${c1.name}\\): 10.0.0.0/28 is too small: ${n1} addresses needed, 13 usable`));
+  assert.match(t, /10\.0\.0\.0\/28 \(ESX management .*\) overlaps 10\.0\.0\.8\/29/);
+  assert.match(t, /VLAN 10 is used for different subnets/);
+  assert.match(t, /vSAN \(WLD-01 .*\): enter the gateway\./);
+  assert.match(t, /198\.18\.4\.0\/24 overlaps 198\.18\.0\.0\/15, reserved for VCF services runtime/);
+  assert.match(t, /gateway 10\.0\.2\.40 isn't a usable address in 10\.0\.2\.0\/27/);
+  assert.match(t, /10\.0\.3\.5\/24 has host bits set\. Did you mean 10\.0\.3\.0\/24\?/);
+  // two networks on one subnet and VLAN: shared, and their needs add up
+  d = caseDesign("vdefend-atp");
+  set(`${c2.id}:esx`, "20", "10.0.9.0/28", "10.0.9.1"); set(`${c2.id}:vmotion`, "20", "10.0.9.0/28", "10.0.9.1");
+  assert.deepStrictEqual(ip.planIssues(d, r).issues.filter(i => i.t.includes("10.0.9.0/28")), [], "3 + 3 hosts: 6 of 13 usable, room to grow");
+  set(`${c2.id}:esx`, "20", "10.0.9.0/29", "10.0.9.1"); set(`${c2.id}:vmotion`, "20", "10.0.9.0/29", "10.0.9.1");
+  assert.ok(ip.planIssues(d, r).issues.some(i => i.lvl === "crit" && /^10\.0\.9\.0\/29 \(shared by .*\) is too small: 6 addresses needed, 5 usable/.test(i.t)));
+  set(`${c2.id}:esx`, "20", "10.0.9.0/28", "10.0.9.1"); set(`${c2.id}:vmotion`, "20", "10.0.9.0/28", "10.0.9.1");
+  set(`${c2.id}:vsan`, "21", "10.0.9.0/28", "10.0.9.1");
+  assert.ok(ip.planIssues(d, r).issues.some(i => /10\.0\.9\.0\/28 is used by .* on different VLANs/.test(i.t)));
+  set(`${c1.id}:tep`, "30", "10.0.20.0/27", "10.0.20.1");     // fits today (29 usable), not twice
+  assert.ok(ip.planIssues(d, r).issues.some(i => i.lvl === "warn" && i.t.startsWith(`Host TEP (WLD-01 / ${c1.name}): 10.0.20.0/27 has little room to grow (${n1 * 2} of 29`)));
+  assert.throws(() => ip.planOps(d, `${c2.id}:esx`, "vlan", "5000"), /1 to 4094/);
+});
+
+test("plan: rows for removed clusters are dropped on load; rows are kept through a save", () => {
+  let d = caseDesign("vdefend-atp"); const c = dom(d, "WLD-01").clusters[1];
+  d = must(d, ip.planOps(d, `${c.id}:esx`, "cidr", "10.0.0.0/27"));
+  const again = engine.loadDesign(JSON.parse(engine.serializeDesign(d))); if (again.kind !== "design") throw new Error();
+  assert.deepStrictEqual(again.design.plan.rows, { [`${c.id}:esx`]: { cidr: "10.0.0.0/27" } });
+  d = must(d, edit.actionOps(d, { act: "delClu", id: c.id }).ops);
+  assert.deepStrictEqual(d.plan.rows, {});
+});
+
+test("the IP plan knowledge file has a source, a link and a verified date for each table", () => {
+  const k = JSON.parse(readText(new URL("../knowledge/ipplan.json", import.meta.url), "utf8"));
+  for (const [name, t] of Object.entries(k.tables) as [string, { source: string; url: string; verified: string }][]) assert.ok(t.source && /^https:\/\/techdocs\.broadcom\.com\//.test(t.url) && /^\d{4}-\d\d-\d\d$/.test(t.verified), name);
+});

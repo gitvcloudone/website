@@ -6,7 +6,7 @@ import { maxFor, tierMax } from "../../engine/src/index.js";
                                                                       
 import { STEPS, stepById } from "./flow.js";
 import { policyFields, fleetFields, clusterFields } from "./fields.js";
-import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml, nsxHtml } from "./expert.js";
+import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml, nsxHtml, planHtml } from "./expert.js";
                                             
 import { stepState, changes, STORAGE_KEYS } from "./steps.js";
                                             
@@ -71,7 +71,9 @@ function reviewHtml(d        , r              ) {
     <h4>Open items</h4>
     ${open.length ? `<ul>${open.map(o => `<li><a href="#/step/${o.s.id}">${esc(o.s.title)}</a>: ${esc(o.t)}</li>`).join("")}</ul>` : `<p class="hint">None.</p>`}
     <h4>Sizing checks</h4>
-    ${crit.length || warn.length ? `<ul class="warns">${[...crit, ...warn].map(w => `<li class="${w.lvl}">${esc(w.t)}</li>`).join("")}</ul>` : `<p class="hint">No issues.</p>`}`;
+    ${crit.length || warn.length ? `<ul class="warns">${[...crit, ...warn].map(w => `<li class="${w.lvl}">${esc(w.t)}</li>`).join("")}</ul>` : `<p class="hint">No issues.</p>`}
+    <h3 id="plan">IP / VLAN / DNS plan</h3>
+    ${planHtml(d, r)}`;
 }
 
 function outputHtml() {

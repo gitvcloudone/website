@@ -6,7 +6,7 @@ import { DEFAULTS } from "../knowledge.js";
                                                                        
 
 export const FORMAT = "vcf-design";
-export const FORMAT_VERSION = 6;
+export const FORMAT_VERSION = 7;
 
 // Which sizing setting lives in which section. Together they are exactly the page's settings (DEFAULTS + project text).
 export const SECTION_KEYS = {
@@ -55,6 +55,11 @@ export const newIdentity = ()           => ({ mode: "", idp: "", provisioning: "
  
 export const newNetwork = ()          => ({ domain: "", dns: "", ntp: "", hostNics: {}, clusters: {}, domains: {} });
 
+/** IP / VLAN plan (format 7+): what's entered (or proposed) for each network, keyed "<instance, domain or cluster id>:<network>". */
+                                                                      
+                                                                                        
+export const newPlan = ()       => ({ base: "", vlanStart: 0, rows: {} });
+
                          
                         
                         
@@ -67,6 +72,7 @@ export const newNetwork = ()          => ({ domain: "", dns: "", ntp: "", hostNi
                             
                      
                    
+             
                        
  
 
@@ -92,6 +98,7 @@ export function newDesign()         {
     hostTypes: [], topology: { instances: [] },
     identity: newIdentity(),
     network: newNetwork(),
+    plan: newPlan(),
     decisions: { steps: {} },
   }          ;
 }
