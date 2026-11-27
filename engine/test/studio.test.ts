@@ -202,7 +202,7 @@ test("a format 1 design opens as format 2 with nothing changed: RVTools values a
 const fake = fakeFiles() as Record<string, Record<string, unknown>>;
 const readFake = (n: string) => rvi.readExport(fake[n].fileName as string, s => (fake[n][s] as never) ?? null);
 const rvCases = CASES.filter(c => c.rvtools);
-const strip = (gs: { name: string; source: string; include: boolean; values: unknown; meta: unknown }[]) => gs.map(g => ({ name: g.name, source: g.source, include: g.include, values: g.values, meta: g.meta }));
+const strip = (gs: { name: string; source?: string; include?: boolean; values: unknown; meta?: unknown }[]) => gs.map(g => ({ name: g.name, source: g.source, include: g.include, values: g.values, meta: g.meta }));
 
 test("RVTools import in the studio builds the same groups and sizing as the VCF Sizing page, for every RVTools case", () => {
   assert.equal(rvCases.length, 3);
@@ -221,7 +221,7 @@ test("RVTools import in the studio builds the same groups and sizing as the VCF 
     assert.ok(d.workload.groups.filter(g => g.source === "rvtools").every(g => g.parsed && rvi.overridden(g).length === 0));
     const want = engine.size(i.S, i.topo, i.groups, i.hostTypes), got = store.sizeDesign(d);
     assert.deepStrictEqual([got.hosts, got.licCores, got.clusters.map(x => x.total)], [want.hosts, want.licCores, want.clusters.map(x => x.total)], `${c.name}: sizing`);
-    assert.equal(rb.stats.dups, i.rv.build.dups); assert.equal(rb.stats.excluded, i.rv.build.excluded);
+    assert.equal(rb.stats.dups, i.rv!.build.dups); assert.equal(rb.stats.excluded, i.rv!.build.excluded);
   }
 });
 
