@@ -82,6 +82,23 @@ export function evaluate(d        , r              )               {
   });
 }
 
+/** Scores mean something only once there's a workload and a sized cluster; before that, show none. */
+export function scorable(d        , r              )          {
+  const work = d.workload.groups.some(g => g.include !== false && ((Number(g.values?.vcpu) || 0) > 0 || (Number(g.values?.vramGiB) || 0) > 0));
+  return work && r.clusters.length > 0;
+}
+
+                                                                                          
+/** What's wrong with the design itself, leaving out what only the customer can supply (rules with input "customer")
+ *  and "consider" tips: open required and recommended rules, plus the sizing checks to fix or check. */
+export function designIssues(d        , r              )                {
+  const out                = [];
+  for (const x of evaluate(d, r)) if (x.status === "open" && !x.rule.input && x.rule.level !== "consider")
+    for (const f of x.findings) if (!f.reason) out.push({ level: x.rule.level                        , text: `${x.rule.title}: ${f.where}` });
+  for (const w of r.warnings) if (w.lvl === "crit") out.push({ level: "required", text: w.t }); else if (w.lvl === "warn") out.push({ level: "check", text: w.t });
+  return out;
+}
+
                                                                                                                                                                       
 /** Per pillar: rules met, deviations accepted, open; at risk with an open required rule; incomplete when a step feeding it was skipped. */
 export function scorecard(d        , res              )                {

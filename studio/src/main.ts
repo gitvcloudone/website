@@ -1,6 +1,6 @@
 // VCF Design Studio: page shell. Step rail, live summary, start screen, autosave.
 // All changes go through store.propose(); views only read the design and the sizing result.
-import { loadDesign, newDesign, serializeDesign, mergeHostTypes, clusterReason, summaryLine, FORMAT_VERSION } from "../../engine/src/index.ts";
+import { loadDesign, newDesign, serializeDesign, mergeHostTypes, clusterReason, summaryLine } from "../../engine/src/index.ts";
 import type { Design, SizingResult } from "../../engine/src/index.ts";
 import { openSaved, save, forget, propose, sizeDesign } from "./store.ts";
 import type { Proposal } from "./store.ts";
@@ -11,7 +11,8 @@ import { fieldOps, hostTypeOps, actionOps, identityOps } from "./edit.ts";
 import { netOps, nicsOps } from "./hostnet.ts";
 import { nsxOps } from "./nsx.ts";
 import { planOps, proposePlan } from "./ip.ts";
-import { evaluate, scorecard, deviationOps } from "./rules.ts";
+import { evaluate, scorecard, deviationOps, scorable } from "./rules.ts";
+import { enabled } from "./flags.ts";
 import { easyOptions, applyOptionOps, snapOf } from "./easy.ts";
 import type { EasyInputs, EasyOption } from "./easy.ts";
 import { easyHtml } from "./guided.ts";
@@ -56,8 +57,8 @@ type Route = { view: "start" } | { view: "step"; id: string } | { view: "expert"
 function route(): Route {
   const h = location.hash.replace(/^#\/?/, "").split("/");
   if (h[0] === "step" && stepById(h[1] || "")) return h[1] === "start" ? { view: "start" } : { view: "step", id: h[1] };
-  if (h[0] === "expert") return { view: "expert" };
-  if (h[0] === "easy") return { view: "easy" };
+  if (h[0] === "expert" && enabled("expertView")) return { view: "expert" };
+  if (h[0] === "easy" && enabled("easyButton")) return { view: "easy" };
   return { view: "start" };
 }
 const go = (hash: string) => { if (location.hash === hash) render(); else location.hash = hash; };
@@ -73,8 +74,8 @@ function railHtml(r: Route) {
     const inner = `<span class="n">${s.n}</span><span class="t">${esc(s.title)}</span>${badge}`;
     return `<li class="${s.id === cur ? "on" : ""} ${coming ? "coming" : ""}">${coming ? `<span class="item" aria-disabled="true">${inner}</span>` : `<a class="item" href="#/step/${s.id}" ${s.id === cur ? 'aria-current="step"' : ""}>${inner}</a>`}</li>`;
   }).join("")}</ol>
-  <a class="expert ${r.view === "easy" ? "on" : ""}" href="#/easy">Easy button <span class="hint">three complete options</span></a>
-  <a class="expert ${r.view === "expert" ? "on" : ""}" href="#/expert">Expert view <span class="hint">all settings on one page</span></a>`;
+  ${enabled("easyButton") ? `<a class="expert ${r.view === "easy" ? "on" : ""}" href="#/easy">Easy button <span class="hint">three complete options</span></a>` : ""}
+  ${enabled("expertView") ? `<a class="expert ${r.view === "expert" ? "on" : ""}" href="#/expert">Expert view <span class="hint">all settings on one page</span></a>` : ""}`;
 }
 
 function summaryHtml() {
@@ -85,7 +86,7 @@ function summaryHtml() {
     <p class="line">${esc(summaryLine(r))}</p>
     <div class="tiles">${tiles.map(([k, v]) => `<div class="tile"><span class="k">${k}</span><span class="big num">${v}</span></div>`).join("")}</div>
     ${r.clusters.length ? `<ul class="reasons">${r.clusters.slice(0, 8).map(c => `<li><b>${esc(c.c.name)}</b> ${esc(clusterReason(c))}</li>`).join("")}${r.clusters.length > 8 ? `<li class="hint">…and ${r.clusters.length - 8} more clusters</li>` : ""}</ul>` : ""}
-    ${(sc => `<p class="hint bp">Best practices: ${sc.reduce((a, p) => a + p.open, 0)} not met, ${sc.reduce((a, p) => a + p.accepted, 0)} accepted as deviations${sc.some(p => p.atRisk) ? ` · <span class="pill crit">At risk: ${esc(sc.filter(p => p.atRisk).map(p => p.label).join(", "))}</span>` : ""}. <a href="#/step/review">Scorecard</a></p>`)(scorecard(design, evaluate(design, r)))}
+    ${!scorable(design, r) ? "" : (sc => `<p class="hint bp">Best practices: ${sc.reduce((a, p) => a + p.open, 0)} not met, ${sc.reduce((a, p) => a + p.accepted, 0)} accepted as deviations${sc.some(p => p.atRisk) ? ` · <span class="pill crit">At risk: ${esc(sc.filter(p => p.atRisk).map(p => p.label).join(", "))}</span>` : ""}. <a href="#/step/review">Scorecard</a></p>`)(scorecard(design, evaluate(design, r)))}
     ${crit.length || warn.length ? `<p class="hint">${crit.length ? `<span class="pill crit">${crit.length} to fix</span> ` : ""}${warn.length ? `<span class="pill warn">${warn.length} to check</span>` : ""}</p>
       <ul class="warns">${[...crit, ...warn].slice(0, 3).map(w => `<li class="${w.lvl}">${esc(w.t)}</li>`).join("")}</ul>` : ""}
   </section>`;
@@ -296,5 +297,4 @@ document.addEventListener("click", ev => {
   if (commit({ source: "easy-button", ops: applyOptionOps(design, easyIn, o) })) { undoEasy = before; go("#/step/review"); }
 });
 
-$("ver").textContent = `design format ${FORMAT_VERSION}`;
 render();

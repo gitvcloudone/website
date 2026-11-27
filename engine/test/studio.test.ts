@@ -2,7 +2,8 @@
 // (opening what this browser has saved, proposals) works. The page itself is checked in a browser.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { build } from "../../studio/build.mjs";
@@ -17,6 +18,9 @@ test("vcf-design-studio/app is up to date with the source (run npm run build)", 
   try {
     const files = build(dir);
     for (const f of files) assert.equal(readFileSync(join(dir, f), "utf8"), readFileSync(new URL(`../../vcf-design-studio/app/${f}`, import.meta.url), "utf8"), f);
+    // and nothing left over from a source file that no longer exists
+    const walk = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(join(d, e.name)).map(x => join(e.name, x)) : [e.name]);
+    assert.deepStrictEqual(walk(fileURLToPath(new URL("../../vcf-design-studio/app/", import.meta.url))).sort(), [...files].sort(), "committed files match the build");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -813,4 +817,80 @@ test("easy button: applying an option gives exactly the numbers on its card, rec
   const reg = rules.decisionRegister(y, rules.evaluate(y, store.sizeDesign(y)));
   assert.ok(reg.some(e => e.step === "Host types" && e.kind === "changed" && /after the easy button/.test(e.text)), "an override shows as your decision");
   assert.ok(reg.some(e => e.step === "Topology" && e.kind === "auto"));
+});
+
+// ---------- review fixes (6b) ----------
+import * as flags from "../../studio/src/flags.ts";
+import { easyHtml } from "../../studio/src/guided.ts";
+/** A design with one manual workload group of the given size, everything else as the case has it. */
+const sized = (name: string, values: Record<string, number>) => {
+  const d = structuredClone(caseDesign(name));
+  d.workload.groups = [{ ...d.workload.groups[0], id: 1, name: "Apps", source: "manual", include: true, parsed: null,
+    values: { vms: 0, vcpu: 0, vramGiB: 0, usedTiB: 0, allocTiB: 0, templTiB: 0, ...values }, opts: { ...d.workload.groups[0].opts, place: "auto", drTo: "" } } as never];
+  return d;
+};
+const WORKLOADS = {
+  "400 VMs (the 27 Nov review)": { vms: 400, vcpu: 1600, vramGiB: 6400, usedTiB: 120, allocTiB: 200 },
+  "small": { vms: 40, vcpu: 120, vramGiB: 480, usedTiB: 8, allocTiB: 12 },
+  "memory-heavy": { vms: 300, vcpu: 900, vramGiB: 24000, usedTiB: 60, allocTiB: 90 },
+  "storage-heavy": { vms: 200, vcpu: 600, vramGiB: 2400, usedTiB: 900, allocTiB: 1200 },
+};
+
+test("easy button: no option breaks a required rule, and every recommended one it misses is on its card", () => {
+  for (const [label, w] of Object.entries(WORKLOADS)) for (const layout of ["standard", "consolidated"] as const) {
+    const d = sized("simple-basic", w), inp = { ...GEN, layout }, opts = easy.easyOptions(d, inp);
+    assert.ok(opts.length, `${label} ${layout}: options`);
+    for (const o of opts) {
+      const x = must(d, easy.applyOptionOps(d, inp, o)), r = store.sizeDesign(x), issues = rules.designIssues(x, r);
+      assert.ok(!issues.some(i => i.level === "required"), `${label} ${layout} ${o.key}: a required rule broken: ${JSON.stringify(issues)}`);
+      assert.deepStrictEqual(issues.map(i => i.text), o.issues.map(i => i.text), `${label} ${layout} ${o.key}: the card lists exactly what the design misses`);
+      if (o.issues.length) assert.match(easyHtml(d, inp, opts), /Below best practice/);
+    }
+  }
+});
+
+test("easy button: the 400-VM workload gets 4-host vSAN clusters with rebuild room, on every option", () => {
+  const d = sized("simple-basic", WORKLOADS["400 VMs (the 27 Nov review)"]);
+  for (const layout of ["standard", "consolidated"] as const) for (const o of easy.easyOptions(d, { ...GEN, layout })) {
+    assert.deepStrictEqual(o.issues, [], `${layout} ${o.key}: meets every design best practice`);
+    const x = must(d, easy.applyOptionOps(d, { ...GEN, layout }, o)), r = store.sizeDesign(x);
+    for (const c of r.clusters.filter(c => engine.isVsan(c.c) && c.c.topo !== "stretched")) {
+      assert.ok(c.total >= easy.VSAN_MIN_HOSTS, `${layout} ${o.key} ${c.c.name}: ${c.total} hosts`);
+      assert.ok(c.total - 1 >= c.pol!.min, `${layout} ${o.key} ${c.c.name}: room to rebuild with a host down`);
+    }
+    assert.ok(!r.warnings.some(w => /can't rebuild/.test(w.t)), `${layout} ${o.key}: no rebuild warning`);
+    if (o.raised.length) assert.match(x.decisions.auto!.reasons.topology, /vSAN clusters start at 4 hosts/, "a raised cluster says why");
+  }
+});
+
+test("easy button: rules only the customer can meet are marked and never count against an option", () => {
+  const cust = engine.RULES.filter(r => r.input === "customer").map(r => r.id).sort();
+  assert.deepStrictEqual(cust, ["MG-DNS-NTP", "MG-MGMT-VLANS", "MG-PLAN-CONSISTENT", "MG-SUBNET-GROWTH", "RC-BREAKGLASS", "SC-ASN", "SC-IDENTITY"]);
+  const o = easy.easyOptions(sized("simple-basic", WORKLOADS.small), GEN);
+  for (const x of o) assert.ok(!x.issues.some(i => /DNS|identity provider|Break-glass|ASN|IP plan/i.test(i.text)), `${x.key}: no customer facts among its issues`);
+});
+
+test("no best-practice scores or at-risk badges before the design has a workload and a topology", () => {
+  const empty = engine.newDesign();
+  assert.equal(rules.scorable(empty, store.sizeDesign(empty)), false);
+  const html = stepHtml(empty, store.sizeDesign(empty), { sel: "", closed: new Set() } as never, "review");
+  assert.match(html, /Scores appear once the design has a workload and a topology/);
+  assert.doesNotMatch(html, /At risk/);
+  const d = caseDesign("simple-basic");
+  assert.equal(rules.scorable(d, store.sizeDesign(d)), true);
+  assert.match(stepHtml(d, store.sizeDesign(d), { sel: "", closed: new Set() } as never, "review"), /<table class="score">/);
+});
+
+test("no internal jargon on the page: the design format number stays in the design file", () => {
+  assert.doesNotMatch(readFileSync(new URL("../../vcf-design-studio/index.html", import.meta.url), "utf8"), /design format/i);
+  assert.doesNotMatch(readFileSync(new URL("../../studio/src/main.ts", import.meta.url), "utf8"), /design format/i);
+});
+
+test("feature flags: everything on for every tier today; turning a feature off hides it", () => {
+  for (const t of flags.TIERS) for (const f of Object.keys(flags.FEATURES) as flags.Feature[]) assert.ok(flags.enabled(f, t), `${f} for ${t}`);
+  const d = sized("simple-basic", WORKLOADS.small), r = store.sizeDesign(d), ui = { sel: "", closed: new Set() } as never;
+  assert.match(stepHtml(d, r, ui, "workload"), /href="#\/easy"/);
+  try { flags.setOverrides({ easyButton: false }); assert.doesNotMatch(stepHtml(d, r, ui, "workload"), /href="#\/easy"/); }
+  finally { flags.setOverrides({}); }
+  assert.ok(flags.enabled("easyButton"));
 });

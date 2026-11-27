@@ -81,6 +81,23 @@ export function evaluate(d: Design, r: SizingResult): RuleResult[] {
   });
 }
 
+/** Scores mean something only once there's a workload and a sized cluster; before that, show none. */
+export function scorable(d: Design, r: SizingResult): boolean {
+  const work = d.workload.groups.some(g => g.include !== false && ((Number(g.values?.vcpu) || 0) > 0 || (Number(g.values?.vramGiB) || 0) > 0));
+  return work && r.clusters.length > 0;
+}
+
+export interface DesignIssue { level: "required" | "recommended" | "check"; text: string }
+/** What's wrong with the design itself, leaving out what only the customer can supply (rules with input "customer")
+ *  and "consider" tips: open required and recommended rules, plus the sizing checks to fix or check. */
+export function designIssues(d: Design, r: SizingResult): DesignIssue[] {
+  const out: DesignIssue[] = [];
+  for (const x of evaluate(d, r)) if (x.status === "open" && !x.rule.input && x.rule.level !== "consider")
+    for (const f of x.findings) if (!f.reason) out.push({ level: x.rule.level as DesignIssue["level"], text: `${x.rule.title}: ${f.where}` });
+  for (const w of r.warnings) if (w.lvl === "crit") out.push({ level: "required", text: w.t }); else if (w.lvl === "warn") out.push({ level: "check", text: w.t });
+  return out;
+}
+
 export interface PillarScore { pillar: Pillar; label: string; met: number; accepted: number; open: number; applicable: number; atRisk: boolean; incomplete: string[] }
 /** Per pillar: rules met, deviations accepted, open; at risk with an open required rule; incomplete when a step feeding it was skipped. */
 export function scorecard(d: Design, res: RuleResult[]): PillarScore[] {

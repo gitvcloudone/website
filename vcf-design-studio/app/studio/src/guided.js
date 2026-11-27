@@ -7,8 +7,9 @@ import { maxFor, tierMax, hwText, clusterReason as clusterReasonText } from "../
 import { STEPS, stepById } from "./flow.js";
 import { policyFields, fleetFields, clusterFields } from "./fields.js";
 import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml, hostnetHtml, nsxHtml, planHtml, rulesBox } from "./expert.js";
-import { evaluate, scorecard, decisionRegister, riskRegister } from "./rules.js";
+import { evaluate, scorecard, decisionRegister, riskRegister, scorable } from "./rules.js";
                                                         
+import { enabled } from "./flags.js";
                                             
 import { stepState, changes, STORAGE_KEYS } from "./steps.js";
                                             
@@ -46,7 +47,7 @@ function choiceBar(d        , id        ) {
 function body(d        , r              , ui          , id        )         {
   switch (id) {
     case "project": return projectHtml(d);
-    case "workload": return workloadHtml(d, ui) + `<section class="card"><div class="choice"><div><h3>Easy button</h3><p class="hint">Three complete designs from this workload (fewest hosts, lowest licensing, and the sweet spot between them), with recommended values for every step. Pick one and go straight to Review.</p></div><div class="row"><a class="btn" href="#/easy">Easy button</a></div></div></section>`;
+    case "workload": return workloadHtml(d, ui) + (!enabled("easyButton") ? "" : `<section class="card"><div class="choice"><div><h3>Easy button</h3><p class="hint">Three complete designs from this workload (fewest hosts, lowest licensing, and the sweet spot between them), with recommended values for every step. Pick one and go straight to Review.</p></div><div class="row"><a class="btn" href="#/easy">Easy button</a></div></div></section>`);
     case "policy": return `<div class="grid">${fields(policyFields(), d.policy                                      , { t: "sec", sec: "policy" })}</div>`;
     case "fleet": return `<div class="grid">${fields(fleetFields(d.fleet), d.fleet                                      , { t: "sec", sec: "fleet" })}</div>`;
     case "identity": return identityHtml(d) + rulesBox(d, r, ["identity"]);
@@ -69,7 +70,8 @@ function reviewHtml(d        , r              ) {
   const res = evaluate(d, r), score = scorecard(d, res), decs = decisionRegister(d, res), risks = riskRegister(res);
   const open = STEPS.flatMap(s => { const st = stepState(d, s.id);
     return [...(["todo", "skipped", "open"].includes(st.state) ? [{ s, t: st.note }] : []), ...(st.open || []).map(t => ({ s, t }))]; });
-  const ruleOpen = res.filter(x => x.status === "open").flatMap(x => x.findings.filter(f => !f.reason).map(f => ({ x, f })));
+  const ready = scorable(d, r);
+  const ruleOpen = !ready ? [] : res.filter(x => x.status === "open").flatMap(x => x.findings.filter(f => !f.reason).map(f => ({ x, f })));
   const stepLink = (id        ) => id === "plan" ? `<a href="#plan">IP / VLAN / DNS plan</a>` : `<a href="#/step/${id}">${esc(stepById(id)?.title || id)}</a>`;
   const KIND                         = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", auto: "Auto-selected", deviation: "Deviation accepted" };
   const crit = r.warnings.filter(w => w.lvl === "crit"), warn = r.warnings.filter(w => w.lvl === "warn");
@@ -77,9 +79,9 @@ function reviewHtml(d        , r              ) {
     <h4>Open items</h4>
     ${open.length || ruleOpen.length ? `<ul>${open.map(o => `<li><a href="#/step/${o.s.id}">${esc(o.s.title)}</a>: ${esc(o.t)}</li>`).join("")}${ruleOpen.map(o => `<li>${stepLink(o.x.rule.step)}: <span class="lvl lvl-${o.x.rule.level}">${o.x.rule.level === "required" ? "Required" : o.x.rule.level === "recommended" ? "Recommended" : "Consider"}</span> ${esc(o.x.rule.title)}: ${esc(o.f.where)}. Change the design, or accept it with a reason.</li>`).join("")}</ul>` : `<p class="hint">None.</p>`}
     <h4>Best-practice scorecard</h4>
-    <div class="tablewrap"><table class="score"><thead><tr><th>Pillar</th><th class="n">Met</th><th class="n">Deviations accepted</th><th class="n">Not met</th><th>Status</th></tr></thead><tbody>
+    ${!ready ? `<p class="hint">Scores appear once the design has a workload and a topology to check.</p>` : `<div class="tablewrap"><table class="score"><thead><tr><th>Pillar</th><th class="n">Met</th><th class="n">Deviations accepted</th><th class="n">Not met</th><th>Status</th></tr></thead><tbody>
       ${score.map(p => `<tr><td>${esc(p.label)}</td><td class="n num">${p.met} of ${p.applicable}</td><td class="n num">${p.accepted}</td><td class="n num">${p.open}</td><td>${p.atRisk ? `<span class="pill crit">At risk</span> ` : ""}${p.incomplete.length ? `<span class="pill warn">Incomplete: ${esc(p.incomplete.join(", "))} skipped</span>` : ""}${!p.atRisk && !p.incomplete.length ? (p.open ? "Open items" : p.applicable ? "Good" : "Nothing to check yet") : ""}</td></tr>`).join("")}
-    </tbody></table></div>
+    </tbody></table></div>`}
     <h4>Design decisions</h4>
     ${decs.length ? `<div class="tablewrap"><table class="decisions"><thead><tr><th>Step</th><th>Decision</th><th>Kind</th><th>Reason</th></tr></thead><tbody>${decs.map(x => `<tr><td>${esc(x.step)}</td><td>${esc(x.text)}</td><td>${KIND[x.kind]}</td><td>${esc(x.reason || "")}</td></tr>`).join("")}</tbody></table></div>` : `<p class="hint">None yet.</p>`}
     <h4>Risks</h4>
@@ -121,13 +123,16 @@ export function easyHtml(d        , inp            , opts                     ) 
   const hasWork = d.workload.groups.some(g => g.include && ((Number(g.values.vcpu) || 0) > 0 || (Number(g.values.vramGiB) || 0) > 0));
   const custom = inp.source === "custom";
   const card = (o            ) => {
-    const res = evaluate(o.design, o.r), sc = scorecard(o.design, res), open = sc.reduce((a, p) => a + p.open, 0), risk = sc.filter(p => p.atRisk).map(p => p.label);
     const tiles = [["Hosts", _nf(o.hosts)], ["Licensed cores", _nf(o.licCores)], ["vSAN add-on", `${_nf(o.addOnTiB)} TiB`]];
     return `<div class="option"><h3>${esc(o.label)}</h3><p class="hint">${esc(o.why)}.${o.same.length ? ` Same design as ${esc(o.same.join(" and "))}.` : ""}</p>
       <p><b>${esc(custom ? o.hw.name + ": " : "")}${esc(hwText(o.hw))}</b>${o.tier ? `<br><span class="hint">NVMe memory tiering on where workloads run</span>` : ""}</p>
       <div class="tiles">${tiles.map(([k, v]) => `<div class="tile"><span class="k">${k}</span><span class="big num">${v}</span></div>`).join("")}</div>
       <ul class="reasons">${o.r.clusters.map(c => `<li><b>${esc(c.c.name)}</b> ${esc(clusterReasonText(c))}</li>`).join("")}</ul>
-      <p class="hint">Best practices: ${open} not met${risk.length ? `, <span class="pill crit">at risk: ${esc(risk.join(", "))}</span>` : ""} (customer details such as DNS and ASNs are still to enter).</p>
+      ${o.raised.length ? `<ul class="reasons">${o.raised.map(t => `<li>${esc(t)}.</li>`).join("")}</ul>` : ""}
+      ${o.issues.length
+        ? `<p class="hint"><span class="pill warn">Below best practice</span> No option meets every best practice for this workload; this one accepts:</p><ul class="warns">${o.issues.map(i => `<li class="warn">${esc(i.text)}</li>`).join("")}</ul>`
+        : `<p class="hint"><span class="pill good">Meets every design best practice</span></p>`}
+      <p class="hint">Still yours to enter: DNS and NTP, identity provider and roles, break-glass, BGP ASNs and the IP plan.</p>
       <div class="row"><button type="button" data-easy="${esc(o.key)}">Use this option</button></div></div>`;
   };
   return `<section class="card step">

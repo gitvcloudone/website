@@ -5,7 +5,7 @@
 // domain) or consolidated. Picking one fills steps 4-12 with recommended values and records every automatic
 // choice with its reason. Customer facts (DNS, NTP, identity provider, roles, break-glass, ASNs, IP plan) are
 // never filled. No DOM; tested.
-import { VENDORS, CLUSTER_DEFAULTS, NVME_TB, HOST_LCPU_MAX, ramOptions, fixHw, hwText, clusterReason } from "../../engine/src/index.js";
+import { VENDORS, CLUSTER_DEFAULTS, NVME_TB, HOST_LCPU_MAX, ramOptions, fixHw, hwText, clusterReason, isVsan } from "../../engine/src/index.js";
                                                                                                                
 import { sizeDesign, propose } from "./store.js";
                                      
@@ -13,10 +13,18 @@ import { newDomain } from "./edit.js";
 import { recommendOps } from "./steps.js";
 import { STEPS } from "./flow.js";
 import { snapOf } from "./snap.js";
+import { designIssues } from "./rules.js";
+                                              
 export { snapOf };
 
+/** The easy button's floor for a vSAN cluster that isn't stretched: four hosts (RC-VSAN-4), and one more than its
+ *  storage policy needs, so a host can be in maintenance or failed while vSAN rebuilds to full protection. */
+export const VSAN_MIN_HOSTS = 4;
+
                                                                                                                         
-                                                                                                                                              
+/** raised: clusters set above their sized count so the design meets the vSAN rules (why, for the record).
+ *  issues: what's still below best practice in the design itself (customer details left out); filled for the pool, not every trial. */
+                                                                                                                                                                                       
                                                                                                                        
 
 /** Steps the easy button sets to their recommended values. */
@@ -52,9 +60,21 @@ export function topologyFor(layout                      , htId        , tier    
 
 const designWith = (base        , hw          , layout                      , tier         )         =>
   ({ ...base, hostTypes: [{ ...hw, id: "h1" }], topology: topologyFor(layout, "h1", tier) });
-const measure = (design        , hw          , tier         )            => {
-  const r = sizeDesign(design);
-  return { hw, tier, design, r, hosts: r.hosts, licCores: r.licCores, addOnTiB: r.lic.addOnTiB };
+/** Size a design; any vSAN cluster below the floor is set to it (fixed hosts) and the design sized again. */
+const measure = (design0        , hw          , tier         )            => {
+  let design = design0, r = sizeDesign(design);
+  const raise = new Map                                    ();
+  for (const x of r.clusters) {
+    if (x.c.clone || !isVsan(x.c) || x.c.topo === "stretched" || !x.pol) continue;
+    const n = Math.max(VSAN_MIN_HOSTS, x.pol.min + 1);
+    if (x.total < n) raise.set(x.c.id, { n, why: `${x.c.name} set to ${n} hosts (sized at ${x.total}): vSAN clusters start at ${VSAN_MIN_HOSTS} hosts, so one can be in maintenance or fail while vSAN rebuilds to full protection` });
+  }
+  if (raise.size) {
+    design = structuredClone(design);
+    for (const i of design.topology.instances) for (const dm of [i.mgmt, ...i.wlds]) for (const c of dm.clusters) { const x = raise.get(c.id); if (x) c.fixedHosts = x.n; }
+    r = sizeDesign(design);
+  }
+  return { hw, tier, design, r, hosts: r.hosts, licCores: r.licCores, addOnTiB: r.lic.addOnTiB, raised: [...raise.values()].map(x => x.why), issues: [] };
 };
 
 /** Host types to try: every catalogue CPU and balanced memory configuration (2 sockets), or the design's own. */
@@ -85,7 +105,10 @@ export function candidates(d        , inp            , withTier = false)        
   }
   const key = (c           ) => JSON.stringify([c.hw.vendor, c.hw.cores, c.hw.ramGB]);
   const plainHosts = new Map(out.filter(c => !c.tier).map(c => [key(c), c.hosts]));
-  return out.filter(c => c.hosts > 0 && (!c.tier || c.hosts < (plainHosts.get(key(c)) ?? Infinity)));
+  const pool = out.filter(c => c.hosts > 0 && (!c.tier || c.hosts < (plainHosts.get(key(c)) ?? Infinity)));
+  // Required rules are a floor: a candidate that breaks one is never offered. Recommended ones are kept and listed.
+  for (const c of pool) c.issues = designIssues(c.design, c.r);
+  return pool.filter(c => !c.issues.some(i => i.level === "required"));
 }
 
 const by = (...ks                              ) => (a           , b           ) => { for (const k of ks) { const x = k(a) - k(b); if (x) return x; } return 0; };
@@ -95,8 +118,10 @@ const phys = (c           ) => c.hw.sockets * c.hw.cores;
  *  and the sweet spot: on the trade-off curve (no other candidate has both fewer hosts and fewer licensed cores), the point
  *  nearest the ideal of both, each scaled over the curve. Ties go to the smaller hardware (less RAM, fewer drives, no tiering). */
 export function easyOptions(d        , inp            )               {
-  const pool = candidates(d, inp, true);
-  if (!pool.length) return [];
+  const all = candidates(d, inp, true);
+  if (!all.length) return [];
+  // Options come from the candidates that meet every best practice; only when none does are the others used, each with its exceptions listed.
+  const clean = all.filter(c => !c.issues.length), pool = clean.length ? clean : all;
   const small = [c => c.addOnTiB, (c           ) => (c.tier ? 1 : 0), (c           ) => c.hw.ramGB, (c           ) => c.hw.nvme, phys]                                ;
   const fewest = [...pool].sort(by(c => c.hosts, c => c.licCores, ...small))[0];
   const lic = [...pool].sort(by(c => c.licCores, c => c.hosts, ...small))[0];
@@ -118,7 +143,7 @@ export function easyOptions(d        , inp            )               {
 /** The changes that apply an option: recommended values on the auto steps, its host type and topology, and the record of why. */
 export function applyOptionOps(d        , inp            , o            )       {
   const hw = { ...o.hw, id: "h1", name: inp.source === "custom" ? o.hw.name : `${o.hw.sockets} × ${o.hw.cores}-core ${VENDORS[o.hw.vendor].label}, ${o.hw.ramGB.toLocaleString("en-US")} GB` };
-  const x = o.design, topo = topologyFor(inp.layout, "h1", o.tier);
+  const x = o.design, topo = structuredClone(o.design.topology);   // as sized, with any cluster raised to the vSAN floor
   const decided = clusterReason(o.r.clusters[o.r.clusters.length - 1]);
   const title = (id        ) => STEPS.find(s => s.id === id)?.title || id;
   const reasons                         = {
@@ -127,6 +152,8 @@ export function applyOptionOps(d        , inp            , o            )       
       ? `Management domain for the VCF management components, one workload domain for the workloads, and a 2-node large edge cluster there. Last cluster: ${decided}.`
       : `Consolidated: workloads run in the management domain's cluster, with a 2-node large edge cluster. ${decided}.`,
   };
+  if (o.raised.length) reasons.topology += ` ${o.raised.join(". ")}.`;
+  if (o.issues.length) reasons.topology += ` Below best practice, accepted with this option: ${o.issues.map(i => i.text).join("; ")}.`;
   for (const s of AUTO_STEPS) reasons[s] = `${title(s)}: recommended values, set by the easy button.`;
   const steps = { ...d.decisions.steps }; for (const s of AUTO_STEPS) steps[s] = "recommended";
   const ops       = [

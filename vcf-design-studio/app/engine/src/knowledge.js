@@ -98,6 +98,7 @@ export const IPPLAN = {
 
 // Best-practice rules: pillar, level, step, why, risk, source (checks in the studio, by id)
                                                                                                                
-                                                                                                                                                                                                                  
+/** `input: "customer"`: only the customer can supply what the rule checks (DNS, identity, ASNs, the IP plan), so the easy button never fills it. */
+                                                                                                                                                                                                                                      
 export const RULES = rules.rules          ;
 export const PILLARS = rules.pillars                          ;

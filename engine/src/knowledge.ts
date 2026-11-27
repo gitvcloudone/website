@@ -97,6 +97,7 @@ export const IPPLAN = {
 
 // Best-practice rules: pillar, level, step, why, risk, source (checks in the studio, by id)
 export type Pillar = "availability" | "manageability" | "performance" | "recoverability" | "security" | "cost";
-export interface Rule { id: string; pillar: Pillar; level: "required" | "recommended" | "consider"; step: string; title: string; why: string; risk: string; source: string; url: string | null; verified: string }
+/** `input: "customer"`: only the customer can supply what the rule checks (DNS, identity, ASNs, the IP plan), so the easy button never fills it. */
+export interface Rule { id: string; pillar: Pillar; level: "required" | "recommended" | "consider"; step: string; input?: "customer"; title: string; why: string; risk: string; source: string; url: string | null; verified: string }
 export const RULES = rules.rules as Rule[];
 export const PILLARS = rules.pillars as Record<Pillar, string>;
