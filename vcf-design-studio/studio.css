@@ -210,3 +210,16 @@ table.plan input[type=text] { width: 9.5em; min-width: 0; padding: 4px 6px; }
 table.plan input.vlan[type=text] { width: 4.5em; }
 table.plan td, table.plan th { white-space: nowrap; }
 table.dns tr.total td { font-weight: 600; }
+/* phone: each plan row becomes a small card (label beside value) instead of a wide table */
+@media (max-width: 640px) {
+  table.plan thead { display: none; }
+  table.plan, table.plan tbody, table.plan tr, table.plan td { display: block; width: 100%; }
+  table.plan tr { padding: 8px 0; border-bottom: 1px solid var(--line, rgba(127,127,127,.3)); }
+  table.plan td { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 0; padding: 2px 0; text-align: left; }
+  table.plan td::before { content: attr(data-l); color: var(--muted, #888); font-size: .85em; }
+  table.plan td:empty, table.plan tr.block td:nth-child(3), table.plan tr.block td:nth-child(5), table.plan tr.block td:nth-child(7) { display: none; }
+  table.plan td:first-child::before { content: none; }
+  table.plan td { white-space: normal; box-sizing: border-box; min-width: 0; }
+  table.plan td > b { white-space: normal; }
+  table.plan input[type=text], table.plan input.vlan[type=text] { width: 60%; max-width: 11em; min-width: 0; box-sizing: border-box; }
+}

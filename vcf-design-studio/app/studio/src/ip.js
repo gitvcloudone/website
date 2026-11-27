@@ -130,6 +130,10 @@ export function planIssues(d        , r              )                          
     const byVlan = new Map                     ();
     for (const x of ok) if (x.vlan && x.n.inst === inst) byVlan.set(x.vlan, (byVlan.get(x.vlan) || new Set()).add(cidrText(x.s)));
     for (const [v, s] of byVlan) if (s.size > 1) issues.push({ lvl: "crit", t: `${inst.name}: VLAN ${v} is used for different subnets (${[...s].join(", ")}).` });
+    // design rule: host management (ESX) and the management VMs each on their own VLAN
+    const vm = ok.find(x => x.n.inst === inst && x.n.key.endsWith(":vmmgmt"));
+    for (const x of ok) if (vm && vm.vlan && x.n.inst === inst && x.n.key.endsWith(":esx") && x.vlan === vm.vlan)
+      issues.push({ lvl: "warn", t: `${label(x.n)} shares VLAN ${x.vlan} with VM management: host management and the management VMs each get their own VLAN.` });
   }
   return { issues, missing };
 }

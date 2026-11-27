@@ -649,6 +649,10 @@ test("plan: checks catch too-small subnets, overlaps, duplicate VLANs, gateways 
   set(`${c1.id}:tep`, "30", "10.0.20.0/27", "10.0.20.1");     // fits today (29 usable), not twice
   assert.ok(ip.planIssues(d, r).issues.some(i => i.lvl === "warn" && i.t.startsWith(`Host TEP (WLD-01 / ${c1.name}): 10.0.20.0/27 has little room to grow (${n1 * 2} of 29`)));
   assert.throws(() => ip.planOps(d, `${c2.id}:esx`, "vlan", "5000"), /1 to 4094/);
+  // host management and the management VMs on one VLAN: flagged
+  const vmKey = ip.planNets(d, r).find(n => n.key.endsWith(":vmmgmt"))!.key;
+  set(vmKey, "20", "10.0.9.0/28", "10.0.9.1");
+  assert.ok(ip.planIssues(d, r).issues.some(i => i.lvl === "warn" && new RegExp(`^ESX management \\(WLD-01 / ${c2.name}\\) shares VLAN 20 with VM management`).test(i.t)));
 });
 
 test("plan: rows for removed clusters are dropped on load; rows are kept through a save", () => {
@@ -663,4 +667,16 @@ test("plan: rows for removed clusters are dropped on load; rows are kept through
 test("the IP plan knowledge file has a source, a link and a verified date for each table", () => {
   const k = JSON.parse(readText(new URL("../knowledge/ipplan.json", import.meta.url), "utf8"));
   for (const [name, t] of Object.entries(k.tables) as [string, { source: string; url: string; verified: string }][]) assert.ok(t.source && /^https:\/\/techdocs\.broadcom\.com\//.test(t.url) && /^\d{4}-\d\d-\d\d$/.test(t.verified), name);
+});
+
+test("plan: an additional instance has its own per-instance components and none of the fleet ones (VCF 9.1 additional-instance page)", () => {
+  const d = caseDesign("multi-instance"), r = store.sizeDesign(d), [i1, i2] = d.topology.instances;
+  assert.ok(d.fleet.automation);
+  const labels = (inst: engine.Instance) => ip.dnsRecords(d, r).filter(x => x.inst === inst && !x.label.startsWith("ESX host")).map(x => x.label);
+  const per = ["SDDC Manager", "Cloud Proxy", "VCF management services: instance components", "VCF services runtime", "VCF Automation (3 nodes + 2 spare IPs)"];
+  const fleet = ["VCF Operations (primary, replica, data node)", "License Server", "VCF management services: fleet components", "VCF services runtime (listed under VCF Automation, first instance)"];
+  for (const l of [...per, ...fleet]) assert.ok(labels(i1).includes(l), `first instance: ${l}`);
+  for (const l of per) assert.ok(labels(i2).includes(l), `additional instance: ${l}`);
+  for (const l of fleet) assert.ok(!labels(i2).includes(l), `not in the additional instance: ${l}`);
+  assert.ok(labels(i2).some(l => l.startsWith("vCenter")) && labels(i2).includes("NSX Manager cluster VIP"));
 });
