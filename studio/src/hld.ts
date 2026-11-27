@@ -4,6 +4,7 @@
 import { IDENTITY, NETWORK, NSX, PILLARS, RULES, SOURCES, isVsan, clusterReason, summaryLine, workloadTotals } from "../../engine/src/index.ts";
 import type { Design, SizingResult, NarrativeTarget } from "../../engine/src/index.ts";
 import { snapOf } from "./snap.ts";
+import { productName } from "./flags.ts";
 import { evaluate, scorecard, decisionRegister, riskRegister, scorable } from "./rules.ts";
 import { stepState, changes, show } from "./steps.ts";
 import { STEPS } from "./flow.ts";
@@ -24,6 +25,8 @@ export type Block =
   | { t: "ai"; label: string; paras: string[]; stale: boolean };                // AI-drafted text, labelled as such
 export interface Section { id: string; title: string; blocks: Block[]; sub?: Section[] }
 export interface Hld {
+  /** the app that made it: "VCF Design Studio" or "VCF Design Studio: AI-powered" */
+  tool: string;
   title: string; customer: string; site: string; version: string; date: string; status: string;
   summary: string; sections: Section[];
 }
@@ -255,7 +258,7 @@ export function buildHld(d: Design, r: SizingResult, date: string): Hld {
     sec("prereqs", "Prerequisites", preBlocks),
     sec("appendix", "Appendix: method and sources", appendix),
   ];
-  return { title: `VMware Cloud Foundation high-level design`, customer, site: d.project.site, version: d.project.version, date,
+  return { tool: productName(), title: `VMware Cloud Foundation high-level design`, customer, site: d.project.site, version: d.project.version, date,
     status: skippedSteps.length || openRules.length || missing ? "Draft: open items remain" : "Draft", summary, sections };
 }
 

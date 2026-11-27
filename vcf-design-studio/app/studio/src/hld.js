@@ -5,6 +5,7 @@
 import { IDENTITY, NETWORK, NSX, PILLARS, RULES, SOURCES, isVsan, clusterReason, summaryLine, workloadTotals } from "../../engine/src/index.js";
                                                                                        
 import { snapOf } from "./snap.js";
+import { productName } from "./flags.js";
 import { evaluate, scorecard, decisionRegister, riskRegister, scorable } from "./rules.js";
 import { stepState, changes, show } from "./steps.js";
 import { STEPS } from "./flow.js";
@@ -25,6 +26,8 @@ import { prerequisites } from "./prereqs.js";
                                                                                 // AI-drafted text, labelled as such
                                                                                         
                       
+                                                                                     
+               
                                                                                                
                                        
  
@@ -256,7 +259,7 @@ export function buildHld(d        , r              , date        )      {
     sec("prereqs", "Prerequisites", preBlocks),
     sec("appendix", "Appendix: method and sources", appendix),
   ];
-  return { title: `VMware Cloud Foundation high-level design`, customer, site: d.project.site, version: d.project.version, date,
+  return { tool: productName(), title: `VMware Cloud Foundation high-level design`, customer, site: d.project.site, version: d.project.version, date,
     status: skippedSteps.length || openRules.length || missing ? "Draft: open items remain" : "Draft", summary, sections };
 }
 

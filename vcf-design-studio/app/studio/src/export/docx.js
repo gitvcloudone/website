@@ -60,7 +60,7 @@ export function hldDocx(h     , images                                          
   // Cover
   body.push(para(h.title, "Title"), para(h.customer, "Subtitle"));
   body.push(tableXml(["", ""], [["Site", h.site || "–"], ["VCF version", h.version], ["Date", h.date], ["Status", h.status]], [], false));
-  body.push(para("Prepared with VCF Design Studio by vCloudOne, an independent tool not affiliated with or endorsed by Broadcom. Sizing and licence figures are estimates to confirm before ordering.", "Small"));
+  body.push(para(`Prepared with ${h.tool} by vCloudOne, an independent tool not affiliated with or endorsed by Broadcom. Sizing and licence figures are estimates to confirm before ordering.`, "Small"));
   body.push(para("Contents", "TOCHeading", "", `<w:pageBreakBefore/>`));
   body.push(`<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-2" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r></w:p>`);
   // The entries are written out too, so the contents show before Word updates the field (it adds page numbers).
@@ -87,7 +87,7 @@ export function hldDocx(h     , images                                          
       `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>` +
       `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>` },
     { name: "docProps/core.xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">` +
-      `<dc:title>${xml(`${h.customer}: ${h.title}`)}</dc:title><dc:creator>VCF Design Studio by vCloudOne</dc:creator></cp:coreProperties>` },
+      `<dc:title>${xml(`${h.customer}: ${h.title}`)}</dc:title><dc:creator>${xml(h.tool)} by vCloudOne</dc:creator></cp:coreProperties>` },
     { name: "word/_rels/document.xml.rels", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
       `<Relationship Id="rIdStyles" Type="${R}/styles" Target="styles.xml"/><Relationship Id="rIdNum" Type="${R}/numbering" Target="numbering.xml"/>` +
       `<Relationship Id="rIdSettings" Type="${R}/settings" Target="settings.xml"/><Relationship Id="rIdFooter" Type="${R}/footer" Target="footer1.xml"/>` +

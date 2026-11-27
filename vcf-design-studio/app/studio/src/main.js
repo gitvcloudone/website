@@ -1,5 +1,5 @@
 // Built from TypeScript by studio/build.mjs. Edit the .ts source, then run npm run build.
-// VCF Design Studio: page shell. Step rail, live summary, start screen, autosave.
+// VCF Design Studio (both editions): page shell. Step rail, live summary, start screen, autosave.
 // All changes go through store.propose(); views only read the design and the sizing result.
 import { loadDesign, newDesign, serializeDesign, mergeHostTypes, clusterReason, summaryLine } from "../../engine/src/index.js";
                                                                       
@@ -13,7 +13,8 @@ import { netOps, nicsOps } from "./hostnet.js";
 import { nsxOps } from "./nsx.js";
 import { planOps, proposePlan } from "./ip.js";
 import { evaluate, scorecard, deviationOps, scorable } from "./rules.js";
-import { enabled } from "./flags.js";
+import { enabled, setEdition } from "./flags.js";
+                                          
 import { EXPORTERS } from "./export/index.js";
                                                 
                                                  
@@ -39,6 +40,9 @@ import { NARRATIVE_TARGETS } from "../../engine/src/index.js";
 const $ = (id        ) => document.getElementById(id) ;
 const esc = (s         ) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ));
 const nf = (n        , d = 0) => (Number.isFinite(n) ? n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "–");
+
+// ---------- edition: the page says which app this is (classic, or AI-powered) ----------
+setEdition((document.documentElement.dataset.edition || "classic")           );
 
 // ---------- state ----------
 const opened = openSaved(localStorage);
@@ -357,7 +361,7 @@ document.addEventListener("click", ev => {
 let aiHistory              = [], aiAbort                         = null, aiSeq = 0;
 const today = () => new Date().toISOString().slice(0, 10);
 const storage = (() => { try { return localStorage; } catch { return null; } })();
-aiView.settings = loadAi(storage); aiView.ready = aiReady(aiView.settings);
+if (enabled("aiCopilot") || enabled("aiWriter")) { aiView.settings = loadAi(storage); aiView.ready = aiReady(aiView.settings); }   // classic never reads AI settings
 const aiConn = () => connectorFor(aiView.settings);
 const redactor = () => redactorFor(design, aiView.settings.standIns);
 

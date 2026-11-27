@@ -24,7 +24,7 @@ export function hldHtml(h     , svgs                                            
   return `<article class="hld">
     <header class="hld-cover"><p class="hld-kicker">${esc(h.title)}</p><h2>${esc(h.customer)}</h2>
       <dl><dt>Site</dt><dd>${esc(h.site || "–")}</dd><dt>VCF version</dt><dd>${esc(h.version)}</dd><dt>Date</dt><dd>${esc(h.date)}</dd><dt>Status</dt><dd>${esc(h.status)}</dd></dl>
-      <p class="hint">Prepared with VCF Design Studio by vCloudOne, an independent tool not affiliated with or endorsed by Broadcom. Sizing and licence figures are estimates to confirm before ordering.</p></header>
+      <p class="hint">Prepared with ${esc(h.tool)} by vCloudOne, an independent tool not affiliated with or endorsed by Broadcom. Sizing and licence figures are estimates to confirm before ordering.</p></header>
     <nav class="hld-toc"><h3>Contents</h3><ol>${secs.filter(x => x.depth === 1).map(x => `<li>${esc(x.s.title)}</li>`).join("")}</ol></nav>
     ${secs.map(({ s, depth, n }) => `<section class="hld-sec d${depth}" id="hld-${s.id}"><${depth === 1 ? "h3" : "h4"}>${n} ${esc(s.title)}</${depth === 1 ? "h3" : "h4"}>${s.blocks.map(b => block(b, svgs)).join("")}</section>`).join("")}
   </article>`;

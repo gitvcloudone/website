@@ -2,7 +2,7 @@
 // the engine decides; customer facts and real names stay home.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import * as engine from "../src/index.ts";
 import * as store from "../../studio/src/store.ts";
 import * as flags from "../../studio/src/flags.ts";
@@ -21,6 +21,8 @@ import { copilotHtml, writerHtml, aiView, textHtml } from "../../studio/src/ai/p
 import { decisionRegister, evaluate } from "../../studio/src/rules.ts";
 import { buildHld, walk, designSnap } from "../../studio/src/hld.ts";
 import { hldDocx } from "../../studio/src/export/docx.ts";
+import { stepHtml } from "../../studio/src/guided.ts";
+import { toDrawio, topologyDiagram } from "../../studio/src/diagram.ts";
 import { snapOf } from "../../studio/src/snap.ts";
 
 const caseDesign = (name: string) => {
@@ -184,6 +186,7 @@ test("design format 10: a format 9 file opens with no AI record and no drafts; b
 
 test("panel: off until a key; behind its flags; suggestions offer Apply; drafts card explains what it needs", () => {
   const d = acme(), keep = structuredClone(aiView);
+  flags.setEdition("ai");
   try {
     assert.match(copilotHtml(), /data-act="ai-toggle"/, "a closed launcher by default");
     Object.assign(aiView, { open: true, ready: false });
@@ -195,6 +198,39 @@ test("panel: off until a key; behind its flags; suggestions offer Apply; drafts 
     assert.match(writerHtml(d), /Draft with AI/);
     Object.assign(aiView, { ready: false }); assert.match(writerHtml(d), /Add your Claude API key/);
     flags.setOverrides({ aiCopilot: false, aiWriter: false }); assert.equal(copilotHtml(), ""); assert.equal(writerHtml(d), "");
-  } finally { flags.setOverrides({}); Object.assign(aiView, keep); }
+  } finally { flags.setOverrides({}); flags.setEdition("classic"); Object.assign(aiView, keep); }
   assert.equal(textHtml("<b>x</b>"), "<p>&lt;b&gt;x&lt;/b&gt;</p>", "model text is escaped");
+});
+
+test("editions: classic has no AI anywhere; AI-powered has it; each names itself in its documents", () => {
+  const d = acme(), r = store.sizeDesign(d), ui = { sel: "", closed: new Set() } as never, keep = structuredClone(aiView);
+  try {
+    flags.setEdition("classic");
+    assert.equal(flags.enabled("aiCopilot"), false); assert.equal(flags.enabled("aiWriter"), false);
+    Object.assign(aiView, { open: true, ready: true });
+    assert.equal(copilotHtml(), ""); assert.equal(writerHtml(d), "");
+    assert.doesNotMatch(stepHtml(d, r, ui, "output"), /data-act="ai-|ai-drafts/);
+    assert.equal(buildHld(d, r, "x").tool, "VCF Design Studio");
+    assert.match(new TextDecoder().decode(hldDocx(buildHld(d, r, "x"))), /<dc:creator>VCF Design Studio by vCloudOne</);
+    flags.setEdition("ai");
+    assert.ok(flags.enabled("aiCopilot") && flags.enabled("aiWriter"));
+    assert.match(stepHtml(d, r, ui, "output"), /ai-drafts/);
+    const h = buildHld(d, r, "x"); assert.equal(h.tool, "VCF Design Studio: AI-powered");
+    assert.match(new TextDecoder().decode(hldDocx(h)), /Prepared with VCF Design Studio: AI-powered by vCloudOne/);
+    assert.match(toDrawio(topologyDiagram(d, r)), /<mxfile host="VCF Design Studio: AI-powered">/);
+    flags.setEdition("bogus" as never); assert.equal(flags.currentEdition(), "classic", "unknown editions fall back to classic");
+  } finally { flags.setEdition("classic"); Object.assign(aiView, keep); }
+});
+
+test("pages: the AI-powered page uses the shared app, is unlinked and kept out of search; classic stays classic", () => {
+  const root = new URL("../../", import.meta.url), read = (p: string) => readFileSync(new URL(p, root), "utf8");
+  const classic = read("vcf-design-studio/index.html"), ai = read("vcf-design-studio-ai/index.html");
+  assert.doesNotMatch(classic, /data-edition/); assert.match(classic, /<h1>VCF Design Studio <span/);
+  assert.match(ai, /<html lang="en" data-edition="ai">/); assert.match(ai, /<title>VCF Design Studio: AI-powered \| vCloudOne<\/title>/);
+  assert.match(ai, /<meta name="robots" content="noindex">/);
+  for (const ref of [...ai.matchAll(/(?:src|href)="(\.\.\/vcf-design-studio\/[^"]+)"/g)].map(m => m[1])) assert.ok(existsSync(new URL(ref.replace("../", ""), root)), `${ref} exists`);
+  assert.match(ai, /src="\.\.\/vcf-design-studio\/app\/studio\/src\/main\.js"/);
+  assert.doesNotMatch(ai, /never leave your machine: designs/, "no promise the AI page can't keep");
+  const others = ["index.html", "sitemap.xml", "404.html", "vcf-sizing/index.html", "evs-sizing/index.html", "vmc-sizing/index.html", "vcf-design-studio/index.html"].map(read).join("");
+  assert.doesNotMatch(others, /vcf-design-studio-ai/, "nothing links to it yet");
 });

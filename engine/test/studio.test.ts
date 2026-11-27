@@ -887,7 +887,13 @@ test("no internal jargon on the page: the design format number stays in the desi
 });
 
 test("feature flags: everything on for every tier today; turning a feature off hides it", () => {
-  for (const t of flags.TIERS) for (const f of Object.keys(flags.FEATURES) as flags.Feature[]) assert.ok(flags.enabled(f, t), `${f} for ${t}`);
+  // every feature is on for every tier in each edition it belongs to; AI features exist only in the AI edition
+  for (const e of Object.keys(flags.EDITIONS) as flags.Edition[]) {
+    flags.setEdition(e);
+    for (const t of flags.TIERS) for (const f of Object.keys(flags.FEATURES) as flags.Feature[])
+      assert.equal(flags.enabled(f, t), !flags.FEATURES[f].editions || flags.FEATURES[f].editions!.includes(e), `${f} for ${t} in ${e}`);
+  }
+  flags.setEdition("classic");
   const d = sized("simple-basic", WORKLOADS.small), r = store.sizeDesign(d), ui = { sel: "", closed: new Set() } as never;
   assert.match(stepHtml(d, r, ui, "workload"), /href="#\/easy"/);
   try { flags.setOverrides({ easyButton: false }); assert.doesNotMatch(stepHtml(d, r, ui, "workload"), /href="#\/easy"/); }
