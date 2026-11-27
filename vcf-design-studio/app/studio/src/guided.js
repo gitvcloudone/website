@@ -5,8 +5,8 @@
 import { maxFor, tierMax } from "../../engine/src/index.js";
                                                                       
 import { STEPS, stepById } from "./flow.js";
-import { projectFields, policyFields, fleetFields, clusterFields } from "./fields.js";
-import { fields, btn, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml } from "./expert.js";
+import { policyFields, fleetFields, clusterFields } from "./fields.js";
+import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml } from "./expert.js";
                                             
 import { stepState, changes, STORAGE_KEYS } from "./steps.js";
                                             
@@ -43,7 +43,7 @@ function choiceBar(d        , id        ) {
 }
 function body(d        , r              , ui          , id        )         {
   switch (id) {
-    case "project": return `<div class="grid">${fields(projectFields(), d.project                                      , { t: "sec", sec: "project" })}</div>`;
+    case "project": return projectHtml(d);
     case "workload": return workloadHtml(d, ui);
     case "policy": return `<div class="grid">${fields(policyFields(), d.policy                                      , { t: "sec", sec: "policy" })}</div>`;
     case "fleet": return `<div class="grid">${fields(fleetFields(d.fleet), d.fleet                                      , { t: "sec", sec: "fleet" })}</div>`;

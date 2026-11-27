@@ -6,7 +6,8 @@ import { PROFILES, IDENTITY, workloadTotals, hostCfg, maxFor, tierMax, settingsF
 import type { Design, SizingResult, Cluster, Domain, Instance, Group } from "../../engine/src/index.ts";
 import { projectFields, policyFields, fleetFields, addonFields, identityFields, breakGlassFields, ACCESS, hostTypeFields, domainFields, domainNsxFields, edgeSizes, clusterFields, STORAGE } from "./fields.ts";
 import type { Field, Choice } from "./fields.ts";
-import { locate } from "./edit.ts";
+import { locate, moveTo91 } from "./edit.ts";
+import { sizeDesign } from "./store.ts";
 import { overridden, estate } from "./rvimport.ts";
 import type { LoadedFile, rebuild } from "./rvimport.ts";
 
@@ -212,6 +213,20 @@ export function identityHtml(d: Design) {
     <div class="grid">${fields(breakGlassFields(), x.breakGlass as unknown as Record<string, unknown>, { t: "sec", sec: "identity.breakGlass" })}</div>`;
 }
 
+/** Project fields, and for a design brought in at VCF 9.0 the move to 9.1 with what it would change. */
+export function projectHtml(d: Design) {
+  let note = "";
+  if (d.project.version === "9.0") {
+    const m = moveTo91(d, sizeDesign);
+    const what = m.clusters.length || m.hosts[0] !== m.hosts[1] || m.licCores[0] !== m.licCores[1]
+      ? `Moving changes: ${m.clusters.map(c => `${esc(c.name)} ${c.before} → ${c.after} hosts`).join(", ")}${m.clusters.length ? "; " : ""}total ${nf(m.hosts[0])} → ${nf(m.hosts[1])} hosts, ${nf(m.licCores[0])} → ${nf(m.licCores[1])} VCF cores.`
+      : "Moving changes no numbers in this design.";
+    note = `<div class="choicebar st-skipped"><div><b>This design is for VCF 9.0.</b> <span class="hint">VCF Design Studio designs for 9.1 and later. It stays at 9.0, with its numbers unchanged, until you move it.</span></div>
+      <p class="hint">${what}</p><div class="row"><button type="button" data-xact="${attr({ act: "moveTo91" })}">Move to VCF 9.1</button></div></div>`;
+  }
+  return note + `<div class="grid">${fields(projectFields(d.project.version), d.project as unknown as Record<string, unknown>, { t: "sec", sec: "project" })}</div>`;
+}
+
 export function addonsHtml(d: Design) {
   const S = d.addons as unknown as Record<string, unknown>;
   return `<div class="addons">${addonFields(d.addons, clusterChoices(d)).map(g => `<div class="addon"><h4>${esc(g.title)}</h4><div class="grid">${fields(g.fields, S, { t: "sec", sec: "addons" })}</div><p class="hint">${esc(g.note)}</p></div>`).join("")}</div>`;
@@ -224,7 +239,7 @@ export function expertHtml(d: Design, r: SizingResult, ui: ExpertUi): string {
   const addOns = (["vdefend", "vlrOn", "aviOn", "hcxOn", "dsmOn"] as const).filter(k => k === "vdefend" ? d.addons.vdefend !== "off" : d.addons[k]).length;
   return [
     `<section class="card xhead"><header><h2>Expert view</h2><span class="hint">Every setting on one page, on the same design as the guided steps. Hover <span class="why">?</span> for why a default was chosen; changed values are marked.</span></header></section>`,
-    section("project", "Project", d.project.customer || "Untitled", `<div class="grid">${fields(projectFields(), d.project as unknown as Record<string, unknown>, { t: "sec", sec: "project" })}</div>`, ui, "project"),
+    section("project", "Project", d.project.customer || "Untitled", projectHtml(d), ui, "project"),
     section("workload", "Workload", `${plural(d.workload.groups.length, "group")}${d.workload.groups.length ? ` · ${nf(t.vcpu)} vCPU · ${nf(t.vramGiB)} GiB vRAM` : ""}`, workloadHtml(d, ui), ui, "workload"),
     section("policy", "Sizing policy", `${d.policy.cpuRatio}:1 CPU · RAM ${d.policy.ramRatio}:1 · fill ${d.policy.memFill}%`, `<div class="grid">${fields(policyFields(), d.policy as unknown as Record<string, unknown>, { t: "sec", sec: "policy" })}</div>`, ui, "policy"),
     section("fleet", "Fleet management", d.fleet.profile, `<div class="grid">${fields(fleetFields(d.fleet), d.fleet as unknown as Record<string, unknown>, { t: "sec", sec: "fleet" })}</div>`, ui, "fleet"),

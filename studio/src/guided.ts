@@ -4,8 +4,8 @@
 import { maxFor, tierMax } from "../../engine/src/index.ts";
 import type { Design, SizingResult } from "../../engine/src/index.ts";
 import { STEPS, stepById } from "./flow.ts";
-import { projectFields, policyFields, fleetFields, clusterFields } from "./fields.ts";
-import { fields, btn, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml } from "./expert.ts";
+import { policyFields, fleetFields, clusterFields } from "./fields.ts";
+import { fields, btn, projectHtml, workloadHtml, hostTypesHtml, topologyHtml, addonsHtml, identityHtml } from "./expert.ts";
 import type { ExpertUi } from "./expert.ts";
 import { stepState, changes, STORAGE_KEYS } from "./steps.ts";
 import type { StepState } from "./steps.ts";
@@ -42,7 +42,7 @@ function choiceBar(d: Design, id: string) {
 }
 function body(d: Design, r: SizingResult, ui: ExpertUi, id: string): string {
   switch (id) {
-    case "project": return `<div class="grid">${fields(projectFields(), d.project as unknown as Record<string, unknown>, { t: "sec", sec: "project" })}</div>`;
+    case "project": return projectHtml(d);
     case "workload": return workloadHtml(d, ui);
     case "policy": return `<div class="grid">${fields(policyFields(), d.policy as unknown as Record<string, unknown>, { t: "sec", sec: "policy" })}</div>`;
     case "fleet": return `<div class="grid">${fields(fleetFields(d.fleet), d.fleet as unknown as Record<string, unknown>, { t: "sec", sec: "fleet" })}</div>`;

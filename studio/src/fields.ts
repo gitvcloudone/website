@@ -32,11 +32,12 @@ export const POLICY_WHY: Record<string, string> = {
 
 const def = (k: keyof Settings) => (DEFAULTS as unknown as Record<string, unknown>)[k];
 
-export function projectFields(): Field[] {
+/** The studio designs for VCF 9.1 and later; 9.0 is offered only for a design that was brought in at 9.0. */
+export function projectFields(version = "9.1"): Field[] {
   return [
     { key: "customer", label: "Customer", type: "text", placeholder: "Customer name" },
     { key: "site", label: "Site / data centre", type: "text", placeholder: "e.g. DC1 and DC2" },
-    { key: "version", label: "VCF version", type: "select", choices: [["9.1", "VCF 9.1"], ["9.0", "VCF 9.0"]], def: DEFAULTS.version, why: "Sets which features are available, e.g. vSAN global dedupe and mirrored memory-tier drives need 9.1." },
+    { key: "version", label: "VCF version", type: "select", choices: [["9.1", "VCF 9.1"], ...(version === "9.0" ? [["9.0", "VCF 9.0 (brought in from an older sizing)"] as Choice] : [])], def: DEFAULTS.version, why: "VCF Design Studio designs for VCF 9.1 and later." },
     { key: "notes", label: "Notes", type: "textarea", placeholder: "Assumptions specific to this design (carried into the export)" },
   ];
 }

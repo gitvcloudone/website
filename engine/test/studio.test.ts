@@ -375,3 +375,26 @@ test("the identity knowledge file has a source, a link and a verified date for e
   const k = JSON.parse(readText(new URL("../knowledge/identity.json", import.meta.url), "utf8"));
   for (const [name, t] of Object.entries(k.tables) as [string, { source: string; url: string; verified: string }][]) assert.ok(t.source && /^https:\/\/techdocs\.broadcom\.com\//.test(t.url) && /^\d{4}-\d\d-\d\d$/.test(t.verified), name);
 });
+
+// ---------- VCF 9.1 and later ----------
+import { projectFields } from "../../studio/src/fields.ts";
+test("new designs offer VCF 9.1 only; a design brought in at 9.0 keeps 9.0 and its numbers until moved", () => {
+  const choices = (v?: string) => projectFields(v).find(f => f.key === "version")!.choices!.map(c => c[0]);
+  assert.deepStrictEqual(choices(), ["9.1"]); assert.deepStrictEqual(choices("9.0"), ["9.1", "9.0"]);
+  assert.equal(engine.newDesign().project.version, "9.1");
+  // a 9.0 sizing with vSAN dedupe set: dedupe only applies on 9.1
+  const i = buildInputs(engine, CASES.find(x => x.name === "simple-basic")!, {});
+  const S = { ...i.S, version: "9.0" }, topo = structuredClone(i.topo);
+  const c = topo.instances[0].wlds[0].clusters[0]; c.dedupe = 2;
+  const r = engine.loadDesign({ v: 1, tool: "vcf", settings: S, hostTypes: i.hostTypes, topo, groups: i.groups }); if (r.kind !== "design") throw new Error();
+  const d = r.design;
+  assert.equal(d.project.version, "9.0");
+  assert.deepStrictEqual(store.sizeDesign(d).hosts, engine.size(S, topo, i.groups, i.hostTypes).hosts, "opens unchanged");
+  const m = edit.moveTo91(d, store.sizeDesign);
+  const after = must(d, edit.actionOps(d, { act: "moveTo91" }).ops);
+  assert.equal(after.project.version, "9.1");
+  assert.deepStrictEqual(m.hosts, [store.sizeDesign(d).hosts, store.sizeDesign(after).hosts], "the notice reports exactly what moving does");
+  assert.deepStrictEqual(m.licCores, [store.sizeDesign(d).licCores, store.sizeDesign(after).licCores]);
+  assert.ok(expertHtml(d, store.sizeDesign(d), { sel: "", closed: new Set() }).includes("This design is for VCF 9.0."));
+  assert.ok(!expertHtml(after, store.sizeDesign(after), { sel: "", closed: new Set() }).includes("This design is for VCF 9.0."));
+});

@@ -70,6 +70,16 @@ export function identityOps(d: Design, key: string, value: unknown): Op[] {
   return ops;
 }
 
+/** Moving a design brought in at VCF 9.0 to 9.1: the op, and every number that changes (vSAN dedupe and mirrored tier drives only apply on 9.1). */
+export function moveTo91(d: Design, size: (d: Design) => { hosts: number; licCores: number; clusters: { c: { id: string; name: string }; total: number }[] }) {
+  const ops: Op[] = [{ op: "set", path: ["project", "version"], value: "9.1" }];
+  const next = structuredClone(d); next.project.version = "9.1";
+  const a = size(d), b = size(next), by = (r: typeof a) => new Map(r.clusters.map(x => [x.c.name, x.total]));
+  const ba = by(a), bb = by(b), names = [...new Set([...ba.keys(), ...bb.keys()])];
+  const clusters = names.filter(n => ba.get(n) !== bb.get(n)).map(n => ({ name: n, before: ba.get(n) ?? 0, after: bb.get(n) ?? 0 }));
+  return { ops, clusters, hosts: [a.hosts, b.hosts], licCores: [a.licCores, b.licCores] };
+}
+
 // ---------- structural changes: computed on a copy, sent as whole sections ----------
 const newDomain = (id: string, name: string, kind: string, o: Partial<Domain> = {}): Domain =>
   ({ id, name, kind, vcSize: "medium", nsx: "shared", nsxSize: "large", nsxNodes: 3, clusters: [], edges: [], ...o });
@@ -81,7 +91,7 @@ export type Action =
   | { act: "addEdge"; id: string } | { act: "delEdge"; id: string }
   | { act: "addHt" } | { act: "dupHt"; id: string } | { act: "delHt"; id: string }
   | { act: "addGroup" } | { act: "delGroup"; index: number } | { act: "resetGroup"; index: number }
-  | { act: "addRole" } | { act: "delRole"; index: number } | { act: "suggestRoles" };
+  | { act: "addRole" } | { act: "delRole"; index: number } | { act: "suggestRoles" } | { act: "moveTo91" };
 
 /** Starting role matrix: fleet-wide groups at three access levels. Placeholder names, to rename to the customer's groups. */
 export const SUGGESTED_ROLES = [
@@ -156,6 +166,7 @@ export function actionOps(d0: Design, a: Action): { ops: Op[]; select?: string }
       break;
     }
     case "delGroup": d.workload.groups.splice(a.index, 1); break;
+    case "moveTo91": d.project.version = "9.1"; break;
     case "addRole": d.identity.roles.push({ group: "", scope: "fleet", access: "readonly" }); break;
     case "delRole": d.identity.roles.splice(a.index, 1); break;
     case "suggestRoles": d.identity.roles.push(...SUGGESTED_ROLES.map(r => ({ ...r }))); break;
@@ -167,6 +178,6 @@ export function actionOps(d0: Design, a: Action): { ops: Op[]; select?: string }
   // a role scoped to a removed instance or domain loses its scope (chosen again), never widens to the fleet
   for (const r of d.identity.roles) if (r.scope && r.scope !== "fleet") { const at = locate(d, r.scope); if (!at || (at.kind !== "inst" && at.kind !== "dom")) r.scope = ""; }
   const ops: Op[] = [];
-  for (const k of ["topology", "hostTypes", "workload", "identity"] as const) if (JSON.stringify(d[k]) !== JSON.stringify(d0[k])) ops.push({ op: "set", path: [k], value: d[k] });
+  for (const k of ["project", "topology", "hostTypes", "workload", "identity"] as const) if (JSON.stringify(d[k]) !== JSON.stringify(d0[k])) ops.push({ op: "set", path: [k], value: d[k] });
   return { ops, select };
 }
