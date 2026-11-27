@@ -7,8 +7,7 @@
   "scripts": {
     "test": "node --test \"engine/test/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "golden:record": "node engine/baseline/record.mjs",
-    "fake-rvtools": "node engine/baseline/make-fake-rvtools.mjs"
+    "golden:record": "node engine/baseline/record.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
