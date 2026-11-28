@@ -36,6 +36,8 @@ date with the source, so always run `npm run build` and commit its output with y
 | Change the Word, Excel or HTML rendering | `studio/src/export/docx.ts`, `xlsx.ts`, `html.ts` (no libraries: they write the file formats directly) | Open the result in Word or Excel |
 | Change the PDF layout | The print rules at the end of `vcf-design-studio/studio.css` (the PDF is the browser printing the HLD preview) | Print from the Design output page |
 | Change which edition has a feature, or an edition's name | `studio/src/flags.ts` (`EDITIONS`, and `editions` on a feature) | Tests check classic has no AI |
+| Change how the AI panels attach to the page | `studio/src/ai/page.ts` (loaded only on the AI-powered page) and `studio/src/slots.ts` (the places it fills) | Tests check the classic page's imports never reach `studio/src/ai/` |
+| Change the installable app (name, icons, offline) | `manifest.webmanifest` in each page's folder, `vcf-design-studio/icons/`, and `sw.js` (keep the two copies identical; bump `CACHE` to clear old copies) | Tests check icon sizes and that the two service workers match |
 | Change the AI-powered page itself | `vcf-design-studio-ai/index.html` (it loads the shared app and styles from `vcf-design-studio/`) | Look at both pages |
 | Change what the AI copilot can do | `studio/src/ai/tools.ts` (`TOOLS`: each tool's description, input and what it returns) and its instructions in `studio/src/ai/copilot.ts` | AI tests use a stand-in API; no key needed |
 | Change what the AI may set | `studio/src/ai/catalog.ts` (design choices only; customer facts stay out) | Tests check no customer fact is settable |
