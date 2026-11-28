@@ -10,6 +10,9 @@
 <meta name="description" content="Guided design, sizing and architecture documentation for VMware Cloud Foundation, with an AI design copilot.">
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="/vcloudone_button.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="../vcf-design-studio/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#111a26">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="preload" href="/assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
@@ -73,7 +76,7 @@
     <input type="file" id="rvfile" accept=".xlsx,.xlsm" multiple class="hidden">
   </div>
 </header>
-<p class="indep">Independent tool, not affiliated with or endorsed by Broadcom. The tool runs in your browser and RVTools files never leave your machine. The AI features are off until you add your own Claude API key; when you use them, a summary of the design goes to Anthropic with stand-in names, and you can see exactly what first.</p>
+<p class="indep">Independent tool, not affiliated with or endorsed by Broadcom. The tool runs in your browser and RVTools files never leave your machine. The AI features are off until you choose an AI provider. When you use them, a summary of the design goes from your browser straight to that provider, or stays on this computer with a local model. Customer names are swapped for stand-ins, and you can see exactly what is sent first.</p>
 <div class="studio">
   <nav class="col railcol" id="rail" aria-label="Design steps"></nav>
   <main class="col" id="main"></main>

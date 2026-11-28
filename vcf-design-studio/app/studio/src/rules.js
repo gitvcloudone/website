@@ -2,7 +2,7 @@
 // Best-practice rules: the checks behind engine/knowledge/rules.json (one function per rule id), the
 // scorecard per pillar, accepted deviations (a reason each; never required to fix), and the decision and
 // risk registers that Review shows and the HLD will use. Reads the design and sizing only. No DOM; tested.
-import { RULES, PILLARS, isVsan } from "../../engine/src/index.js";
+import { RULES, PILLARS, PROFILES, isVsan } from "../../engine/src/index.js";
                                                                                     
 import { allClusters, effective } from "./hostnet.js";
 import { allDomains, effectiveNsx, asns, isPrivateAsn, tgwNeedsStandby } from "./nsx.js";
@@ -45,6 +45,7 @@ export const CHECKS                        = {
   "RC-BREAKGLASS": d => ({ applies: true, findings: [
     ...(d.identity.breakGlass.holder.trim() ? [] : [{ target: "holder", where: "No holder named" }]),
     ...(d.identity.breakGlass.rotationDays > 0 ? [] : [{ target: "rotation", where: "No password rotation set" }])] }),
+  "AV-FLEET-HA": d => ({ applies: true, findings: PROFILES[d.fleet.profile]?.ha === false ? [{ target: "fleet", where: `${d.fleet.profile} deployment model: one node each` }] : [] }),
   "PF-MTU-9000": d => { const cs = allClusters(d);
     return { applies: cs.length > 0, findings: cs.filter(({ c }) => effective(d, c).mtu < 9000).map(({ dm, c }) => ({ target: c.id, where: `${dm.name} / ${c.name}: MTU ${effective(d, c).mtu}` })) }; },
   "PF-EDGE-SIZE": d => { const es = allDomains(d).flatMap(({ inst, dm }) => dm.edges.filter(e => e.on !== "bm").map(e => ({ inst, dm, e })));
@@ -64,6 +65,8 @@ export const CHECKS                        = {
     return { applies: ds.some(({ dm }) => asns(d, dm).localAsn > 0), findings: ds.flatMap(({ inst, dm }) => { const a = asns(d, dm).localAsn;
       return !a ? [] : !isPrivateAsn(a) ? [{ target: dm.id, where: `${domName(d, inst, dm)}: ASN ${a} isn't private` }] : used.get(a)  > 1 ? [{ target: dm.id, where: `${domName(d, inst, dm)}: ASN ${a} is used by another Tier-0` }] : []; }) }; },
   "CO-OVERSIZED": (d, r) => ({ applies: sized(r).length > 0, findings: sized(r).filter(x => x.fixed > 0 && x.total >= x.need + 2 && x.total >= 1.5 * x.need).map(x => ({ target: x.c.id, where: `${cluName(x)}: ${x.total} hosts set, ${x.need} needed` })) }),
+  "CO-CORE-16": (d, r) => { const used = new Map(sized(r).map(x => [x.c.hw.name + "|" + x.c.hw.cores, x.c.hw]));
+    return { applies: used.size > 0, findings: [...used.values()].filter(h => h.cores < 16).map(h => ({ target: h.name, where: `${h.name}: ${h.cores}-core CPUs, licensed as 16 cores each` })) }; },
   "CO-TIERING": (d, r) => { const cs = sized(r).filter(x => x.limiter === "RAM");
     return { applies: cs.length > 0, findings: cs.filter(x => !x.c.tierOn).map(x => ({ target: x.c.id, where: `${cluName(x)}: memory-bound, tiering off` })) }; },
 };

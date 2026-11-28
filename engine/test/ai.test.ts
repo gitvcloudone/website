@@ -25,6 +25,7 @@ import { hldDocx } from "../../studio/src/export/docx.ts";
 import { stepHtml } from "../../studio/src/guided.ts";
 import { toDrawio, topologyDiagram } from "../../studio/src/diagram.ts";
 import { snapOf } from "../../studio/src/snap.ts";
+import { slots } from "../../studio/src/slots.ts";
 
 const caseDesign = (name: string) => {
   const i = buildInputs(engine, CASES.find(x => x.name === name)!, fakeFiles());
@@ -340,12 +341,28 @@ test("editions: classic has no AI anywhere; AI-powered has it; each names itself
     assert.match(new TextDecoder().decode(hldDocx(buildHld(d, r, "x"))), /<dc:creator>VCF Design Studio by vCloudOne</);
     flags.setEdition("ai");
     assert.ok(flags.enabled("aiCopilot") && flags.enabled("aiWriter"));
-    assert.match(stepHtml(d, r, ui, "output"), /ai-drafts/);
+    const was = slots.output; slots.output = x => writerHtml(x);   // as studio/src/ai/page.ts does on the AI-powered page
+    try { assert.match(stepHtml(d, r, ui, "output"), /ai-drafts/); } finally { slots.output = was; }
     const h = buildHld(d, r, "x"); assert.equal(h.tool, "VCF Design Studio: AI-powered");
     assert.match(new TextDecoder().decode(hldDocx(h)), /Prepared with VCF Design Studio: AI-powered by vCloudOne/);
     assert.match(toDrawio(topologyDiagram(d, r)), /<mxfile host="VCF Design Studio: AI-powered">/);
     flags.setEdition("bogus" as never); assert.equal(flags.currentEdition(), "classic", "unknown editions fall back to classic");
   } finally { flags.setEdition("classic"); Object.assign(aiView, keep); }
+});
+
+test("classic never loads AI code: nothing the page imports at start reaches studio/src/ai; the AI page loads it on demand", () => {
+  const app = new URL("../../vcf-design-studio/app/", import.meta.url);
+  const seen = new Set<string>(), queue = ["studio/src/main.js"];
+  while (queue.length) {
+    const f = queue.pop()!; if (seen.has(f)) continue; seen.add(f);
+    const text = readFileSync(new URL(f, app), "utf8");
+    for (const m of text.matchAll(/^\s*(?:import|export)\s[^;]*?from\s*["'](\.{1,2}\/[^"']+)["']/gm)) queue.push(new URL(m[1], new URL(f, app)).href.slice(app.href.length));
+  }
+  assert.ok(seen.size > 20, "walked the app");
+  assert.deepStrictEqual([...seen].filter(f => f.includes("/ai/")), [], "static imports reach no AI module");
+  const main = readFileSync(new URL("studio/src/main.js", app), "utf8");
+  assert.match(main, /import\("\.\/ai\/page\.js"\)/, "the AI page module is a dynamic import");
+  assert.match(main, /if \(enabled\("aiCopilot"\) \|\| enabled\("aiWriter"\)\)/, "and only when the edition has AI");
 });
 
 test("pages: the AI-powered page uses the shared app, is unlinked and kept out of search; classic stays classic", () => {
@@ -359,4 +376,28 @@ test("pages: the AI-powered page uses the shared app, is unlinked and kept out o
   assert.doesNotMatch(ai, /never leave your machine: designs/, "no promise the AI page can't keep");
   const others = ["index.html", "sitemap.xml", "404.html", "vcf-sizing/index.html", "evs-sizing/index.html", "vmc-sizing/index.html", "vcf-design-studio/index.html"].map(read).join("");
   assert.doesNotMatch(others, /vcf-design-studio-ai/, "nothing links to it yet");
+  const line = ai.match(/<p class="indep">([^<]+)<\/p>/)![1];
+  assert.match(line, /choose an AI provider/); assert.match(line, /stays on this computer with a local model/); assert.doesNotMatch(line, /Claude API key|goes to Anthropic/, "names no single provider");
+});
+
+test("installable: each page has a manifest with square icons, an Apple icon and the same network-first service worker", () => {
+  const root = new URL("../../", import.meta.url), read = (p: string) => readFileSync(new URL(p, root), "utf8");
+  const png = (p: string) => { const b = readFileSync(new URL(p, root)); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
+  for (const [dir, name, icons] of [["vcf-design-studio/", "VCF Design Studio", ""], ["vcf-design-studio-ai/", "VCF Design Studio: AI-powered", "../vcf-design-studio/"]] as const) {
+    const html = read(dir + "index.html"), m = JSON.parse(read(dir + "manifest.webmanifest"));
+    assert.match(html, /<link rel="manifest" href="manifest\.webmanifest">/, dir);
+    assert.match(html, new RegExp(`<link rel="apple-touch-icon" href="${icons.replace(/\./g, "\\.")}icons/apple-touch-icon\\.png">`), dir);
+    assert.equal(m.name, name); assert.equal(m.start_url, "./"); assert.equal(m.scope, "./"); assert.equal(m.display, "standalone");
+    for (const i of m.icons) {
+      const f = new URL(i.src, new URL(dir, root)).href.slice(root.href.length), [w, h] = png(f);
+      assert.equal(`${w}x${h}`, i.sizes, f);
+    }
+    assert.ok(m.icons.some((i: { sizes: string }) => i.sizes === "192x192") && m.icons.some((i: { sizes: string; purpose?: string }) => i.sizes === "512x512" && !i.purpose), `${dir} has 192 and 512 icons`);
+    assert.deepStrictEqual(png(icons ? "vcf-design-studio/icons/apple-touch-icon.png" : dir + "icons/apple-touch-icon.png"), [180, 180]);
+  }
+  const sw = read("vcf-design-studio/sw.js");
+  assert.equal(read("vcf-design-studio-ai/sw.js"), sw, "one service worker, copied to both folders");
+  assert.match(sw, /url\.origin !== self\.location\.origin\) return/, "never touches AI providers or other sites");
+  assert.match(sw, /const res = await fetch\(req\)[\s\S]*catch[\s\S]*caches\.match/, "network first, cache only when offline");
+  assert.match(read("studio/src/main.ts"), /navigator\.serviceWorker\.register\("sw\.js"\)/);
 });

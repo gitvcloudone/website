@@ -80,6 +80,8 @@ the decisions, explains them and documents them — it doesn't just validate a f
   their names and which features each has. Both pages load the same built app and styles from
   `vcf-design-studio/`, so every fix lands in both. They share the design saved in the browser, so a
   design moves between them. Each names itself in the documents it makes.
+- The classic page never fetches AI code: `main.ts` imports `studio/src/ai/page.ts` dynamically, only when the
+  edition has AI, and that module fills the page's `slots` (`studio/src/slots.ts`). A test walks the classic imports.
 
 ## AI layer (build step 9)
 
@@ -132,11 +134,13 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
 - Every fix comes with a test that would have caught it.
 - No internal jargon in the UI (e.g. "design format N"); that belongs in the design file, not on screen.
 - Static site; no backend, accounts or payments yet (AI calls go from the browser with the user's own key). Mobile-friendly layouts and PWA-ready, so
-  iPhone/Android apps (Capacitor) can follow later.
+  iPhone/Android apps (Capacitor) can follow later. Each page has its own `manifest.webmanifest` and `sw.js` (network first, this
+  site's files only), so it installs and opens offline; icons are in `vcf-design-studio/icons/`.
 - Analytics, when added: cookieless, events only, never design content (no customer names, counts
   or RVTools data).
 - Theme: local drafts use the original dark-capable theme; the published version uses the vCloudOne
-  site theme. Don't put David's name against products in About/bio text.
+  site theme. Don't put David's name against third-party products (VMware, VCF, Broadcom, AWS and the
+  like) in About/bio text; his own site and tools (vCloudOne, VCF Design Studio) are fine.
 - Add `MAINTAINING.md`: which file to edit for which kind of update.
 
 ## Build order
