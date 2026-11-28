@@ -342,6 +342,20 @@ figure.diagram svg { display: block; max-width: none; height: auto; }
 .ai-settings .field { display: grid; gap: 3px; font-size: 13px; }
 .ai-settings .field input, .ai-settings .field select { font: 13.5px var(--body); padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); }
 .ai-settings .check { display: flex; gap: 6px; align-items: flex-start; font-size: 13px; }
+.ai-where { margin: 0; font-size: 12.5px; padding: 6px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); }
+.ai-where.local { border-color: #9fd3b4; }
+.ai-model-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.ai-model-row input { min-width: 0; }
+.ai-settings .field input[type="url"] { width: 100%; box-sizing: border-box; }
+.ai-adv summary, .ai-guide summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.ai-adv .field { margin-top: 6px; }
+.ai-guide { border-top: 1px solid var(--line); padding-top: 8px; font-size: 13px; line-height: 1.45; }
+.ai-guide ol, .ai-guide ul { margin: 6px 0; padding-left: 20px; }
+.ai-guide li { margin-bottom: 4px; overflow-wrap: anywhere; }
+.ai-guide p { margin: 6px 0; }
+.ai-notes { color: var(--muted); }
+.ai-caps { margin: 6px 0; } .ai-caps dt { font-weight: 600; } .ai-caps dd { margin: 0 0 6px; }
+.ai-status { margin: 0; font-size: 13px; } .ai-status.ok { color: #15803d; } .ai-status.err { color: var(--crit); } .ai-status.busy { color: var(--muted); font-style: italic; }
 .ai-preview pre { max-height: 260px; overflow: auto; font: 11px/1.4 var(--mono); background: var(--bg); padding: 8px; border-radius: 6px; white-space: pre-wrap; }
 .ai-drafts h3 .pill { margin-right: 4px; }
 .ai-draft { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }

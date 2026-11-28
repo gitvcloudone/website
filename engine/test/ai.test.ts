@@ -9,7 +9,8 @@ import * as flags from "../../studio/src/flags.ts";
 import { CASES } from "../fixtures/cases.mjs";
 import { buildInputs } from "../baseline/harness.mjs";
 import { fakeFiles } from "../baseline/rvtools-files.mjs";
-import { keyConnector, hostedConnector, loadAi, saveAi, aiReady, connectorFor, DEFAULT_AI } from "../../studio/src/ai/connector.ts";
+import { keyConnector, hostedConnector, openAiConnector, toOpenAi, fromOpenAi } from "../../studio/src/ai/connector.ts";
+import { loadAi, saveAi, aiReady, connectorFor, DEFAULT_AI, PROVIDERS, problem, listModels, testConnection, modelOf } from "../../studio/src/ai/providers.ts";
 import type { AiRequest, AiResponse, Connector, ContentBlock } from "../../studio/src/ai/connector.ts";
 import { redactorFor, backDeep } from "../../studio/src/ai/redact.ts";
 import { catalog, coerce } from "../../studio/src/ai/catalog.ts";
@@ -65,15 +66,118 @@ test("connector: own key goes only to Anthropic with the browser-access header; 
   assert.equal(calls[0].url, "https://ai.example/api"); assert.equal(calls[0].init.credentials, "include"); assert.equal((calls[0].init.headers as Record<string, string>)["x-api-key"], undefined, "no key in the browser for the hosted plug");
 });
 
-test("AI settings: off by default; the key is saved only when asked to remember it", () => {
+test("AI settings: not ready until set up; keys saved only when asked to remember them; the first release's settings still load", () => {
   const m: Record<string, string> = {}, st = { getItem: (k: string) => m[k] ?? null, setItem: (k: string, v: string) => { m[k] = v; }, removeItem: (k: string) => { delete m[k]; } };
   assert.deepStrictEqual(loadAi(st), DEFAULT_AI); assert.equal(aiReady(DEFAULT_AI), false); assert.equal(connectorFor(DEFAULT_AI), null);
-  saveAi(st, { ...DEFAULT_AI, plug: "key", key: "sk-ant-secret", remember: false });
-  assert.doesNotMatch(m["vcfStudio.ai"], /sk-ant-secret/); assert.equal(loadAi(st).key, "");
-  saveAi(st, { ...DEFAULT_AI, plug: "key", key: "sk-ant-secret", remember: true });
-  assert.equal(loadAi(st).key, "sk-ant-secret"); assert.ok(aiReady(loadAi(st)));
-  assert.equal(aiReady({ ...DEFAULT_AI, plug: "key", key: "not-a-key" }), false);
-  assert.equal(loadAi({ ...st, getItem: () => "{broken" }).plug, "off");
+  const claude = (key: string, remember: boolean) => ({ ...DEFAULT_AI, remember, cfg: { anthropic: { key, base: "", model: "" } } });
+  saveAi(st, claude("sk-ant-secret", false));
+  assert.doesNotMatch(m["vcfStudio.ai"], /sk-ant-secret/); assert.equal(loadAi(st).cfg.anthropic?.key, "");
+  saveAi(st, claude("sk-ant-secret", true));
+  assert.equal(loadAi(st).cfg.anthropic?.key, "sk-ant-secret"); assert.ok(aiReady(loadAi(st)), "Claude has a default model");
+  assert.equal(modelOf(loadAi(st)), "claude-sonnet-5-5");
+  assert.match(problem(claude("not-a-key", false)), /start with sk-ant-/);
+  assert.equal(loadAi({ ...st, getItem: () => "{broken" }).provider, "anthropic");
+  // first release: { plug, key, model }
+  m["vcfStudio.ai"] = JSON.stringify({ plug: "key", key: "sk-ant-old", remember: true, model: "claude-opus-5-5", standIns: false, hostedUrl: "" });
+  const old = loadAi(st);
+  assert.equal(old.provider, "anthropic"); assert.equal(old.cfg.anthropic?.key, "sk-ant-old"); assert.equal(modelOf(old), "claude-opus-5-5"); assert.equal(old.standIns, false); assert.ok(aiReady(old));
+  m["vcfStudio.ai"] = JSON.stringify({ provider: "bogus", cfg: { openai: { key: 5, model: "gpt-x" } } });
+  assert.equal(loadAi(st).provider, "anthropic", "an unknown provider falls back"); assert.equal(loadAi(st).cfg.openai?.key, "", "bad values dropped");
+});
+
+const oaReply = (message: unknown, finish = "stop") => ({ choices: [{ message, finish_reason: finish }], usage: { prompt_tokens: 7, completion_tokens: 3 } });
+const recorder = (body: unknown | ((url: string) => unknown), status = 200) => {
+  const calls: { url: string; init: RequestInit; body: any }[] = [];
+  const f = async (url: string, init: RequestInit) => { calls.push({ url, init, body: init.body ? JSON.parse(String(init.body)) : null }); return new Response(JSON.stringify(typeof body === "function" ? (body as (u: string) => unknown)(url) : body), { status }); };
+  return { f, calls };
+};
+
+test("OpenAI format: tools, tool calls and tool results translate both ways", () => {
+  const req: AiRequest = { model: "m", max_tokens: 99, system: "sys", tools: [{ name: "get_design", description: "d", input_schema: { type: "object", properties: {} } }], messages: [
+    { role: "user", content: "hi" },
+    { role: "assistant", content: [{ type: "text", text: "Let me look." }, { type: "tool_use", id: "c1", name: "get_design", input: { a: 1 } }] },
+    { role: "user", content: [{ type: "tool_result", tool_use_id: "c1", content: "{...}" }, { type: "tool_result", tool_use_id: "c2", content: "bad", is_error: true }] }] };
+  const o = toOpenAi(req, "max_completion_tokens");
+  assert.equal(o.max_completion_tokens, 99); assert.equal(o.max_tokens, undefined);
+  assert.deepStrictEqual(o.messages[0], { role: "system", content: "sys" });
+  assert.deepStrictEqual(o.messages[2], { role: "assistant", content: "Let me look.", tool_calls: [{ id: "c1", type: "function", function: { name: "get_design", arguments: "{\"a\":1}" } }] });
+  assert.deepStrictEqual(o.messages[3], { role: "tool", tool_call_id: "c1", content: "{...}" });
+  assert.match(String(o.messages[4].content), /^Error: bad/);
+  assert.deepStrictEqual(o.tools, [{ type: "function", function: { name: "get_design", description: "d", parameters: { type: "object", properties: {} } } }]);
+  assert.equal(toOpenAi(req).max_tokens, 99);
+  // back: tool calls (string or object arguments, missing ids, bad JSON), finish reasons, usage
+  const r = fromOpenAi(oaReply({ content: null, tool_calls: [{ id: "x1", function: { name: "what_if", arguments: "{\"changes\":[]}" } }, { function: { name: "get_design", arguments: { k: 2 } } }, { function: { name: "check_rules", arguments: "{oops" } }] }, "stop"));
+  assert.equal(r.stop_reason, "tool_use", "tool calls mean tool use even when a local server says stop");
+  assert.deepStrictEqual(r.content.map(b => b.type === "tool_use" ? [b.id, b.name, b.input] : null), [["x1", "what_if", { changes: [] }], ["call_2", "get_design", { k: 2 }], ["call_3", "check_rules", { _unreadable: "{oops" }]]);
+  assert.deepStrictEqual(r.usage, { input_tokens: 7, output_tokens: 3 });
+  assert.equal(fromOpenAi(oaReply({ content: "cut" }, "length")).stop_reason, "max_tokens");
+  assert.deepStrictEqual(fromOpenAi(oaReply({ content: "done" })).content, [{ type: "text", text: "done" }]);
+  assert.throws(() => fromOpenAi({ error: "x" }), /expected form/);
+});
+
+test("providers: each goes to its own address with its own key; local ones send no key and explain how to let the site in", async () => {
+  const set = (provider: any, c: { key?: string; base?: string; model?: string }) => ({ ...DEFAULT_AI, provider, cfg: { [provider]: { key: "", base: "", model: "", ...c } } });
+  const cases: [string, any, string, string | null, string][] = [
+    ["openai", { key: "sk-proj-1", model: "gpt-x" }, "https://api.openai.com/v1/chat/completions", "Bearer sk-proj-1", "max_completion_tokens"],
+    ["openrouter", { key: "sk-or-v1-2", model: "google/gemini-x" }, "https://openrouter.ai/api/v1/chat/completions", "Bearer sk-or-v1-2", "max_tokens"],
+    ["xai", { key: "xai-3", model: "grok-x" }, "https://api.x.ai/v1/chat/completions", "Bearer xai-3", "max_completion_tokens"],
+    ["ollama", { model: "qwen3" }, "http://localhost:11434/v1/chat/completions", null, "max_tokens"],
+    ["lmstudio", { model: "local-model" }, "http://localhost:1234/v1/chat/completions", null, "max_tokens"],
+    ["custom", { base: "https://llm.example.com/v1/", model: "m" }, "https://llm.example.com/v1/chat/completions", null, "max_tokens"],
+  ];
+  for (const [id, c, url, auth, tokens] of cases) {
+    const s = set(id, c); assert.equal(problem(s), "", id);
+    const { f, calls } = recorder(oaReply({ content: "OK" }));
+    assert.match(await testConnection(s, f), /Connected: .* answered "OK"/, id);
+    assert.equal(calls[0].url, url, id);
+    const h = calls[0].init.headers as Record<string, string>;
+    assert.equal(h.authorization ?? null, auth, id); assert.equal(h["x-api-key"], undefined, id);
+    assert.equal(calls[0].body.model, c.model); assert.ok(tokens in calls[0].body, `${id} uses ${tokens}`);
+  }
+  assert.match(problem(set("openai", { model: "m" })), /Add your OpenAI API key/);
+  assert.match(problem(set("openrouter", { key: "sk-ant-x", model: "m" })), /start with sk-or-/);
+  assert.match(problem(set("ollama", {})), /Choose a model/);
+  assert.match(problem(set("custom", { model: "m" })), /Enter the service's API address/);
+  assert.match(problem(set("custom", { base: "http://10.0.0.5:8000/v1", model: "m" })), /https:\/\/, or be http:\/\/localhost/, "plain http only to this computer");
+  // a local server that can't be reached (or blocks the site) gets the fix in the message
+  const down = async () => { throw new TypeError("Failed to fetch"); };
+  await assert.rejects(testConnection(set("ollama", { model: "qwen3" }), down), /OLLAMA_ORIGINS/);
+  await assert.rejects(testConnection(set("lmstudio", { model: "x" }), down), /Enable CORS/);
+  const { f: e401 } = recorder({ error: { message: "bad key" } }, 401);
+  await assert.rejects(testConnection(set("openai", { key: "sk-1", model: "m" }), e401), /API key wasn't accepted/);
+  const { f: e404 } = recorder({ error: { message: "model not found" } }, 404);
+  await assert.rejects(testConnection(set("xai", { key: "xai-1", model: "nope" }), e404), /xAI \(Grok\) doesn't know that model.*model not found/);
+});
+
+test("load models: OpenRouter lists only tool-capable models; OpenAI hides non-chat models; Claude uses its own headers", async () => {
+  const set = (provider: any, key = "") => ({ ...DEFAULT_AI, provider, cfg: { [provider]: { key, base: "", model: "" } } });
+  let r = recorder({ data: [{ id: "anthropic/claude-x", name: "Claude X" }, { id: "google/gemini-y", name: "Gemini Y" }] });
+  assert.deepStrictEqual(await listModels(set("openrouter", "sk-or-1"), "openrouter", r.f), [["anthropic/claude-x", "Claude X"], ["google/gemini-y", "Gemini Y"]]);
+  assert.equal(r.calls[0].url, "https://openrouter.ai/api/v1/models?supported_parameters=tools");
+  r = recorder({ data: [{ id: "gpt-x" }, { id: "text-embedding-3-small" }, { id: "whisper-1" }, { id: "gpt-x-mini" }] });
+  assert.deepStrictEqual((await listModels(set("openai", "sk-1"), "openai", r.f)).map(m => m[0]), ["gpt-x", "gpt-x-mini"]);
+  r = recorder({ data: [{ id: "claude-sonnet-5-5", display_name: "Claude Sonnet 5.5" }] });
+  await listModels(set("anthropic", "sk-ant-1"), "anthropic", r.f);
+  assert.equal(r.calls[0].url, "https://api.anthropic.com/v1/models"); assert.equal((r.calls[0].init.headers as Record<string, string>)["anthropic-dangerous-direct-browser-access"], "true");
+  r = recorder({ object: "list", data: [] });
+  await assert.rejects(listModels(set("ollama"), "ollama", r.f), /Download one first/);
+  await assert.rejects(listModels(set("openai"), "openai", r.f), /API key first/);
+});
+
+test("copilot works the same over an OpenAI-format provider: tools run, proposals wait, real names stay home", async () => {
+  const d = acme(); const sent: any[] = [];
+  const script = [
+    () => oaReply({ content: null, tool_calls: [{ id: "a", type: "function", function: { name: "get_design", arguments: "{}" } }] }, "tool_calls"),
+    () => oaReply({ content: "Customer A has a sound design." }),
+  ];
+  const f = async (_u: string, init: RequestInit) => { sent.push(JSON.parse(String(init.body))); return new Response(JSON.stringify(script.shift()!())); };
+  const conn = openAiConnector({ name: "OpenAI", base: "https://api.openai.com/v1", key: "sk-1", tokens: "max_completion_tokens" }, f);
+  const out = await ask(conn, "gpt-x", d, redactorFor(d, true), [], "Is Acme Bank's design sound?", [], ids());
+  assert.equal(out.reply, "Acme Bank has a sound design.");
+  assert.equal(sent.length, 2); assert.ok(sent[0].tools.length >= 6, "every copilot tool offered");
+  const toolMsg = sent[1].messages.find((m: any) => m.role === "tool");
+  assert.equal(toolMsg.tool_call_id, "a"); assert.match(toolMsg.content, /Customer A/);
+  assert.doesNotMatch(JSON.stringify(sent), /Acme|Ashburn|Initech|10\.9\.8/, "no real names or addresses sent");
 });
 
 test("stand-in names: customer details go out swapped and come back real; addresses and notes never go out", () => {
@@ -191,15 +295,37 @@ test("panel: off until a key; behind its flags; suggestions offer Apply; drafts 
     assert.match(copilotHtml(), /data-act="ai-toggle"/, "a closed launcher by default");
     Object.assign(aiView, { open: true, ready: false });
     assert.match(copilotHtml(), /id="ai-key"/); assert.match(copilotHtml(), /stand-in names/i);
+    assert.match(copilotHtml(), /id="ai-provider"/); assert.match(copilotHtml(), /How to set up Claude/); assert.match(copilotHtml(), /What the AI can do/);
     Object.assign(aiView, { ready: true, showSettings: false, turns: [{ role: "user", text: "q" }, { role: "assistant", text: "a\n\n- one\n- two", steps: ["Read the design"] }],
       suggestions: [{ id: "s1", summary: "Do X", reason: "why", changes: [{ setting: "policy.cpuRatio", label: "CPU ratio", where: "Sizing policy", from: 4, to: 5 }], ops: [], before: impactOf(d), after: impactOf(d), status: "pending" }] });
     const html = copilotHtml();
     assert.match(html, /data-act="ai-apply" data-sid="s1"/); assert.match(html, /<li>one<\/li>/); assert.match(html, /Read the design/);
     assert.match(writerHtml(d), /Draft with AI/);
-    Object.assign(aiView, { ready: false }); assert.match(writerHtml(d), /Add your Claude API key/);
+    Object.assign(aiView, { ready: false }); assert.match(writerHtml(d), /Set up an AI provider/);
     flags.setOverrides({ aiCopilot: false, aiWriter: false }); assert.equal(copilotHtml(), ""); assert.equal(writerHtml(d), "");
   } finally { flags.setOverrides({}); flags.setEdition("classic"); Object.assign(aiView, keep); }
   assert.equal(textHtml("<b>x</b>"), "<p>&lt;b&gt;x&lt;/b&gt;</p>", "model text is escaped");
+});
+
+test("settings panel: every provider shows its setup steps, cost and where the design goes; local ones name this site", () => {
+  const keep = structuredClone(aiView);
+  flags.setEdition("ai");
+  try {
+    for (const p of PROVIDERS) {
+      Object.assign(aiView, { open: true, ready: false, showSettings: true, origin: "https://vcloudone.com", status: { kind: "", text: "" },
+        edit: { ...DEFAULT_AI, provider: p.id, cfg: {} }, settings: structuredClone(DEFAULT_AI) });
+      const html = copilotHtml(), g = p.guide("https://vcloudone.com");
+      assert.ok(g.steps.length >= 3 && g.cost, p.id);
+      assert.match(html, new RegExp(`How to set up ${p.name.replace(/[()]/g, "\\$&")}`), p.id);
+      assert.match(html, /Where the design goes:/, p.id);
+      assert.equal(/id="ai-key"/.test(html), p.key !== "none", `${p.id} key field`);
+      assert.equal(/id="ai-base"/.test(html), true, `${p.id} address field`);
+      for (const [, u] of g.links) assert.match(u, /^https:\/\//, `${p.id} links`);
+      if (p.local) assert.match(html, /stays on this computer/, p.id);
+    }
+    const o = PROVIDERS.find(p => p.id === "ollama")!.guide("https://vcloudone.com").steps.join(" ");
+    assert.match(o, /launchctl setenv OLLAMA_ORIGINS "https:\/\/vcloudone.com"/); assert.match(o, /systemctl edit ollama.service/); assert.match(o, /Windows/);
+  } finally { flags.setEdition("classic"); Object.assign(aiView, keep); }
 });
 
 test("editions: classic has no AI anywhere; AI-powered has it; each names itself in its documents", () => {

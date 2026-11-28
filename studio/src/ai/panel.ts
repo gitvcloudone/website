@@ -2,8 +2,8 @@
 // The page (main.ts) owns the state and the events; `aiView` is what the screens read.
 import { NARRATIVE_TARGETS } from "../../../engine/src/index.ts";
 import type { Design } from "../../../engine/src/index.ts";
-import { MODELS } from "./connector.ts";
-import type { AiSettings } from "./connector.ts";
+import { PROVIDERS, CAPABILITIES, DEFAULT_AI, provider, cfgOf, problem } from "./providers.ts";
+import type { AiSettings, ProviderId } from "./providers.ts";
 import type { Suggestion, Impact } from "./tools.ts";
 import { TARGETS } from "./writer.ts";
 import { designSnap } from "../hld.ts";
@@ -11,10 +11,15 @@ import { enabled } from "../flags.ts";
 
 export interface Turn { role: "user" | "assistant" | "error"; text: string; steps?: string[] }
 export interface AiView { settings: AiSettings; ready: boolean; open: boolean; showSettings: boolean; turns: Turn[]; suggestions: Suggestion[];
-  busy: string; input: string; preview: string; drafting: string }
+  busy: string; input: string; preview: string; drafting: string;
+  /** The settings form while it's open (saved into `settings` on Save). */
+  edit: AiSettings; models: Partial<Record<ProviderId, [string, string][]>>; status: { kind: "" | "ok" | "err" | "busy"; text: string }; origin: string }
 /** What the screens show; set by the page. */
-export const aiView: AiView = { settings: { plug: "off", key: "", remember: false, model: MODELS[0][0], standIns: true, hostedUrl: "" }, ready: false, open: false, showSettings: false,
-  turns: [], suggestions: [], busy: "", input: "", preview: "", drafting: "" };
+export const aiView: AiView = { settings: structuredClone(DEFAULT_AI), ready: false, open: false, showSettings: false,
+  turns: [], suggestions: [], busy: "", input: "", preview: "", drafting: "",
+  edit: structuredClone(DEFAULT_AI), models: {}, status: { kind: "", text: "" }, origin: "https://vcloudone.com" };
+/** The provider in use, for labels. */
+export const providerName = (s: AiSettings) => (s.provider === "hosted" ? "the vCloudOne AI service" : provider(s.provider)?.name || "AI");
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 const nf = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
@@ -27,15 +32,38 @@ export function textHtml(t: string) {
   }).join("");
 }
 
-function settingsHtml(s: AiSettings) {
+function guideHtml(id: ProviderId, origin: string, open: boolean) {
+  const p = provider(id)!, g = p.guide(origin);
+  return `<details class="ai-guide" ${open ? "open" : ""}><summary>How to set up ${esc(p.name)}</summary>
+    <ol>${g.steps.map(t => `<li>${esc(t)}</li>`).join("")}</ol>
+    <p><b>Cost:</b> ${esc(g.cost)}</p>
+    ${g.notes.length ? `<ul class="ai-notes">${g.notes.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+    ${g.links.length ? `<p class="ai-links">${g.links.map(([l, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)}</a>`).join(" · ")}</p>` : ""}</details>`;
+}
+
+function settingsHtml(v: AiView) {
+  const s = v.edit, id = (s.provider === "hosted" ? "anthropic" : s.provider) as ProviderId, p = provider(id)!, c = cfgOf(s, id);
+  const loaded = v.models[id] || [], opts = [...p.models, ...loaded.filter(m => !p.models.some(x => x[0] === m[0]))];
+  const why = problem(s, id), saved = problem(v.settings) === "" && v.settings.provider === id;
+  const baseField = `<label class="field"><span>API address</span><input type="url" id="ai-base" autocomplete="off" spellcheck="false" placeholder="https://…/v1" value="${esc(c.base)}"></label>`;
   return `<div class="ai-settings">
-    <p class="hint">Uses your own Claude API key, sent only to Anthropic from this browser. A vCloudOne AI service may come later.</p>
-    <label class="field"><span>Claude API key</span><input type="password" id="ai-key" autocomplete="off" placeholder="sk-ant-…" value="${esc(s.key)}"></label>
-    <label class="check"><input type="checkbox" id="ai-remember" ${s.remember ? "checked" : ""}> Remember the key on this device</label>
-    <label class="field"><span>Model</span><select id="ai-model">${MODELS.map(([id, l]) => `<option value="${id}" ${id === s.model ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
+    <label class="field"><span>AI provider</span><select id="ai-provider">${PROVIDERS.map(x => `<option value="${x.id}" ${x.id === id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
+    <p class="hint">${esc(p.blurb)}</p>
+    <p class="ai-where ${p.local ? "local" : ""}"><b>Where the design goes:</b> ${esc(p.where)}.${p.local ? "" : " It's sent from this browser straight there, never through vCloudOne."}</p>
+    ${p.local || !p.base ? baseField : ""}
+    ${p.key === "none" ? "" : `<label class="field"><span>${p.key === "optional" ? "API key (if the service needs one)" : `${esc(p.name)} API key`}</span><input type="password" id="ai-key" autocomplete="off" placeholder="${esc(p.keyHint || "")}" value="${esc(c.key)}"></label>
+    <label class="check"><input type="checkbox" id="ai-remember" ${s.remember ? "checked" : ""}> Remember keys on this device</label>`}
+    <label class="field"><span>Model</span><span class="ai-model-row"><input id="ai-model" list="ai-model-list" autocomplete="off" spellcheck="false" placeholder="${opts.length ? "" : "Load models, or type a model name"}" value="${esc(c.model)}"><button type="button" class="ghost" data-act="ai-models">Load models</button></span>
+      <datalist id="ai-model-list">${opts.map(([m, l]) => `<option value="${esc(m)}">${esc(l === m ? "" : l)}</option>`).join("")}</datalist></label>
+    ${loaded.length ? `<p class="hint">${loaded.length} model${loaded.length === 1 ? "" : "s"} found${id === "openrouter" ? " that support tools" : ""}. Start typing to filter.</p>` : ""}
+    ${!p.local && p.base ? `<details class="ai-adv"><summary>API address</summary>${baseField}</details>` : ""}
     <label class="check"><input type="checkbox" id="ai-standins" ${s.standIns ? "checked" : ""}> Use stand-in names (recommended): customer, site, workload group and VM names, DNS domain, identity groups</label>
     <p class="hint">Sent: the design's choices and the tool's own numbers. Never sent: DNS and NTP servers, IP addresses, ASNs, the notes field. Nothing is stored by vCloudOne.</p>
-    <div class="row"><button type="button" data-act="ai-save">Save</button><button type="button" class="ghost" data-act="ai-preview">Show what's sent</button>${s.key ? `<button type="button" class="ghost" data-act="ai-forget">Forget key</button>` : ""}</div>
+    <div class="row"><button type="button" data-act="ai-save">Save</button><button type="button" class="ghost" data-act="ai-test">Test connection</button><button type="button" class="ghost" data-act="ai-preview">Show what's sent</button>${Object.values(v.settings.cfg).some(x => x?.key) ? `<button type="button" class="ghost" data-act="ai-forget">Forget keys</button>` : ""}</div>
+    ${v.status.text ? `<p class="ai-status ${v.status.kind}" aria-live="polite">${esc(v.status.text)}</p>` : why && !saved ? `<p class="hint">${esc(why)}</p>` : ""}
+    ${guideHtml(id, v.origin, !saved)}
+    <details class="ai-guide"><summary>What the AI can do</summary><dl class="ai-caps">${CAPABILITIES.map(([t, d]) => `<dt>${esc(t)}</dt><dd>${esc(d)}</dd>`).join("")}</dl>
+      <p class="hint">With every provider, host counts, licensing and rule results come from the sizing engine, never from the model.</p></details>
   </div>`;
 }
 
@@ -61,7 +89,7 @@ export function copilotHtml(v: AiView = aiView): string {
   if (!enabled("aiCopilot")) return "";
   if (!v.open) return `<section class="card ai-card closed"><button type="button" class="ai-open" data-act="ai-toggle"><span class="pill ai">AI</span> Design copilot <span class="hint">ask, what-if, suggestions</span></button></section>`;
   const head = `<header class="ai-head"><h2>Design copilot</h2><div class="row"><button type="button" class="link" data-act="ai-settings">${v.showSettings ? "Close settings" : "Settings"}</button>${v.turns.length ? `<button type="button" class="link" data-act="ai-clear">New chat</button>` : ""}<button type="button" class="link" data-act="ai-toggle" aria-label="Close the copilot">Close</button></div></header>`;
-  if (!v.ready || v.showSettings) return `<section class="card ai-card">${head}${!v.ready ? `<p>The copilot explains this design, runs what-ifs through the sizing engine and suggests changes you can apply. Add your Claude API key to turn it on.</p>` : ""}${settingsHtml(v.settings)}${v.preview ? `<details open class="ai-preview"><summary>What's sent with a question</summary><pre>${esc(v.preview)}</pre></details>` : ""}</section>`;
+  if (!v.ready || v.showSettings) return `<section class="card ai-card">${head}${!v.ready ? `<p>The copilot explains this design, runs what-ifs through the sizing engine and suggests changes you can apply. Choose an AI provider to turn it on: Claude, OpenAI, OpenRouter, xAI, or a model on this computer.</p>` : ""}${settingsHtml(v)}${v.preview ? `<details open class="ai-preview"><summary>What's sent with a question</summary><pre>${esc(v.preview)}</pre></details>` : ""}</section>`;
   const sugg = (t: Turn, i: number) => i === v.turns.length - 1 && t.role === "assistant" ? v.suggestions.filter(s => s.status === "pending").map(suggestionHtml).join("") : "";
   const turns = v.turns.map((t, i) => t.role === "user" ? `<div class="ai-msg user">${esc(t.text)}</div>`
     : t.role === "error" ? `<div class="ai-msg error">${esc(t.text)}</div>`
@@ -69,7 +97,7 @@ export function copilotHtml(v: AiView = aiView): string {
   const done = v.suggestions.filter(s => s.status !== "pending");
   const examples = ["Why does each cluster have the hosts it has?", "What if we used 4 NICs per host?", "Review this design against the best practices", "How could we lower the VCF core count?"];
   return `<section class="card ai-card">${head}
-    <p class="hint">${v.settings.standIns ? "Stand-in names on. " : ""}Numbers come from the sizing engine; suggestions change nothing until you apply them.</p>
+    <p class="hint">Using ${esc(providerName(v.settings))}. ${v.settings.standIns ? "Stand-in names on. " : ""}Numbers come from the sizing engine; suggestions change nothing until you apply them.</p>
     <div class="ai-log" id="ai-log">${turns || `<div class="ai-examples">${examples.map(q => `<button type="button" class="ghost" data-act="ai-example">${esc(q)}</button>`).join("")}</div>`}
       ${v.busy ? `<div class="ai-msg bot busy" aria-live="polite">${esc(v.busy)}…</div>` : ""}</div>
     ${done.length ? `<p class="hint">${done.filter(s => s.status === "applied").length} applied, ${done.filter(s => s.status === "dismissed").length} dismissed in this chat.</p>` : ""}
@@ -91,5 +119,5 @@ export function writerHtml(d: Design, v: AiView = aiView): string {
         <p class="hint">${n.edited ? "Drafted with AI and edited" : "AI draft"}${n.at ? `, ${esc(n.at)}` : ""}. It appears in the HLD labelled as such.</p>` : ""}</div>`;
   }).join("");
   return `<section class="card ai-drafts"><h3><span class="pill ai">AI</span> HLD drafts</h3>
-    <p class="hint">${v.ready ? "The AI writes from this design's own facts and numbers. Review and edit before you share it." : "Add your Claude API key in the Design copilot panel to draft these sections."}</p>${rows}</section>`;
+    <p class="hint">${v.ready ? "The AI writes from this design's own facts and numbers. Review and edit before you share it." : "Set up an AI provider in the Design copilot panel to draft these sections."}</p>${rows}</section>`;
 }

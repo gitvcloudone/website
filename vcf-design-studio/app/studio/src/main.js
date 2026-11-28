@@ -28,8 +28,9 @@ import { stepState, recommendOps, skipOps, reopenOps } from "./steps.js";
                                                 
                                         
 import { aiView, copilotHtml } from "./ai/panel.js";
-import { loadAi, saveAi, aiReady, connectorFor } from "./ai/connector.js";
                                                    
+import { loadAi, saveAi, aiReady, connectorFor, modelOf, listModels, testConnection, problem, provider } from "./ai/providers.js";
+                                                                 
 import { redactorFor } from "./ai/redact.js";
 import { ask } from "./ai/copilot.js";
 import { draft } from "./ai/writer.js";
@@ -361,7 +362,9 @@ document.addEventListener("click", ev => {
 let aiHistory              = [], aiAbort                         = null, aiSeq = 0;
 const today = () => new Date().toISOString().slice(0, 10);
 const storage = (() => { try { return localStorage; } catch { return null; } })();
-if (enabled("aiCopilot") || enabled("aiWriter")) { aiView.settings = loadAi(storage); aiView.ready = aiReady(aiView.settings); }   // classic never reads AI settings
+if (enabled("aiCopilot") || enabled("aiWriter")) {   // classic never reads AI settings
+  aiView.settings = loadAi(storage); aiView.ready = aiReady(aiView.settings); aiView.edit = structuredClone(aiView.settings); aiView.origin = location.origin;
+}
 const aiConn = () => connectorFor(aiView.settings);
 const redactor = () => redactorFor(design, aiView.settings.standIns);
 
@@ -370,7 +373,7 @@ async function aiAsk(q        ) {
   aiView.turns.push({ role: "user", text: q }); aiView.input = ""; aiView.busy = "Thinking"; render();
   aiAbort = new AbortController();
   try {
-    const out = await ask(conn, aiView.settings.model, design, redactor(), aiHistory, q, aiView.suggestions, () => `s${++aiSeq}`, aiAbort.signal,
+    const out = await ask(conn, modelOf(aiView.settings), design, redactor(), aiHistory, q, aiView.suggestions, () => `s${++aiSeq}`, aiAbort.signal,
       step => { aiView.busy = step; render(); });
     aiHistory = out.history; aiView.turns.push({ role: "assistant", text: out.reply, steps: out.steps });
   } catch (e) {
@@ -391,31 +394,54 @@ async function aiDraft(t                 ) {
   const conn = aiConn(); if (!conn || aiView.drafting) return;
   aiView.drafting = t; render();
   try {
-    const n = await draft(conn, aiView.settings.model, design, redactor(), t, today());
+    const n = await draft(conn, modelOf(aiView.settings), design, redactor(), t, today());
     commit({ source: "ai-writer", ops: [{ op: "set", path: ["narrative"], value: { ...design.narrative, [t]: n } }] });
   } catch (e) { flash = [{ text: (e         ).message, lvl: "crit" }]; }
   finally { aiView.drafting = ""; render(); }
 }
 
+// The settings form edits a working copy (aiView.edit); Save makes it the settings in use.
+const editId = () => (aiView.edit.provider === "hosted" ? "anthropic" : aiView.edit.provider)              ;
+function aiField(id        , v                  ) {
+  const e = aiView.edit, pid = editId(), c              = { key: "", base: "", model: "", ...e.cfg[pid] };
+  if (id === "ai-key") c.key = String(v).trim(); else if (id === "ai-base") c.base = String(v).trim(); else if (id === "ai-model") c.model = String(v).trim();
+  else if (id === "ai-remember") { e.remember = !!v; return; } else if (id === "ai-standins") { e.standIns = !!v; return; } else return;
+  e.cfg[pid] = c; aiView.status = { kind: "", text: "" };
+}
 function aiSaveSettings() {
-  const key = (document.getElementById("ai-key")                           )?.value.trim() ?? aiView.settings.key;
-  aiView.settings = { ...aiView.settings, plug: key ? "key" : "off", key,
-    remember: (document.getElementById("ai-remember")                           )?.checked ?? false,
-    model: (document.getElementById("ai-model")                            )?.value || aiView.settings.model,
-    standIns: (document.getElementById("ai-standins")                           )?.checked ?? true };
-  saveAi(storage, aiView.settings); aiView.ready = aiReady(aiView.settings);
-  if (key && !aiView.ready) aiView.turns.push({ role: "error", text: "That doesn't look like a Claude API key (they start with sk-ant-)." });
+  aiView.settings = structuredClone(aiView.edit); saveAi(storage, aiView.settings); aiView.ready = aiReady(aiView.settings);
+  const why = problem(aiView.settings);
+  aiView.status = why ? { kind: "err", text: `Saved, but not ready yet: ${why}` } : { kind: "", text: "" };
   aiView.showSettings = !aiView.ready; aiView.preview = ""; render();
+}
+async function aiLoadModels() {
+  const id = editId(); aiView.status = { kind: "busy", text: "Loading models…" }; render();
+  try { const m = await listModels(aiView.edit, id); aiView.models[id] = m;
+    if (!aiView.edit.cfg[id]?.model && !provider(id) .models.length) aiField("ai-model", m[0][0]);   // pick the first if none chosen yet
+    aiView.status = { kind: "ok", text: `Found ${m.length} model${m.length === 1 ? "" : "s"}.` }; }
+  catch (e) { aiView.status = { kind: "err", text: (e         ).message }; }
+  render();
+}
+async function aiTest() {
+  aiView.status = { kind: "busy", text: "Testing…" }; render();
+  try { aiView.status = { kind: "ok", text: await testConnection({ ...aiView.edit, provider: editId() }) }; }
+  catch (e) { aiView.status = { kind: "err", text: (e         ).message }; }
+  render();
 }
 
 document.addEventListener("click", ev => {
   const b = (ev.target               ).closest             ("[data-act^='ai-']"); if (!b) return;
   const act = b.dataset.act;
-  if (act === "ai-toggle") { aiView.open = !aiView.open; aiView.showSettings = aiView.open && !aiView.ready; }
-  else if (act === "ai-settings") aiView.showSettings = !aiView.showSettings;
+  if (act === "ai-toggle") { aiView.open = !aiView.open; aiView.showSettings = aiView.open && !aiView.ready; if (aiView.showSettings) aiView.edit = structuredClone(aiView.settings); }
+  else if (act === "ai-settings") { aiView.showSettings = !aiView.showSettings; aiView.edit = structuredClone(aiView.settings); aiView.status = { kind: "", text: "" }; }
   else if (act === "ai-save") { aiSaveSettings(); return; }
-  else if (act === "ai-forget") { aiView.settings = { ...aiView.settings, key: "", plug: "off", remember: false }; saveAi(storage, aiView.settings); aiView.ready = false; aiView.showSettings = true; }
-  else if (act === "ai-preview") { const red = redactorFor(design, (document.getElementById("ai-standins")                           )?.checked ?? aiView.settings.standIns);
+  else if (act === "ai-models") { void aiLoadModels(); return; }
+  else if (act === "ai-test") { void aiTest(); return; }
+  else if (act === "ai-forget") {
+    for (const s of [aiView.settings, aiView.edit]) { for (const c of Object.values(s.cfg)) if (c) c.key = ""; s.remember = false; }
+    saveAi(storage, aiView.settings); aiView.ready = aiReady(aiView.settings); aiView.showSettings = true; aiView.status = { kind: "ok", text: "Keys forgotten on this device." };
+  }
+  else if (act === "ai-preview") { const red = redactorFor(design, aiView.edit.standIns);
     aiView.preview = red.out(JSON.stringify(designSummary(design, result), null, 1)); }
   else if (act === "ai-clear") { aiHistory = []; aiView.turns = []; aiView.suggestions = []; }
   else if (act === "ai-send") { void aiAsk(aiView.input); return; }
@@ -427,12 +453,19 @@ document.addEventListener("click", ev => {
   else if (act === "ai-undraft") { const t = b.dataset.target                   ; const n = { ...design.narrative }; delete n[t]; commit({ source: "ai-writer", ops: [{ op: "set", path: ["narrative"], value: n }] }); return; }
   render();
 });
-document.addEventListener("input", ev => { const el = ev.target               ; if (el.id === "ai-input") aiView.input = (el                       ).value; });
+document.addEventListener("input", ev => {
+  const el = ev.target                    ;
+  if (el.id === "ai-input") aiView.input = el.value;
+  else if (["ai-key", "ai-base", "ai-model"].includes(el.id)) aiField(el.id, el.value);
+});
 document.addEventListener("keydown", ev => {
   const el = ev.target               ;
   if (el.id === "ai-input" && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); void aiAsk(aiView.input); }
 });
 document.addEventListener("change", ev => {
+  const x = ev.target                    ;
+  if (x.id === "ai-provider") { aiView.edit.provider = x.value              ; aiView.status = { kind: "", text: "" }; aiView.preview = ""; render(); return; }
+  if (x.id === "ai-remember" || x.id === "ai-standins") { aiField(x.id, x.checked); return; }
   const el = ev.target                       , t = el.dataset?.narr                               ;
   if (!t || !design.narrative[t]) return;
   if (el.value.trim() === design.narrative[t] .text.trim()) return;
