@@ -45,6 +45,8 @@ date with the source, so always run `npm run build` and commit its output with y
 | Change how HLD sections are drafted | `studio/src/ai/writer.ts` (the brief per section and the writing rules) | Tests |
 | Add an AI provider, or change one's setup guide, address, key format or models | `studio/src/ai/providers.ts` (`PROVIDERS`: one entry each, with its `guide`) | Tests render every guide and send through every provider with a stand-in API |
 | Change the Claude models, the OpenAI-format translation, or add the hosted backend | `studio/src/ai/connector.ts` (`MODELS`; `toOpenAi`/`fromOpenAi`; `hostedConnector` takes the same request as the Claude Messages API) | Tests |
+| Update the spreadsheet reader (SheetJS) | Put the new official file in `assets/vendor/` (named with its version), update the five pages' script tags, `SHEETJS` in `engine/test/security.test.ts`, the URL in `.github/workflows/test.yml`, and the `xlsx` devDependency to the same version | CI downloads the official file and fails unless it matches; the tests read every sample RVTools row back through a real .xlsx file. No page may load a script from another site |
+| Change how AI drafts are checked | `unmatchedNumbers` / `hldNumbers` in `studio/src/hld.ts` (numbers a draft may quote; hosts and cores against the engine's figures) | Tests flag a wrong host count and pass names like wld01-cl01 |
 | Change the page layout or styles | `vcf-design-studio/index.html`, `vcf-design-studio/studio.css` | Look at it on desktop and phone width |
 
 ## Golden tests
