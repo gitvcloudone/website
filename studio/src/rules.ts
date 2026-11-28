@@ -117,7 +117,7 @@ export function deviationOps(d: Design, key: string, reason: unknown): Op[] {
   return [{ op: "set", path: ["decisions", "deviations"], value: all }];
 }
 
-export interface DecisionEntry { step: string; kind: "changed" | "recommended" | "auto" | "deviation"; text: string; reason?: string }
+export interface DecisionEntry { step: string; kind: "changed" | "recommended" | "auto" | "deviation" | "ai"; text: string; reason?: string }
 /** The design decisions: values changed from the recommendation, recommendations accepted, deviations accepted with their reasons. */
 export function decisionRegister(d: Design, res: RuleResult[]): DecisionEntry[] {
   const out: DecisionEntry[] = [], a = d.decisions.auto;
@@ -132,6 +132,7 @@ export function decisionRegister(d: Design, res: RuleResult[]): DecisionEntry[] 
     if (d.decisions.steps[s.id] === "recommended") out.push(a && a.reasons[s.id]
       ? { step: s.title, kind: "auto", text: "Recommended values, auto-selected by the easy button" } : { step: s.title, kind: "recommended", text: "Recommended values accepted" });
   }
+  for (const c of d.decisions.ai || []) out.push({ step: "AI copilot", kind: "ai", text: c.summary, reason: c.reason });
   for (const x of res) for (const f of x.findings) if (f.reason) out.push({ step: STEPS.find(s => s.id === x.rule.step)?.title || "IP / VLAN / DNS plan", kind: "deviation", text: `${x.rule.title}: ${f.where}`, reason: f.reason });
   return out;
 }

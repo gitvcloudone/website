@@ -8,6 +8,7 @@ import { STORAGE } from "./fields.js";
 import { allClusters, effective, networksOf, hostsByCluster, nicsOf } from "./hostnet.js";
 import { allDomains, effectiveNsx, asns } from "./nsx.js";
 import { xml } from "./export/zip.js";
+import { productName } from "./flags.js";
 
                                                                                                      
                                                                                                                                              
@@ -139,7 +140,7 @@ export function toDrawio(g         )         {
     return `<mxCell id="${id(n.id)}" value="${xml(value)}" style="${style}" vertex="1" parent="${par ? id(par.id) : "1"}"><mxGeometry x="${x}" y="${y}" width="${n.w}" height="${n.h}" as="geometry"/></mxCell>`;
   });
   const edges = g.links.map((l, i) => `<mxCell id="lk${i}" value="${xml(l.label || "")}" style="endArrow=none;html=1;fontSize=10;strokeColor=#5b6b7c;${l.dashed ? "dashed=1;" : ""}labelBackgroundColor=#ffffff;" edge="1" parent="1" source="${id(l.from)}" target="${id(l.to)}"><mxGeometry relative="1" as="geometry"/></mxCell>`);
-  return `<mxfile host="VCF Design Studio"><diagram id="${g.id}" name="${xml(g.title)}"><mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" page="0"><root>` +
+  return `<mxfile host="${xml(productName())}"><diagram id="${g.id}" name="${xml(g.title)}"><mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" page="0"><root>` +
     `<mxCell id="0"/><mxCell id="1" parent="0"/>${cells.join("")}${edges.join("")}</root></mxGraphModel></diagram></mxfile>`;
 }
 

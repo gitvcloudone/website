@@ -193,7 +193,7 @@ test("a format 1 design opens in the current format with nothing changed: RVTool
   assert.equal(raw.formatVersion, 1);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
   assert.equal(r.design.formatVersion, engine.FORMAT_VERSION);
-  assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null });
+  assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null, ai: [] });
   assert.deepStrictEqual(r.design.workload.groups.map(g => [g.source, g.parsed]), [["rvtools", null], ["rvtools", null], ["manual", null]]);
   assert.deepStrictEqual(r.design.workload.groups.map(g => g.values), raw.workload.groups.map((g: { values: unknown }) => g.values));
   assert.ok(r.design.workload.groups.every(g => rvi.overridden(g).length === 0));
@@ -266,7 +266,7 @@ test("a format 2 design opens in the current format with no step choices", () =>
   const raw = JSON.parse(readText(new URL("../fixtures/designs/format-2.vcf-design.json", import.meta.url), "utf8"));
   assert.equal(raw.formatVersion, 2);
   const r = engine.loadDesign(raw); if (r.kind !== "design") throw new Error();
-  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION); assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null });
+  assert.equal(r.design.formatVersion, engine.FORMAT_VERSION); assert.deepStrictEqual(r.design.decisions, { steps: {}, deviations: {}, auto: null, ai: [] });
   assert.equal(r.design.workload.groups[1].values.vms, raw.workload.groups[1].values.vms);
   assert.deepStrictEqual(rvi.overridden(r.design.workload.groups[1]), ["vms"], "format 2 parsed values kept");
   assert.equal(steps.stepState(r.design, "policy").state, "decided", "cpuRatio 5 is a decision");
@@ -887,7 +887,13 @@ test("no internal jargon on the page: the design format number stays in the desi
 });
 
 test("feature flags: everything on for every tier today; turning a feature off hides it", () => {
-  for (const t of flags.TIERS) for (const f of Object.keys(flags.FEATURES) as flags.Feature[]) assert.ok(flags.enabled(f, t), `${f} for ${t}`);
+  // every feature is on for every tier in each edition it belongs to; AI features exist only in the AI edition
+  for (const e of Object.keys(flags.EDITIONS) as flags.Edition[]) {
+    flags.setEdition(e);
+    for (const t of flags.TIERS) for (const f of Object.keys(flags.FEATURES) as flags.Feature[])
+      assert.equal(flags.enabled(f, t), !flags.FEATURES[f].editions || flags.FEATURES[f].editions!.includes(e), `${f} for ${t} in ${e}`);
+  }
+  flags.setEdition("classic");
   const d = sized("simple-basic", WORKLOADS.small), r = store.sizeDesign(d), ui = { sel: "", closed: new Set() } as never;
   assert.match(stepHtml(d, r, ui, "workload"), /href="#\/easy"/);
   try { flags.setOverrides({ easyButton: false }); assert.doesNotMatch(stepHtml(d, r, ui, "workload"), /href="#\/easy"/); }

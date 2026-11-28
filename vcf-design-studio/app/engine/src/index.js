@@ -15,8 +15,8 @@ export { FORMAT, FORMAT_VERSION, SECTION_KEYS, DEFAULT_SCOPE, newDesign, designT
 export { loadDesign, parseHostTypesFile, mergeHostTypes, serializeDesign } from "./design/load.js";
 export { MIGRATIONS, migrateDesign } from "./design/migrations.js";
                                                                                                                   
-export { STEP_CHOICES, newIdentity, newNetwork, newPlan } from "./design/document.js";
-                                                                                                                 
+export { STEP_CHOICES, newIdentity, newNetwork, newPlan, NARRATIVE_TARGETS } from "./design/document.js";
+                                                                                                                                                       
                                                                    
                                                                 
                                                         

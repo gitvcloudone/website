@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-edition="ai">
+<head>
+<meta charset="utf-8">
+<!-- vc:theme -->
+<script>(function(){var d=document.documentElement,t=null,m=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)');try{t=localStorage.getItem('theme')}catch(e){}function a(){d.setAttribute('data-theme',t||(m&&m.matches?'dark':'light'))}a();if(m&&m.addEventListener)m.addEventListener('change',function(){try{t=localStorage.getItem('theme')}catch(e){}if(!t){a();window.dispatchEvent(new Event('themechange'))}})})();</script>
+<!-- /vc:theme -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VCF Design Studio: AI-powered | vCloudOne</title>
+<meta name="description" content="Guided design, sizing and architecture documentation for VMware Cloud Foundation, with an AI design copilot.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/vcloudone_button.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="preload" href="/assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css?v=ef2d4d0f">
+<link rel="stylesheet" href="/assets/theme-sizer.css?v=ef2d4d0f">
+<link rel="stylesheet" href="../vcf-design-studio/studio.css">
+</head>
+<body>
+<!-- vc:nav -->
+<nav class="sn" aria-label="Main">
+  <div class="sn-inner">
+    <a href="/" class="sn-logo"><img src="/vcloudone_button.png" alt="" width="28" height="28"><span>vCloud<b>One</b></span></a>
+    <button class="sn-toggle" id="sn-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sn-links"><span></span><span></span><span></span></button>
+    <div class="sn-links" id="sn-links">
+      <a href="/articles/">Articles</a>
+      <a href="/updates/">Updates</a>
+      <div class="sn-dd">
+        <button type="button" class="sn-dd-btn" aria-expanded="false">Topics <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <div class="sn-menu">
+          <a href="/topics/hyperscalers/">Hyperscalers</a>
+          <a href="/topics/vmware/">VMware</a>
+          <a href="/topics/ai/">AI</a>
+          <a href="/topics/cloud/">Cloud</a>
+        </div>
+      </div>
+      <div class="sn-dd">
+        <button type="button" class="sn-dd-btn on" aria-expanded="false">Tools <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <div class="sn-menu">
+          <span class="sn-h">Sizing</span>
+          <a href="/evs-sizing/">EVS Sizing<small>Hosts and clusters for Amazon EVS</small></a>
+          <a href="/vmc-sizing/">VMC Sizing<small>SDDCs and hosts for VMware Cloud on AWS</small></a>
+          <a href="/vcf-sizing/">VCF Sizing<small>Fleets and clusters on your own hardware</small></a>
+          <span class="sn-h">Amazon EVS</span>
+          <a href="/evs/">EVS overview</a>
+          <a href="/evs-guide/">Deployment guide</a>
+          <a href="/evs-guide/#terraform">Terraform automation</a>
+          <a href="/evs-guide/#validator">Prerequisite validator</a>
+        </div>
+      </div>
+      <a href="/about/">About</a>
+      <button type="button" class="sn-theme" id="sn-theme" aria-label="Switch theme" title="Switch light / dark"><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg><span class="sn-theme-l">Dark mode</span></button>
+      <div class="sn-social">
+        <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener" title="LinkedIn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></a>
+        <a href="https://x.com/dchung615" target="_blank" rel="noopener" title="X" aria-label="X"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.013 2.25H8.08l4.264 5.633 5.9-5.633zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+        <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg></a>
+        <a href="/rss/" title="RSS feed" aria-label="RSS feed"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20 5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg></a>
+      </div>
+    </div>
+  </div>
+</nav>
+<!-- /vc:nav -->
+<header class="top">
+  <div>
+    <h1>VCF Design Studio: AI-powered <span class="by">by vCloudOne</span></h1>
+    <p>Guided design, sizing and architecture documentation for VMware Cloud Foundation.</p>
+  </div>
+  <div class="row">
+    <button type="button" class="ghost" data-act="save-file">Save design file</button>
+    <button type="button" class="ghost" data-act="open-file">Open file</button>
+    <input type="file" id="file" accept=".json,application/json" class="hidden">
+    <input type="file" id="rvfile" accept=".xlsx,.xlsm" multiple class="hidden">
+  </div>
+</header>
+<p class="indep">Independent tool, not affiliated with or endorsed by Broadcom. The tool runs in your browser and RVTools files never leave your machine. The AI features are off until you add your own Claude API key; when you use them, a summary of the design goes to Anthropic with stand-in names, and you can see exactly what first.</p>
+<div class="studio">
+  <nav class="col railcol" id="rail" aria-label="Design steps"></nav>
+  <main class="col" id="main"></main>
+  <aside class="col summarycol" id="summary"></aside>
+</div>
+<noscript><p class="indep">VCF Design Studio: AI-powered needs JavaScript.</p></noscript>
+<!-- vc:footer -->
+<footer class="sf">
+  <div class="sf-inner">
+    <div>
+      <div class="sf-brand"><img src="/vcloudone_button.png" alt="" width="24" height="24">vCloudOne</div>
+      <p>Notes, guides and sizing tools by David Chung.</p>
+      <p>Views are my own.</p>
+    </div>
+    <div>
+      <h5>Read</h5>
+      <a href="/articles/">Articles</a>
+      <a href="/updates/">Updates</a>
+      <a href="/about/">About</a>
+      <a href="/rss/">RSS feed</a>
+    </div>
+    <div>
+      <h5>Tools</h5>
+      <a href="/evs-sizing/">EVS Sizing</a>
+      <a href="/vmc-sizing/">VMC Sizing</a>
+      <a href="/vcf-sizing/">VCF Sizing</a>
+      <a href="/evs-guide/">EVS deployment guide</a>
+    </div>
+    <div>
+      <h5>Follow</h5>
+      <a href="https://www.linkedin.com/in/vdchung/" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://x.com/dchung615" target="_blank" rel="noopener">X @dchung615</a>
+      <a href="https://github.com/gitvcloudone" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+  <div class="sf-base"><span>&copy; 2026 vCloudOne</span><span>Everything AI, cloudy and virtual</span></div>
+</footer>
+<!-- /vc:footer -->
+<script>
+(function () {
+    var navToggle = document.getElementById('nav-toggle');
+    var navLinks  = document.getElementById('nav-links');
+    if (navToggle && navLinks) {
+        navToggle.addEventListener('click', function () {
+            var open = navLinks.classList.toggle('is-open');
+            navToggle.classList.toggle('is-open', open);
+            navToggle.setAttribute('aria-expanded', open);
+            navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+        });
+        navLinks.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', function () {
+                navLinks.classList.remove('is-open');
+                navToggle.classList.remove('is-open');
+                navToggle.setAttribute('aria-expanded', 'false');
+                navToggle.setAttribute('aria-label', 'Open menu');
+            });
+        });
+    }
+})();
+</script>
+<script src="/assets/site.js?v=ef2d4d0f" defer></script>
+<!-- SheetJS reads RVTools exports in the browser (same version as /vcf-sizing/) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module" src="../vcf-design-studio/app/studio/src/main.js"></script>
+</body>
+</html>

@@ -7,8 +7,8 @@ import { fixHw } from "../hardware.ts";
 import type { HostType, Settings, Domain, Instance, Cluster, Edge } from "../types.ts";
 import { FORMAT, FORMAT_VERSION, DEFAULT_SCOPE, sectionsFromSettings, settingsFromDesign } from "./document.ts";
 import type { Design, DesignGroup, RvtoolsScope, StepChoice } from "./document.ts";
-import { STEP_CHOICES, newIdentity, newNetwork, newPlan } from "./document.ts";
-import type { Identity, Access, Network, ClusterNet, DomainNsx, Plan, PlanRow, AutoChoice } from "./document.ts";
+import { STEP_CHOICES, newIdentity, newNetwork, newPlan, NARRATIVE_TARGETS } from "./document.ts";
+import type { Identity, Access, Network, ClusterNet, DomainNsx, Plan, PlanRow, AutoChoice, AiChange } from "./document.ts";
 import { migrateDesign } from "./migrations.ts";
 
 type Obj = Record<string, any>;
@@ -93,11 +93,26 @@ function normalize(o: Obj, opt: LoadOptions & { keepSource: boolean }): { design
       // accepted deviations: a reason is required; kept as saved (a deviation whose finding has gone simply no longer shows)
       deviations: Object.fromEntries(Object.entries((o.decisions && o.decisions.deviations) || {}).filter(([k, v]) => /^[A-Z][A-Z0-9-]*@.+$/.test(k) && v && typeof (v as Obj).reason === "string" && (v as Obj).reason.trim())
         .map(([k, v]) => [k, { reason: ((v as Obj).reason as string).trim() }])),
-      auto: autoFrom(o.decisions && o.decisions.auto) } } as Design;
+      auto: autoFrom(o.decisions && o.decisions.auto), ai: aiFrom(o.decisions && o.decisions.ai) },
+    narrative: narrativeFrom(o.narrative) } as Design;
   return { design, notes };
 }
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
+/** Applied AI suggestions: kept when well formed (text fields, a list of paths), at most 500. */
+function aiFrom(x: unknown): AiChange[] {
+  if (!Array.isArray(x)) return [];
+  return x.filter(c => c && typeof c === "object" && typeof (c as Obj).summary === "string" && (c as Obj).summary.trim()).slice(-500)
+    .map((c: Obj) => ({ summary: c.summary.trim(), reason: str(c.reason).trim(), at: str(c.at), paths: Array.isArray(c.paths) ? c.paths.filter((p: unknown) => typeof p === "string") : [] }));
+}
+/** AI-drafted HLD text: known targets with text only. */
+function narrativeFrom(x: unknown): Design["narrative"] {
+  if (!x || typeof x !== "object") return {};
+  const out: Design["narrative"] = {};
+  for (const t of NARRATIVE_TARGETS) { const n = (x as Obj)[t];
+    if (n && typeof n === "object" && typeof n.text === "string" && n.text.trim()) out[t] = { text: n.text, edited: n.edited === true, snap: str(n.snap), at: str(n.at) }; }
+  return out;
+}
 /** Identity & access, keeping only known choices. A role whose instance / domain isn't in the design gets scope "" (to choose again), never a wider one. */
 function identityFrom(x: Obj | undefined, remap: (id: unknown) => string | undefined): Identity {
   const out = newIdentity(); if (!x || typeof x !== "object") return out;
@@ -196,7 +211,7 @@ export function loadDesign(input: unknown, opt: LoadOptions = {}): LoadResult {
   if (Array.isArray(x) || x.tool === "vcf-host-types" || (Array.isArray(x.presets) && !x.settings && !x.topo)) return { kind: "hostTypes", hostTypes: parseHostTypesFile(x) };
   if (x.format === FORMAT) {
     const d = migrateDesign(x);
-    const flat = { settings: settingsFromDesign(d as Design), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups, decisions: d.decisions, identity: d.identity, network: d.network, plan: d.plan };
+    const flat = { settings: settingsFromDesign(d as Design), hostTypes: d.hostTypes, topo: d.topology, scope: d.workload && d.workload.rvtoolsScope, groups: d.workload && d.workload.groups, decisions: d.decisions, identity: d.identity, network: d.network, plan: d.plan, narrative: d.narrative };
     return { kind: "design", from: "design", ...normalize(flat, { ...opt, browserHostTypes: [], keepSource: true }) };
   }
   if (x.tool !== undefined && x.tool !== "vcf") throw new Error(`This is a ${String(x.tool).toUpperCase()} file, not a VCF design.`);

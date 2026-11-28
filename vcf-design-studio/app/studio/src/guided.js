@@ -14,6 +14,7 @@ import { buildHld } from "./hld.js";
 import { diagrams, toSvg } from "./diagram.js";
 import { hldHtml } from "./export/html.js";
 import { EXPORTERS } from "./export/index.js";
+import { writerHtml } from "./ai/panel.js";
                                             
 import { stepState, changes, STORAGE_KEYS } from "./steps.js";
                                             
@@ -77,7 +78,7 @@ function reviewHtml(d        , r              ) {
   const ready = scorable(d, r);
   const ruleOpen = !ready ? [] : res.filter(x => x.status === "open").flatMap(x => x.findings.filter(f => !f.reason).map(f => ({ x, f })));
   const stepLink = (id        ) => id === "plan" ? `<a href="#/step/output">IP / VLAN / DNS plan</a>` : `<a href="#/step/${id}">${esc(stepById(id)?.title || id)}</a>`;
-  const KIND                         = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", auto: "Auto-selected", deviation: "Deviation accepted" };
+  const KIND                         = { changed: "Changed from the recommendation", recommended: "Recommendation accepted", auto: "Auto-selected", deviation: "Deviation accepted", ai: "AI-suggested, applied by the architect" };
   const crit = r.warnings.filter(w => w.lvl === "crit"), warn = r.warnings.filter(w => w.lvl === "warn");
   return `<div class="tablewrap"><table class="review"><thead><tr><th>#</th><th>Step</th><th>Status</th><th>Decisions and open items</th></tr></thead><tbody>${rows}</tbody></table></div>
     <h4>Open items</h4>
@@ -109,6 +110,7 @@ function outputHtml(d        , r              ) {
       ${downloads}<div class="dl-group"><h4>Design file</h4><div class="row"><button type="button" class="ghost" data-act="save-file">Save design file</button></div></div></section>
     <section class="card"><h3>Diagrams</h3>${gs.map(g => `<figure class="diagram">${svgs[g.id]}</figure>`).join("")}</section>
     <section class="card" id="plan"><h3>IP / VLAN / DNS plan</h3>${planHtml(d, r)}</section>
+    ${writerHtml(d)}
     <section class="card hld-wrap"><h3>High-level design preview</h3><p class="hint">The same content as the Word and PDF downloads.</p>${hldHtml(h, svgs)}</section>`;
 }
 

@@ -43,8 +43,7 @@ the decisions, explains them and documents them — it doesn't just validate a f
    (doc/KB link) and a last-verified date. Updating for a new VCF release should be a data edit.
 4. **Proposers** — anything that fills in the design produces a set of proposed changes that the
    engine validates before they're applied: guided steps, easy button, RVTools import. Later:
-   Planning Workbook import, AI assist. AI is **out of scope for now**, but must be addable as one
-   more proposer with no rework.
+   Planning Workbook import, AI assist (see "AI layer" below).
 5. **Exporters** — registered in a list: HLD (Word/PDF), diagrams (SVG/PNG/draw.io), IP/VLAN/DNS
    tables, prerequisite checklist (Excel). Later: VCF Installer JSON, Planning Workbook.
 6. **Platform profiles** — on-prem VCF now; EVS/VMC later as profiles.
@@ -73,6 +72,40 @@ the decisions, explains them and documents them — it doesn't just validate a f
   exception is shown on the option card up front and recorded in the HLD as a decision with a risk.
   A test checks every easy-button option against Review for every golden workload.
 
+## Two editions, one codebase
+
+- **VCF Design Studio** (classic) at `/vcf-design-studio/`: no AI anywhere; it never shows, loads or calls AI.
+- **VCF Design Studio: AI-powered** at `/vcf-design-studio-ai/`: the same app plus the AI layer.
+- The page says which it is (`data-edition="ai"` on `<html>`); `studio/src/flags.ts` holds the editions,
+  their names and which features each has. Both pages load the same built app and styles from
+  `vcf-design-studio/`, so every fix lands in both. They share the design saved in the browser, so a
+  design moves between them. Each names itself in the documents it makes.
+
+## AI layer (build step 9)
+
+- **The AI suggests and explains; the engine decides.** Every AI change arrives as a proposal through
+  the same validation as the guided steps. Host counts, licensing, limits and rule results always come
+  from the engine, never from the model. The AI may only touch whitelisted parts of the design
+  (`studio/src/ai/catalog.ts`: policy, fleet, add-ons, host types, cluster settings, host networking,
+  NSX choices, Identity Broker mode), never customer facts (workload, project, DNS and NTP, addresses,
+  ASNs, identity provider, roles, break-glass, the IP plan) or decisions.
+- **Labelled:** an applied AI suggestion is recorded in the design file (`decisions.ai`) and shows as
+  "AI-suggested" in the decision register and the HLD. AI-drafted HLD text is stored per section
+  (`narrative`), editable, marked as an AI draft, and flagged when the design changed since drafting.
+- **Privacy:** off until the user sets up a provider; names where the design goes; shows exactly what will be sent; stand-in names on by
+  default (customer, site, workload group and VM names, DNS domain, server addresses); nothing kept on
+  a server. On real customer designs, the user's employer policy on AI services applies.
+- **Bring any AI** (`studio/src/ai/providers.ts`): Claude, OpenAI, OpenRouter (Gemini and others),
+  xAI, local models (Ollama, LM Studio) and any OpenAI-compatible service, each with its key, address
+  and model, an in-app setup guide (steps, cost, links, caveats) and Load models / Test connection.
+  Adding a provider is one entry in `PROVIDERS`. Keys stay in the browser unless the user asks to remember them.
+- **One request shape** (`studio/src/ai/connector.ts`): the copilot and writer speak the Claude Messages
+  shape; OpenAI-style APIs are translated there (`toOpenAi` / `fromOpenAi`). Later, a hosted backend
+  that adds sign-in, usage limits and the key takes the same shape, so switching is configuration.
+- **Tools in one list** (`studio/src/ai/tools.ts`): read the design, size a what-if, check the rules,
+  explain a cluster, propose changes. New AI abilities are new tools.
+- **Feature flags** `aiCopilot` and `aiWriter`. Tests use a stand-in API; CI never needs a key.
+
 ## Best practices
 
 Pillars: Availability, Manageability, Performance, Recoverability, Security (AMPRS), plus Cost and
@@ -98,7 +131,7 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
 - Feature flags and tiers live in `studio/src/flags.ts`; see `MAINTAINING.md` for where each kind of update goes.
 - Every fix comes with a test that would have caught it.
 - No internal jargon in the UI (e.g. "design format N"); that belongs in the design file, not on screen.
-- Static site; no backend, accounts, payments or AI yet. Mobile-friendly layouts and PWA-ready, so
+- Static site; no backend, accounts or payments yet (AI calls go from the browser with the user's own key). Mobile-friendly layouts and PWA-ready, so
   iPhone/Android apps (Capacitor) can follow later.
 - Analytics, when added: cookieless, events only, never design content (no customer names, counts
   or RVTools data).
@@ -124,4 +157,10 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
    (`studio/src/hld.ts`) rendered as the page preview, Word (.docx) and PDF (browser print); diagrams are
    SVG, PNG and draw.io; the prerequisites and IP / VLAN / DNS plan export to Excel. The IP plan moved
    from Review to Design output.
-8. Ship at a new path (e.g. /vcf-design-studio/), with /vcf-sizing/ redirecting.
+8. Ship at a new path (e.g. /vcf-design-studio/), with /vcf-sizing/ redirecting. (27 Nov: published at
+   /vcf-design-studio/, unlinked and noindex, for testing. Menus, sitemap and the redirect come later.)
+9. (Done 27 Nov, on the branch.) AI layer, in its own edition at /vcf-design-studio-ai/ (unlinked,
+   noindex); the classic app stays AI-free. AI layer: copilot panel (explain, what-if, propose changes) and HLD
+   writer (executive summary, design rationale, risk mitigations), with the user's own key first; a hosted
+   backend later. Design format 10 adds `decisions.ai` and `narrative`. (27 Nov, later:) bring any AI —
+   provider picker with setup guides; the first release's Claude-only settings still load.
