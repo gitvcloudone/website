@@ -82,6 +82,18 @@
       "verified": "2026-11-26"
     },
     {
+      "id": "AV-FLEET-HA",
+      "pillar": "availability",
+      "level": "recommended",
+      "step": "fleet",
+      "title": "Fleet management deployed highly available",
+      "why": "The high-availability model runs three VCF Operations and three VCF Automation nodes, so fleet management keeps working through a node failure. Broadcom recommends it for production.",
+      "risk": "With the Simple model, one node failure takes VCF Operations or VCF Automation offline until it's restored.",
+      "source": "Planning a successful VCF 9.0 deployment (VMware Cloud Foundation blog)",
+      "url": "https://blogs.vmware.com/cloud-foundation/2025/07/28/planning-a-successful-vmware-cloud-foundation-9-0-deployment/",
+      "verified": "2026-11-27"
+    },
+    {
       "id": "RC-VSAN-4",
       "pillar": "recoverability",
       "level": "recommended",
@@ -255,6 +267,18 @@
       "source": "Studio rule",
       "url": null,
       "verified": "2026-11-26"
+    },
+    {
+      "id": "CO-CORE-16",
+      "pillar": "cost",
+      "level": "consider",
+      "step": "hosts",
+      "title": "CPUs have 16 or more cores",
+      "why": "VCF is licensed per core with a minimum of 16 cores per CPU, so a CPU with fewer cores costs as much to license as a 16-core one.",
+      "risk": "Hosts with CPUs under 16 cores pay for licensed cores they don't have.",
+      "source": "Broadcom KB 313548: Counting cores for VMware Cloud Foundation",
+      "url": "https://knowledge.broadcom.com/external/article/313548",
+      "verified": "2026-11-27"
     }
   ]
 }

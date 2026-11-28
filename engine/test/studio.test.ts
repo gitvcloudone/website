@@ -699,14 +699,29 @@ test("a format 7 design opens with no deviations and its plan kept", () => {
   assert.deepStrictEqual(r.design.decisions.deviations, {}); assert.deepStrictEqual(r.design.plan, raw.plan);
 });
 
-test("rules: every rule has a check and every check a rule; Broadcom rules link TechDocs, the others say whose rule they are", () => {
+test("rules: every rule has a check and every check a rule; Broadcom rules link an official Broadcom source (TechDocs, KB, VCF blog), the others say whose rule they are", () => {
   assert.deepStrictEqual(engine.RULES.map(x => x.id).sort(), Object.keys(rules.CHECKS).sort());
   for (const x of engine.RULES) {
     assert.ok(engine.PILLARS[x.pillar] && ["required", "recommended", "consider"].includes(x.level) && x.why && x.risk, x.id);
     assert.ok(STEPS.some(s => s.id === x.step) || x.step === "plan", `${x.id}: step ${x.step}`);
-    if (x.url) assert.match(x.url, /^https:\/\/techdocs\.broadcom\.com\//, x.id);
+    if (x.url) assert.match(x.url, /^https:\/\/(techdocs\.broadcom\.com|knowledge\.broadcom\.com\/external\/article|blogs\.vmware\.com\/cloud-foundation)\//, `${x.id}: official Broadcom source`);
     else assert.ok(["vCloudOne standard", "Studio rule"].includes(x.source), x.id);
   }
+});
+
+test("rules: fleet management HA and the 16-core licensing minimum", () => {
+  let d = caseDesign("simple-basic");
+  const of = (x: engine.Design) => rules.evaluate(x, store.sizeDesign(x));
+  assert.equal(ruleOf(of(d), "AV-FLEET-HA").status, d.fleet.profile === "Simple" ? "open" : "met");
+  const set = (x: engine.Design, path: (string | number)[], value: unknown) => { const o = store.propose(x, { source: "test", ops: [{ op: "set", path, value }] }); if (!o.ok) throw new Error(o.error); return o.design; };
+  const simple = ruleOf(of(set(d, ["fleet", "profile"], "Simple")), "AV-FLEET-HA");
+  assert.equal(simple.status, "open"); assert.match(simple.findings[0].where, /Simple deployment model/);
+  assert.equal(ruleOf(of(set(d, ["fleet", "profile"], "HA Small")), "AV-FLEET-HA").status, "met");
+  assert.equal(ruleOf(of(d), "CO-CORE-16").status, d.hostTypes.every(h => h.cores >= 16) ? "met" : "open");
+  d = set(d, ["hostTypes", 0, "cores"], 12);
+  const core = ruleOf(of(d), "CO-CORE-16");
+  assert.equal(core.status, "open"); assert.match(core.findings[0].where, /12-core CPUs, licensed as 16 cores each/);
+  assert.equal(core.rule.level, "consider", "a cost note, not a rule the easy button must meet");
 });
 
 test("rules: findings follow the design, deviations need a reason, and nothing changes sizing", () => {
