@@ -136,6 +136,10 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
 - Static site; no backend, accounts or payments yet (AI calls go from the browser with the user's own key). Mobile-friendly layouts and PWA-ready, so
   iPhone/Android apps (Capacitor) can follow later. Each page has its own `manifest.webmanifest` and `sw.js` (network first, this
   site's files only), so it installs and opens offline; icons are in `vcf-design-studio/icons/`.
+- **No third-party scripts.** Every script is served from this site; SheetJS is vendored in `assets/vendor/` at a release
+  without known flaws, and CI checks the copy against the official file. A test fails on any outside `<script src>`.
+- AI-drafted HLD text is checked against the design: any number the HLD doesn't state (hosts and cores against the
+  engine's figures) is flagged in the drafts card and the HLD until corrected.
 - Analytics, when added: cookieless, events only, never design content (no customer names, counts
   or RVTools data).
 - Theme: local drafts use the original dark-capable theme; the published version uses the vCloudOne

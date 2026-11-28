@@ -34,6 +34,12 @@ export function impactOf(d: Design, r: SizingResult = sizeDesign(d)): Impact {
     openRecommended: res.filter(x => x.rule.level === "recommended").reduce((a, x) => a + x.findings.filter(f => !f.reason).length, 0) };
 }
 
+/** Clusters a change would fix at fewer hosts than the engine needs (that weren't already short): the AI may not propose these. */
+export function newShortfalls(before: Design, after: Design): string[] {
+  const was = new Set(sizeDesign(before).clusters.filter(x => x.short).map(x => x.c.id));
+  return sizeDesign(after).clusters.filter(x => x.short && !x.c.clone && !was.has(x.c.id)).map(x => `${x.c.name} at ${x.fixed} hosts, but the engine needs ${x.need}`);
+}
+
 /** What the AI reads about the design: choices and engine results. Customer facts only as entered / not entered. */
 export function designSummary(d: Design, r: SizingResult = sizeDesign(d)) {
   const T = workloadTotals(d.workload.groups.map(g => ({ ...g })) as never), entered = (v: unknown) => (v ? "entered" : "not entered");
@@ -113,6 +119,8 @@ export const TOOLS: AiTool[] = [
   { name: "propose_changes", description: "Propose changes for the architect to review and apply. Nothing changes until they click Apply. Give a one-line summary and the reason. Returns the engine's before and after.",
     input_schema: { type: "object", properties: { summary: { type: "string", description: "One line, e.g. 'Use RAID-6 on wld01-cl01'" }, reason: { type: "string", description: "Why, in a sentence or two" }, changes: CHANGES_SCHEMA }, required: ["summary", "reason", "changes"] },
     run: (i, x) => { const c = changesToOps(x.design, i.changes, x.red); if (!c.ok) throw new Error(c.error);
+      const short = newShortfalls(x.design, c.design);
+      if (short.length) throw new Error(`Not proposed: it would fix ${x.red.out(short.join("; "))}. Host counts below the engine's figure can't be suggested; use what_if to explore them.`);
       const s: Suggestion = { id: x.nextId(), summary: x.red.back(String(i.summary || "").trim()) || "AI suggestion", reason: x.red.back(String(i.reason || "").trim()), changes: c.changes, ops: c.ops,
         before: impactOf(x.design), after: impactOf(c.design), status: "pending" };
       x.suggestions.push(s);

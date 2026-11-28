@@ -2,12 +2,13 @@
 // The copilot panel and the AI-drafts card: HTML from state (no DOM), so tests can render them.
 // The page (main.ts) owns the state and the events; `aiView` is what the screens read.
 import { NARRATIVE_TARGETS } from "../../../engine/src/index.js";
-                                                           
+                                                                            
 import { PROVIDERS, CAPABILITIES, DEFAULT_AI, provider, cfgOf, problem } from "./providers.js";
                                                              
                                                      
 import { TARGETS } from "./writer.js";
-import { designSnap } from "../hld.js";
+import { designSnap, buildHld, walk } from "../hld.js";
+import { sizeDesign } from "../store.js";
 import { enabled } from "../flags.js";
 
                                                                                               
@@ -110,12 +111,14 @@ export function copilotHtml(v         = aiView)         {
 /** The AI drafts card on the Design output page. */
 export function writerHtml(d        , v         = aiView)         {
   if (!enabled("aiWriter")) return "";
-  const snap = designSnap(d);
+  const snap = designSnap(d), unmatched                                             = {};
+  if (NARRATIVE_TARGETS.some(t => d.narrative?.[t])) for (const { s } of walk(buildHld(d, sizeDesign(d), ""))) for (const b of s.blocks) if (b.t === "ai") unmatched[b.target] = b.unmatched;
   const rows = NARRATIVE_TARGETS.map(t => {
     const n = d.narrative?.[t], T = TARGETS[t], busy = v.drafting === t;
     return `<div class="ai-draft"><div class="ai-draft-head"><h4>${esc(T.title)} <span class="hint">in "${esc(T.where)}"</span></h4>
       <div class="row">${v.ready ? `<button type="button" class="ghost" data-act="ai-draft" data-target="${t}" ${v.drafting ? "disabled" : ""}>${busy ? "Drafting…" : n ? "Redraft" : "Draft with AI"}</button>` : ""}${n ? `<button type="button" class="link" data-act="ai-undraft" data-target="${t}">Remove</button>` : ""}</div></div>
       ${n ? `${n.snap !== snap ? `<p class="hint warn">The design changed after this was drafted. Redraft it or check it still holds.</p>` : ""}
+        ${unmatched[t]?.length ? `<p class="hint warn ai-numcheck">These numbers aren't in the design: <b>${esc(unmatched[t] .join(", "))}</b>. Correct them or redraft; the HLD flags them until then.</p>` : ""}
         <textarea rows="8" data-narr="${t}" aria-label="${esc(T.title)} text">${esc(n.text)}</textarea>
         <p class="hint">${n.edited ? "Drafted with AI and edited" : "AI draft"}${n.at ? `, ${esc(n.at)}` : ""}. It appears in the HLD labelled as such.</p>` : ""}</div>`;
   }).join("");
