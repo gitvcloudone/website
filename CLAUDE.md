@@ -92,12 +92,16 @@ the decisions, explains them and documents them — it doesn't just validate a f
 - **Labelled:** an applied AI suggestion is recorded in the design file (`decisions.ai`) and shows as
   "AI-suggested" in the decision register and the HLD. AI-drafted HLD text is stored per section
   (`narrative`), editable, marked as an AI draft, and flagged when the design changed since drafting.
-- **Privacy:** off until the user adds a key; shows exactly what will be sent; stand-in names on by
+- **Privacy:** off until the user sets up a provider; names where the design goes; shows exactly what will be sent; stand-in names on by
   default (customer, site, workload group and VM names, DNS domain, server addresses); nothing kept on
   a server. On real customer designs, the user's employer policy on AI services applies.
-- **One connector, two plugs** (`studio/src/ai/connector.ts`): the user's own Claude API key, called
-  from the browser; later, a hosted backend that adds sign-in, usage limits and the key. Same request
-  and response shape for both, so switching is configuration.
+- **Bring any AI** (`studio/src/ai/providers.ts`): Claude, OpenAI, OpenRouter (Gemini and others),
+  xAI, local models (Ollama, LM Studio) and any OpenAI-compatible service, each with its key, address
+  and model, an in-app setup guide (steps, cost, links, caveats) and Load models / Test connection.
+  Adding a provider is one entry in `PROVIDERS`. Keys stay in the browser unless the user asks to remember them.
+- **One request shape** (`studio/src/ai/connector.ts`): the copilot and writer speak the Claude Messages
+  shape; OpenAI-style APIs are translated there (`toOpenAi` / `fromOpenAi`). Later, a hosted backend
+  that adds sign-in, usage limits and the key takes the same shape, so switching is configuration.
 - **Tools in one list** (`studio/src/ai/tools.ts`): read the design, size a what-if, check the rules,
   explain a cluster, propose changes. New AI abilities are new tools.
 - **Feature flags** `aiCopilot` and `aiWriter`. Tests use a stand-in API; CI never needs a key.
@@ -158,4 +162,5 @@ Diagrams redraw live from the design and export to SVG, PNG and draw.io.
 9. (Done 27 Nov, on the branch.) AI layer, in its own edition at /vcf-design-studio-ai/ (unlinked,
    noindex); the classic app stays AI-free. AI layer: copilot panel (explain, what-if, propose changes) and HLD
    writer (executive summary, design rationale, risk mitigations), with the user's own key first; a hosted
-   backend later. Design format 10 adds `decisions.ai` and `narrative`.
+   backend later. Design format 10 adds `decisions.ai` and `narrative`. (27 Nov, later:) bring any AI —
+   provider picker with setup guides; the first release's Claude-only settings still load.

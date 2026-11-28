@@ -41,7 +41,8 @@ date with the source, so always run `npm run build` and commit its output with y
 | Change what the AI may set | `studio/src/ai/catalog.ts` (design choices only; customer facts stay out) | Tests check no customer fact is settable |
 | Change what's swapped for stand-in names | `studio/src/ai/redact.ts` | Tests check nothing identifying is sent |
 | Change how HLD sections are drafted | `studio/src/ai/writer.ts` (the brief per section and the writing rules) | Tests |
-| Change the AI models or add the hosted backend | `studio/src/ai/connector.ts` (`MODELS`; `hostedConnector` takes the same request as the Claude Messages API) | Tests |
+| Add an AI provider, or change one's setup guide, address, key format or models | `studio/src/ai/providers.ts` (`PROVIDERS`: one entry each, with its `guide`) | Tests render every guide and send through every provider with a stand-in API |
+| Change the Claude models, the OpenAI-format translation, or add the hosted backend | `studio/src/ai/connector.ts` (`MODELS`; `toOpenAi`/`fromOpenAi`; `hostedConnector` takes the same request as the Claude Messages API) | Tests |
 | Change the page layout or styles | `vcf-design-studio/index.html`, `vcf-design-studio/studio.css` | Look at it on desktop and phone width |
 
 ## Golden tests
