@@ -12,7 +12,7 @@ import type { ProviderId, ProviderCfg } from "./providers.ts";
 import { redactorFor } from "./redact.ts";
 import { ask } from "./copilot.ts";
 import { draft } from "./writer.ts";
-import { designSummary, changesToOps } from "./tools.ts";
+import { designSummary, changesToOps, newShortfalls } from "./tools.ts";
 
 export interface PageCtx { design(): Design; result(): SizingResult; commit(p: Proposal): boolean; render(): void; flash(text: string): void }
 
@@ -49,9 +49,11 @@ async function aiAsk(q: string) {
 
 function aiApply(id: string) {
   const s = aiView.suggestions.find(x => x.id === id); if (!s || s.status !== "pending") return;
-  // rebuilt against the D() as it is now, through the same checks
+  // rebuilt against the design as it is now, through the same checks
   const c = changesToOps(D(), s.changes.map(x => ({ setting: x.setting, value: x.to })), redactorFor(D(), false));
-  if (!c.ok) { aiView.turns.push({ role: "error", text: `That suggestion no longer fits the D(): ${c.error}` }); ctx.render(); return; }
+  if (!c.ok) { aiView.turns.push({ role: "error", text: `That suggestion no longer fits the design: ${c.error}` }); ctx.render(); return; }
+  const short = newShortfalls(D(), c.design);
+  if (short.length) { aiView.turns.push({ role: "error", text: `That suggestion would now leave ${short.join("; ")}, so it wasn't applied.` }); ctx.render(); return; }
   const rec = { summary: s.summary, reason: s.reason, at: today(), paths: s.changes.map(x => x.setting) };
   if (ctx.commit({ source: "ai", ops: [...c.ops, { op: "set", path: ["decisions", "ai"], value: [...D().decisions.ai, rec] }] })) { s.status = "applied"; ctx.render(); }
 }

@@ -10,7 +10,7 @@ const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** The swaps for a design. With `on` false, nothing is swapped. */
 export function redactorFor(d: Design, on: boolean): Redactor {
   const pairs: [string, string][] = [];
-  const add = (real: unknown, stand: string) => { const r = String(real ?? "").trim(); if (r.length >= 3 && !pairs.some(p => p[0] === r)) pairs.push([r, stand]); };
+  const add = (real: unknown, stand: string) => { const r = String(real ?? "").trim(); if (r.length >= 3 && !pairs.some(p => p[0].toLowerCase() === r.toLowerCase())) pairs.push([r, stand]); };
   if (on) {
     add(d.project.customer, "Customer A");
     add(d.project.site, "Site A");
@@ -23,7 +23,8 @@ export function redactorFor(d: Design, on: boolean): Redactor {
   }
   // longest first, so "Acme Bank Trust" goes before "Acme Bank"
   const outs = [...pairs].sort((a, b) => b[0].length - a[0].length), backs = [...pairs].sort((a, b) => b[1].length - a[1].length);
-  const swap = (s: string, list: [string, string][], from: 0 | 1) => list.reduce((t, p) => t.replace(new RegExp(escRe(p[from]), "g"), p[1 - from]), s);
+  // going out, real names match whatever their capitals ("ACME BANK", "acme bank"); coming back, stand-ins match exactly
+  const swap = (s: string, list: [string, string][], from: 0 | 1) => list.reduce((t, p) => t.replace(new RegExp(escRe(p[from]), from === 0 ? "gi" : "g"), p[1 - from]), s);
   return { on, pairs, out: s => (on ? swap(s, outs, 0) : s), back: s => (on ? swap(s, backs, 1) : s) };
 }
 
