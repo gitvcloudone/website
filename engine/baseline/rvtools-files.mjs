@@ -11,7 +11,7 @@ export const SHEETS = ["vInfo", "vHost", "vDisk", "vPartition", "vCPU", "vMemory
 
 export async function readXlsx(path) {
   let XLSX;
-  try { XLSX = (await import("xlsx")).default; } catch { throw new Error("SheetJS (xlsx 0.18.5) isn't installed: run npm install"); }
+  try { XLSX = (await import("xlsx")).default; } catch { throw new Error("SheetJS (xlsx) isn't installed: run npm install"); }
   const wb = XLSX.read(new Uint8Array(readFileSync(path)), { type: "array", sheets: SHEETS, dense: true });
   const rows = (n) => wb.Sheets[n] ? XLSX.utils.sheet_to_json(wb.Sheets[n], { defval: null }) : null;
   return { fileName: basename(path), ...Object.fromEntries(SHEETS.map(n => [n, rows(n)])) };
