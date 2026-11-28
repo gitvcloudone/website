@@ -22,7 +22,7 @@ export type Block =
   | { t: "table"; head: string[]; rows: string[][]; num?: number[] }   // num: column indexes to right-align
   | { t: "tbd"; text: string }                                         // "To be defined": a skipped or unfinished part
   | { t: "diagram"; id: "topology" | "network"; caption: string }
-  | { t: "ai"; label: string; paras: string[]; stale: boolean };                // AI-drafted text, labelled as such
+  | { t: "ai"; target: NarrativeTarget; label: string; paras: string[]; stale: boolean; unmatched: string[] };   // AI-drafted text, labelled as such; `unmatched`: its numbers this HLD doesn't contain
 export interface Section { id: string; title: string; blocks: Block[]; sub?: Section[] }
 export interface Hld {
   /** the app that made it: "VCF Design Studio" or "VCF Design Studio: AI-powered" */
@@ -53,7 +53,39 @@ export const designSnap = (d: Design) => snapOf({ ...d, narrative: {}, decisions
 function aiBlock(d: Design, t: NarrativeTarget): Block[] {
   const n = d.narrative?.[t]; if (!n || !n.text.trim()) return [];
   const stale = n.snap !== designSnap(d);
-  return [{ t: "ai", label: n.edited ? "Drafted with AI and edited by the architect" : "AI draft: review before sharing", paras: n.text.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean), stale }];
+  return [{ t: "ai", target: t, label: n.edited ? "Drafted with AI and edited by the architect" : "AI draft: review before sharing", paras: n.text.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean), stale, unmatched: [] }];
+}
+
+const num = (x: string) => Number(x.replace(/,/g, ""));
+/** Host and core counts are checked against those figures only (a "13" elsewhere in the document doesn't make "13 hosts" right). */
+const UNITS: [unit: string, re: RegExp][] = [["host", /^(?:\S+\s+)?hosts?\b/i], ["core", /^(?:\S+\s+){0,2}cores?\b/i]];
+export interface Allowed { any: Set<number>; host: Set<number>; core: Set<number> }
+
+/** What an AI draft may quote: every number the HLD states from the design and the engine (AI drafts left out), and for
+ *  hosts and cores, the engine's host and core figures plus the counts the HLD itself gives in hosts or cores. */
+export function hldNumbers(h: Hld, r?: SizingResult): Allowed {
+  const own = JSON.stringify({ ...h, sections: h.sections.map(function strip(s: Section): Section { return { ...s, blocks: s.blocks.filter(b => b.t !== "ai"), sub: s.sub?.map(strip) }; }) });
+  const a: Allowed = { any: new Set(), host: new Set(), core: new Set() };
+  for (const m of own.matchAll(/(\d[\d,]*(?:\.\d+)?)([^\d"]{0,40})/g)) {
+    a.any.add(num(m[1]));
+    for (const [u, re] of UNITS) if (re.test(m[2].trim())) a[u as "host" | "core"].add(num(m[1]));
+  }
+  if (r) {
+    a.host.add(r.hosts); a.core.add(r.cores); a.core.add(r.licCores);
+    for (const x of r.clusters) for (const v of [x.total, x.need, x.cpuH, x.ramH, x.storH, x.fixed]) if (typeof v === "number") a.host.add(v);
+  }
+  return a;
+}
+/** The numbers in a draft that the design doesn't contain, each with the word after it ("14 hosts").
+ *  Only standalone numbers count: not those inside names such as wld01-cl01, VM-3 or N+1. */
+export function unmatchedNumbers(text: string, allowed: Allowed): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/(?<![\w.+\-/:#])(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?![\w])(\s*%|\s+[A-Za-z]+)?/g)) {
+    const n = num(m[1]), after = text.slice(m.index! + m[1].length).trim();
+    const unit = UNITS.find(([, re]) => re.test(after))?.[0] as "host" | "core" | undefined;
+    if (!(unit ? allowed[unit] : allowed.any).has(n)) { const shown = (m[1] + (m[2] || "")).trim(); if (!out.includes(shown)) out.push(shown); }
+  }
+  return out;
 }
 
 /** The HLD for a design. `date` is passed in so the content is reproducible (tests, saved copies). */
@@ -72,7 +104,7 @@ export function buildHld(d: Design, r: SizingResult, date: string): Hld {
     : `${customer}: a VMware Cloud Foundation ${d.project.version} design that isn't sized yet. Add the workload, host types and topology.`;
   const execBlocks: Block[] = [p(summary), ...aiBlock(d, "summary")];
   if (r.clusters.length) {
-    execBlocks.push(p(`It runs ${plural(T.vms, "VM")} with ${nf(T.vcpu)} vCPU and ${nf(T.vramGiB)} GiB of memory today, planned with ${d.policy.growth}% growth. ` +
+    execBlocks.push(p(`It runs ${plural(T.vms, "VM")} with ${nf(T.vcpu)} vCPU, ${nf(T.vramGiB)} GiB of memory and ${nf(T.usedTiB)} TiB of storage in use (${nf(T.allocTiB)} TiB allocated) today, planned with ${d.policy.growth}% growth. ` +
       `The design needs ${plural(r.hosts, "host")} with ${nf(r.cores)} physical cores, licensed as ${nf(r.licCores)} VCF cores${r.lic.addOnTiB ? ` plus ${nf(r.lic.addOnTiB)} TiB of vSAN add-on capacity` : ""}.`));
     execBlocks.push(table(["Instance", "Domain", "Cluster", "Hosts", "Why that many"],
       r.clusters.map(x => [x.inst.name, x.d.name, x.c.name, x.total, clusterReason(x).replace(/^\d[\d,]* hosts?: /, "")]), [3]));
@@ -258,8 +290,13 @@ export function buildHld(d: Design, r: SizingResult, date: string): Hld {
     sec("prereqs", "Prerequisites", preBlocks),
     sec("appendix", "Appendix: method and sources", appendix),
   ];
-  return { tool: productName(), title: `VMware Cloud Foundation high-level design`, customer, site: d.project.site, version: d.project.version, date,
+  const hld: Hld = { tool: productName(), title: `VMware Cloud Foundation high-level design`, customer, site: d.project.site, version: d.project.version, date,
     status: skippedSteps.length || openRules.length || missing ? "Draft: open items remain" : "Draft", summary, sections };
+  // AI drafts: flag any number the rest of the document doesn't state (the model was told to quote only these)
+  const allowed = hldNumbers(hld, r);
+  for (const { s } of walk(hld)) for (const b of s.blocks) if (b.t === "ai") { b.unmatched = unmatchedNumbers(b.paras.join("\n\n"), allowed);
+    if (b.unmatched.length) b.label += ` · check these numbers, they aren't in the design: ${b.unmatched.join(", ")}`; }
+  return hld;
 }
 
 const ACCESS: Record<string, string> = { admin: "Administrator", operator: "Operator", readonly: "Read-only" };

@@ -277,6 +277,44 @@ test("writer: drafts from the design's facts with stand-ins, stored labelled; fl
   await assert.rejects(draft(fakeApi([() => say("   ")]).conn, "m", d, redactorFor(d, true), "rationale", "x"), /no text/);
 });
 
+test("HLD drafts: numbers the design doesn't contain are flagged in the drafts card and the HLD; names with digits aren't", async () => {
+  const d0 = acme(), r = store.sizeDesign(d0), keep = structuredClone(aiView);
+  const good = `Customer A needs ${r.hosts} hosts licensed as ${r.licCores.toLocaleString("en-US")} VCF cores on VCF ${d0.project.version}. Cluster wld01-cl01 keeps N+1 and VM-3 runs in Workload group 1.`;
+  const bad = `Customer A needs ${r.hosts + 2} hosts and 37.5 TiB of extra capacity, about 99% utilised.`;
+  const withDraft = async (text: string) => { const n = await draft(fakeApi([() => say(text)]).conn, "m", d0, redactorFor(d0, true), "summary", "2026-11-27");
+    return must(d0, [{ op: "set", path: ["narrative"], value: { summary: n } }]); };
+  const aiOf = (d: engine.Design) => walk(buildHld(d, store.sizeDesign(d), "x")).flatMap(({ s }) => s.blocks).find(b => b.t === "ai") as Extract<ReturnType<typeof buildHld>["sections"][number]["blocks"][number], { t: "ai" }>;
+  let d = await withDraft(good);
+  assert.deepStrictEqual(aiOf(d).unmatched, [], "the engine's own numbers and names pass");
+  assert.doesNotMatch(aiOf(d).label, /check these numbers/);
+  d = await withDraft(bad);
+  assert.deepStrictEqual(aiOf(d).unmatched, [`${r.hosts + 2} hosts`, "37.5 TiB", "99%"]);
+  assert.match(aiOf(d).label, new RegExp(`check these numbers, they aren't in the design: ${r.hosts + 2} hosts, 37\\.5 TiB, 99%`));
+  assert.match(new TextDecoder().decode(hldDocx(buildHld(d, store.sizeDesign(d), "x"))), /check these numbers, they aren&apos;t in the design|check these numbers, they aren't in the design/, "the Word file carries the warning");
+  flags.setEdition("ai");
+  try { Object.assign(aiView, { ready: true }); assert.match(writerHtml(d), new RegExp(`These numbers aren't in the design: <b>${r.hosts + 2} hosts, 37\\.5 TiB, 99%</b>`)); }
+  finally { flags.setEdition("classic"); Object.assign(aiView, keep); }
+  // an edit that fixes the number clears the flag
+  d = must(d, [{ op: "set", path: ["narrative", "summary", "text"], value: good }]);
+  assert.deepStrictEqual(aiOf(d).unmatched, []);
+});
+
+test("stand-in names match whatever the capitals; the AI can't suggest fewer hosts than the engine needs; page messages read as text", () => {
+  const d = acme(), red = redactorFor(d, true);
+  assert.equal(red.out("ACME BANK in ashburn and acme bank"), "Customer A in Site A and Customer A");
+  assert.equal(red.back("Customer A"), "Acme Bank", "coming back, the name as entered");
+  const r = store.sizeDesign(d), x = r.clusters.find(c => c.need > 3)!;
+  const ctx = { design: d, red, suggestions: [] as Suggestion[], nextId: ids() };
+  const propose = TOOLS.find(t => t.name === "propose_changes")!;
+  assert.throws(() => propose.run({ summary: "Trim", reason: "x", changes: [{ setting: `cluster.${x.c.id}.fixedHosts`, value: 1 }] }, ctx), /Not proposed: it would fix .* at 1 hosts, but the engine needs \d+/);
+  assert.equal(ctx.suggestions.length, 0);
+  propose.run({ summary: "Pin", reason: "x", changes: [{ setting: `cluster.${x.c.id}.fixedHosts`, value: x.total }] }, ctx);
+  assert.equal(ctx.suggestions.length, 1, "at or above the engine's figure is fine");
+  assert.ok(TOOLS.find(t => t.name === "what_if")!.run({ changes: [{ setting: `cluster.${x.c.id}.fixedHosts`, value: 1 }] }, ctx), "what-ifs can still explore it");
+  const page = readFileSync(new URL("../../studio/src/ai/page.ts", import.meta.url), "utf8");
+  for (const m of page.matchAll(/text: `([^`]*)`/g)) assert.doesNotMatch(m[1].replace(/\$\{[^}]*\}/g, ""), /D\(\)|ctx\./, `message reads as text: ${m[1]}`);
+});
+
 test("design format 10: a format 9 file opens with no AI record and no drafts; bad AI data is dropped", () => {
   const raw = JSON.parse(readFileSync(new URL("../fixtures/designs/format-9.vcf-design.json", import.meta.url), "utf8"));
   assert.equal(raw.formatVersion, 9);
